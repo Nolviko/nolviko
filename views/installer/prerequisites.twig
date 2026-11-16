@@ -1,0 +1,31 @@
+{# Installer step 1 (M01.13). Context: language, title, report (PrerequisiteReport), recheck_url,
+   database_url.
+   No JavaScript; status is written as text, not only as colour; one list per group with a heading. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-install' }}{% endblock %}
+{% block header %}<header class="top"><div class="top-in"><span class="wm"><span class="mark" aria-hidden="true">n</span>{{ 'nolviko' }}</span></div></header>{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% include 'installer/steps.twig' with {step: 1} %}
+<p>{{ t('installer.prerequisites.intro') }}</p>
+
+{% for group, results in {runtime: report.runtime, files: report.files} %}
+<section aria-labelledby="group-{{ group }}">
+<h2 id="group-{{ group }}">{{ group == 'runtime' ? t('installer.prerequisites.runtime') : t('installer.prerequisites.files') }}</h2>
+<ul>
+{% for result in results %}
+<li class="check check-{{ result.status }}"><strong>{{ result.status == 'passed' ? t('installer.status.passed') : (result.status == 'warning' ? t('installer.status.warning') : t('installer.status.failed')) }}:</strong> {{ t(result.message, result.parameters) }}</li>
+{% endfor %}
+</ul>
+</section>
+{% endfor %}
+
+<p role="status">{{ report.canContinue ? t('installer.prerequisites.ready') : t('installer.prerequisites.blocked') }}</p>
+{% if report.canContinue %}
+<p><a href="{{ database_url|safe_url }}">{{ t('installer.prerequisites.continue') }}</a></p>
+{% endif %}
+<p><a href="{{ recheck_url|safe_url }}">{{ t('installer.prerequisites.recheck') }}</a></p>
+{% endblock %}

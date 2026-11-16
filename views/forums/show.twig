@@ -1,0 +1,79 @@
+{# Forum page (M03.11; design "Forum: konu listesi"). Context: title (forum title), canonical (first page), indexable
+   (false on cursor pages), threads (list of ThreadRowView: title, url, sticky, locked, moved, lastPostAt, authorName,
+   lastPosterName, status, unread), newer, older (keyset page URLs or null), index_url, new_thread_url (null when not
+   allowed), mark_read_url (null for guests), csrf_field, csrf_token, trail (readable parents: title, url|null),
+   feed_url (this forum's Atom feed), subforums (readable child forums on the first page: title, url); rows also carry `replies` (2026-11-07)
+   and `views`, `prefix` (label, class) (2026-11-08). #}
+{% extends 'layouts/page.twig' %}
+
+{% set meta_description = description|default(null) ?: title %}
+{% if seo.origin|default(null) %}
+{% set crumbs = [{'@type': 'ListItem', position: 1, name: t('forums.show.back'), item: seo.origin ~ index_url}] %}
+{% for step in trail|default([]) %}{% if step.url %}{% set crumbs = crumbs|merge([{'@type': 'ListItem', position: crumbs|length + 1, name: step.title, item: seo.origin ~ step.url}]) %}{% endif %}{% endfor %}
+{% set crumbs = crumbs|merge([{'@type': 'ListItem', position: crumbs|length + 1, name: title}]) %}
+{% set structured_data = [{'@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs}] %}
+{% endif %}
+{% block head %}
+{% if feed_url|default(null) %}<link rel="alternate" type="application/atom+xml" href="{{ feed_url|safe_url }}">{% endif %}
+{% if not indexable %}
+<meta name="robots" content="noindex, follow">
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ index_url|safe_url }}">{{ t('forums.show.back') }}</a>{% for step in trail|default([]) %}<span aria-hidden="true">/</span>{% if step.url %}<a href="{{ step.url|safe_url }}"><bdi>{{ step.title }}</bdi></a>{% else %}<span><bdi>{{ step.title }}</bdi></span>{% endif %}{% endfor %}<span aria-hidden="true">/</span><span aria-current="page"><bdi>{{ title }}</bdi></span></nav>
+<div class="head-row">
+<div class="stack"><h1 dir="auto">{{ title }}</h1>
+{% if description|default(null) %}<p class="lead" dir="auto">{{ description }}</p>{% endif %}</div>
+<div class="actions">
+{% if mark_read_url is not null %}
+<form method="post" action="{{ mark_read_url|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button class="btn-s" type="submit">{{ t('forums.show.mark_read') }}</button>
+</form>
+{% endif %}
+{% if new_thread_url is not null %}
+<a class="btn" href="{{ new_thread_url|safe_url }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{{ t('forums.index.new_thread') }}</a>
+{% endif %}
+</div>
+</div>
+{% if subforums|default([]) is not empty %}
+<section class="subforums" aria-labelledby="subforums-heading"><h2 id="subforums-heading">{{ t('forums.show.subforums') }}</h2>
+<ul class="panel list">{% for child in subforums %}<li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path></svg><a href="{{ child.url|safe_url }}"><bdi>{{ child.title }}</bdi></a></li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% if threads is empty %}
+<div class="panel empty"><p>{{ t('forums.show.empty') }}</p></div>
+{% else %}
+<ul class="panel thread-list">
+{% for thread in threads %}
+<li class="trow thread{{ thread.sticky ? ' thread-sticky' : '' }}{{ thread.moved ? ' thread-moved' : '' }}{{ thread.unread ? ' t-unread' : '' }}{{ thread.status is not null ? ' thread-' ~ thread.status : '' }}">
+<span class="av c{{ (thread.authorName ?? '')|length % 5 + 1 }}" aria-hidden="true">{{ (thread.authorName ?? '?')|first }}</span>
+<div class="trow-main">
+<div class="trow-title">
+{% if thread.unread %}<span class="dot" aria-hidden="true"></span>{% endif %}
+{% if thread.prefix|default(null) %}<span class="{{ thread.prefix.class }}"><bdi>{{ thread.prefix.label }}</bdi></span>{% endif %}<a href="{{ thread.url|safe_url }}">{% if thread.moved %}{{ t('forums.show.moved', {title: thread.title|censor}) }}{% else %}<bdi>{{ thread.title|censor }}</bdi>{% endif %}</a>
+{% if thread.unread %}<span class="chip chip-new thread-unread">{{ t('forums.show.unread') }}</span>{% endif %}
+{% if thread.sticky %}<span class="chip chip-amber">{{ t('forums.show.sticky') }}</span>{% endif %}
+{% if thread.locked %}<span class="chip">{{ t('forums.show.locked') }}</span>{% endif %}
+{% if thread.status is not null %}<span class="chip chip-danger">{{ t('threads.show.marker', {status: thread.status}) }}</span>{% endif %}
+</div>
+{% if not thread.moved and thread.lastPostAt is not null %}
+<p class="meta">{% if thread.lastPosterAvatar|default(null) %}<img class="av av-s" src="{{ thread.lastPosterAvatar|safe_url }}" width="22" height="22" loading="lazy" alt="">{% endif %}{{ t('forums.show.activity', {author: thread.authorName ?? t('threads.show.removed_account'), poster: thread.lastPosterName ?? t('threads.show.removed_account'), date: thread.lastPostAt|format_datetime}) }}</p>
+{% endif %}
+</div>
+{% if thread.replies|default(null) is not null %}<div class="stat"><b>{{ thread.replies|format_number }}</b><span>{{ t('forums.show.replies', {count: thread.replies}) }}</span></div>{% endif %}
+{% if thread.views|default(null) is not null %}<div class="stat"><b>{{ thread.views|format_number }}</b><span>{{ t('forums.show.views', {count: thread.views}) }}</span></div>{% endif %}
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if newer is not null or older is not null %}
+<nav aria-label="{{ t('forums.show.pages') }}">
+<ul class="pagination">
+{% if newer is not null %}<li><a rel="prev" href="{{ newer|safe_url }}" class="btn btn-s">{{ t('forums.show.newer') }}</a></li>{% endif %}
+{% if older is not null %}<li><a rel="next" href="{{ older|safe_url }}" class="btn btn-s">{{ t('forums.show.older') }}</a></li>{% endif %}
+</ul>
+</nav>
+{% endif %}
+{% endblock %}

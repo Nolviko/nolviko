@@ -1,0 +1,7 @@
+{# Test mail, plain text part (M02.02a). Context: name, subject, language. Rendered with HTML escaping and
+   entity-decoded by MailComposer, so values appear exactly as passed. #}
+{{ t('mail.test.greeting', {name: name}) }}
+
+{{ t('mail.test.body') }}
+
+{{ t('mail.footer') }}

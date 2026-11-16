@@ -1,0 +1,15 @@
+{# New gallery album (2026-11-08). Context: title, action, back_url, album (title, description, visibility),
+   visibilities, error, csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ back_url|safe_url }}">{{ t('gallery.title') }}</a></nav>
+<h1>{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% include 'gallery/album_fields.twig' %}
+<p><button type="submit">{{ t('gallery.create') }}</button></p>
+</form>
+{% endblock %}

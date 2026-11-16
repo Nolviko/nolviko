@@ -1,0 +1,15 @@
+{# Notice to an existing account when someone registers with its address (M02.03). Context: name, login_url,
+   resend_url, subject, language. #}
+{{ t('mail.already_registered.greeting', {name: name}) }}
+
+{{ t('mail.already_registered.body') }}
+
+{{ t('mail.already_registered.login') }}
+{{ login_url }}
+
+{{ t('mail.already_registered.resend') }}
+{{ resend_url }}
+
+{{ t('mail.already_registered.not_you') }}
+
+{{ t('mail.footer') }}

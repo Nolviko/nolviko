@@ -1,0 +1,36 @@
+/* Shared keyboard, reflow and bidirectional baseline. No script or inline CSP exception required. */
+:root { --focus-ring: #005fcc; --page-ink: #17212b; --page-paper: #fff; }
+html { scroll-padding-block: 1rem; }
+body { color: var(--page-ink); background: var(--page-paper); line-height: 1.6; }
+*, *::before, *::after { box-sizing: border-box; }
+main { min-inline-size: 0; overflow-wrap: anywhere; }
+button, input, select, textarea { font: inherit; max-inline-size: 100%; }
+button, input:not([type="hidden"]), select, textarea { min-block-size: 2.75rem; }
+input[type="checkbox"], input[type="radio"] { min-block-size: auto; }
+button, select, summary { cursor: pointer; }
+button:disabled, input:disabled, select:disabled { cursor: not-allowed; }
+label { display: inline-block; }
+textarea { min-block-size: 8rem; }
+a { text-underline-offset: .15em; }
+img, video, svg { max-inline-size: 100%; block-size: auto; }
+pre { max-inline-size: 100%; overflow: auto; white-space: pre; }
+[dir="auto"] { unicode-bidi: plaintext; }
+:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; box-shadow: 0 0 0 6px #fff; }
+main:focus, #admin-main:focus { outline-offset: -3px; }
+.skip-link { position: absolute; inset-block-start: 0; inset-inline-start: -999rem; }
+.skip-link:focus, .skip-link:focus-visible {
+    position: fixed; inset-block-start: .5rem; inset-inline-start: .5rem; z-index: 10000;
+    padding-block: .65rem; padding-inline: 1rem; color: #fff; background: #17212b; border: 2px solid #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+    }
+}
+@media (forced-colors: active) {
+    :focus-visible { outline-color: Highlight; box-shadow: none; }
+    .skip-link:focus { color: LinkText; background: Canvas; border-color: CanvasText; }
+}
+
+input[type="file"] { display: block; inline-size: 100%; min-inline-size: 0; }

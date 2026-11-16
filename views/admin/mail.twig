@@ -1,0 +1,29 @@
+{# Outgoing mail (M02.02a). Context: title, nav, error (translated or null), sent, transport (translated
+   description), native (PHP mail() is used), from (sender address or null), fresh, reauth_url, action,
+   csrf_field, csrf_token. The SMTP password is never part of the context. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% elseif sent %}
+<p role="status">{{ t('admin.mail.sent') }}</p>
+{% endif %}
+<p>{{ transport }}</p>
+{% if native %}
+<p>{{ t('admin.mail.native_warning') }}</p>
+{% endif %}
+{% if from %}
+<p>{{ t('admin.mail.from', {address: from}) }}</p>
+{% else %}
+<p role="alert">{{ t('admin.mail.no_from') }}</p>
+{% endif %}
+{% if not fresh %}
+<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.mail.reauth') }}</a></p>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><button type="submit">{{ t('admin.mail.send_test') }}</button></p>
+</form>
+<p><a href="{{ path('admin.site')|safe_url }}">{{ t('admin.site.edit_link') }}</a></p>
+{% endblock %}

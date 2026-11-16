@@ -1,0 +1,10 @@
+{# Registration is closed (M02.03a). Context: title, login_url. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p role="status">{{ t('auth.register.closed') }}</p>
+<p><a href="{{ login_url|safe_url }}">{{ t('auth.register.to_login') }}</a></p>
+{% endblock %}

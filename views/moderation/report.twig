@@ -1,0 +1,19 @@
+{# Report a post (M04.07a). Context: title, action, post_url, csrf_field, csrf_token, reason, max_reason, error
+   (translated or null). Only moderators read reports; the post's author never sees who reported it. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>{{ t('moderation.report.intro') }}</p>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="report-reason">{{ t('moderation.report.reason') }}</label>
+<textarea id="report-reason" name="reason" rows="4" required maxlength="{{ max_reason }}">{{ reason }}</textarea></p>
+<p><button type="submit">{{ t('moderation.report.submit') }}</button></p>
+</form>
+<p><a href="{{ post_url|safe_url }}">{{ t('moderation.report.back') }}</a></p>
+{% endblock %}

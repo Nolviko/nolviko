@@ -1,0 +1,9 @@
+{% extends 'layouts/page.twig' %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<div class="actions"><a class="btn" href="{{ new_url|safe_url }}">{{ t('conversations.new') }}</a></div>
+<ul class="panel thread-list">{% for item in items %}<li class="trow{{ item.unread ? ' t-unread' : '' }}"><span class="av c{{ item.subject|length % 5 + 1 }}" aria-hidden="true">{{ item.subject|first }}</span><div class="trow-main"><p class="trow-title"><a href="{{ item.url|safe_url }}"><bdi>{{ item.subject }}</bdi></a>{% if item.unread %} <span class="chip chip-new">{{ t('conversations.unread') }}</span>{% endif %}</p></div></li>
+{% else %}<li class="empty">{{ t('conversations.empty') }}</li>{% endfor %}</ul>
+{% if older %}<p><a class="btn btn-s" href="{{ older|safe_url }}">{{ t('conversations.older') }}</a></p>{% endif %}
+{% endblock %}

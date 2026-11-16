@@ -1,0 +1,25 @@
+{# Edit history of one post (2026-11-08). Context: title, post_url, current (source text), edited_at, versions
+   (newest first: editor (name or null), at, reason (or null), content (source text)). Source text is escaped,
+   never rendered. #}
+{% extends 'layouts/page.twig' %}
+
+{% block head %}<meta name="robots" content="{{ 'noindex, nofollow' }}">{% endblock %}
+
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ post_url|safe_url }}">{{ t('threads.history.back') }}</a></nav>
+<h1 dir="auto">{{ title }}</h1>
+<section class="panel history-version" aria-labelledby="history-current">
+<h2 id="history-current">{{ t('threads.history.current') }}{% if edited_at is not null %} · <time datetime="{{ edited_at|date('c') }}">{{ edited_at|format_datetime }}</time>{% endif %}</h2>
+<pre class="history-source" dir="auto">{{ current }}</pre>
+</section>
+{% if versions is empty %}
+<div class="panel empty"><p>{{ t('threads.history.empty') }}</p></div>
+{% endif %}
+{% for version in versions %}
+<section class="panel history-version" aria-labelledby="history-{{ loop.index }}">
+<h2 id="history-{{ loop.index }}">{{ t('threads.history.version', {editor: version.editor ?? t('threads.show.removed_account'), date: version.at|format_datetime}) }}</h2>
+{% if version.reason %}<p class="meta" dir="auto">{{ t('threads.history.reason', {reason: version.reason}) }}</p>{% endif %}
+<pre class="history-source" dir="auto">{{ version.content }}</pre>
+</section>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,280 @@
+<?php
+
+declare(strict_types=1);
+
+ini_set('display_errors', '0');
+
+// Generated fixed front controller. Never bootstrap from live src/vendor during a partial file switch.
+$site = __SITE_LITERAL__;
+$storage = __STORAGE_LITERAL__;
+$private = __PRIVATE_LITERAL__;
+header('Cache-Control: no-store');
+header('Referrer-Policy: no-referrer');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+
+try {
+    if (!empty($_GET) || !in_array($_SERVER['REQUEST_METHOD'] ?? '', ['GET', 'POST'], true)) {
+        throw new RuntimeException('recovery_request_refused');
+    }
+
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+        $id = $_SERVER['HTTP_X_NOLVIKO_RECOVERY_GRANT'] ?? '';
+        $code = $_SERVER['HTTP_X_NOLVIKO_RECOVERY_CODE'] ?? '';
+        $nonce = $_SERVER['HTTP_X_NOLVIKO_RECOVERY_NONCE'] ?? '';
+
+        if (preg_match('/^[a-f0-9]{32}$/D', $id) !== 1 || strlen($code) !== 43 || strlen($nonce) !== 43) {
+            throw new RuntimeException('recovery_request_refused');
+        }
+
+        $path = $private . '/grants/' . $id . '.json';
+
+        if (is_link($path) || !is_file($path) || filesize($path) > 4096) {
+            throw new RuntimeException('recovery_request_refused');
+        }
+
+        $grant = json_decode((string) file_get_contents($path), true, 8, JSON_THROW_ON_ERROR);
+
+        if (($grant['revoked'] ?? true) !== false || !is_int($grant['expires'] ?? null)
+            || $grant['expires'] <= time() || !is_string($grant['code'] ?? null)
+            || !is_string($grant['nonce'] ?? null) || !hash_equals($grant['code'], hash('sha256', $code))
+            || !hash_equals($grant['nonce'], hash('sha256', $nonce))) {
+            throw new RuntimeException('recovery_request_refused');
+        }
+
+        $job = $grant['job'] ?? '';
+    } else {
+        $pointerFile = $private . '/current.json';
+
+        if (is_link($pointerFile) || !is_file($pointerFile) || filesize($pointerFile) > 4096) {
+            throw new RuntimeException('recovery_unavailable');
+        }
+
+        $pointer = json_decode((string) file_get_contents($pointerFile), true, 4, JSON_THROW_ON_ERROR);
+        $job = $pointer['job'] ?? '';
+    }
+
+    if (!is_string($job) || preg_match('/^[a-f0-9]{32}$/D', $job) !== 1) {
+        throw new RuntimeException('recovery_request_refused');
+    }
+
+    $directory = $private . '/frozen-' . $job;
+
+    if (is_link($directory) || !is_dir($directory)) {
+        throw new RuntimeException('recovery_unavailable');
+    }
+
+    $contextFile = $directory . '/entry.json';
+
+    if (is_link($contextFile) || !is_file($contextFile) || filesize($contextFile) > 32768) {
+        throw new RuntimeException('recovery_unavailable');
+    }
+
+    $context = json_decode((string) file_get_contents($contextFile), true, 8, JSON_THROW_ON_ERROR);
+    $forwarded = false;
+    $secure = in_array(strtolower((string) ($_SERVER['HTTPS'] ?? '')), ['on', '1'], true);
+    $remote = inet_pton((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+
+    foreach ($context['proxies'] ?? [] as $proxy) {
+        $parts = explode('/', $proxy, 2);
+        $network = inet_pton($parts[0]);
+
+        if ($network === false || $remote === false || strlen($network) !== strlen($remote)) {
+            continue;
+        }
+
+        if (isset($parts[1]) && !ctype_digit($parts[1])) {
+            continue;
+        }
+
+        $bits = isset($parts[1]) && ctype_digit($parts[1]) ? (int) $parts[1] : strlen($network) * 8;
+
+        if ($bits < 0 || $bits > strlen($network) * 8) {
+            continue;
+        }
+
+        $full = intdiv($bits, 8);
+        $remainder = $bits % 8;
+        $matches = substr($network, 0, $full) === substr($remote, 0, $full)
+            && ($remainder === 0 || ((ord($network[$full]) ^ ord($remote[$full])) >> (8 - $remainder)) === 0);
+
+        if ($matches && strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') {
+            $secure = true;
+            $forwarded = true;
+        }
+    }
+
+    if (!$secure) {
+        throw new RuntimeException('recovery_https_required');
+    }
+
+    $origin = parse_url((string) ($context['origin'] ?? ''));
+    $expectedHost = strtolower((string) ($origin['host'] ?? ''));
+
+    if (isset($origin['port']) && $origin['port'] !== 443) {
+        $expectedHost .= ':' . $origin['port'];
+    }
+
+    $actualHost = strtolower((string) ($forwarded
+        ? ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? '')
+        : ($_SERVER['HTTP_HOST'] ?? '')));
+
+    if (str_ends_with($actualHost, ':443')) {
+        $actualHost = substr($actualHost, 0, -4);
+    }
+
+    if ($expectedHost === '' || $actualHost !== $expectedHost) {
+        throw new RuntimeException('recovery_request_refused');
+    }
+
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
+        $shellFile = $directory . '/recovery.html';
+
+        if (is_link($shellFile) || !is_file($shellFile) || filesize($shellFile) > 65536) {
+            throw new RuntimeException('recovery_unavailable');
+        }
+
+        $html = file_get_contents($shellFile);
+
+        if ($html === false || strlen($html) > 65536 || hash('sha256', $html) !== ($context['shell_hash'] ?? null)) {
+            throw new RuntimeException('recovery_unavailable');
+        }
+
+        $csp = base64_encode(random_bytes(18));
+        header('Content-Type: text/html; charset=UTF-8');
+        header("Content-Security-Policy: default-src 'none'; script-src 'nonce-$csp'; style-src 'nonce-$csp'; "
+            . "connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+        echo str_replace('__RECOVERY_NONCE__', $csp, $html);
+        exit;
+    }
+
+    $manifestPath = $directory . '/manifest.json';
+
+    if (is_link($manifestPath) || !is_file($manifestPath) || filesize($manifestPath) > 4194304) {
+        throw new RuntimeException('recovery_unavailable');
+    }
+
+    $manifest = json_decode((string) file_get_contents($manifestPath), true, 8, JSON_THROW_ON_ERROR);
+
+    if (($manifest['ready'] ?? false) !== true || ($manifest['source'] ?? null) !== $site
+        || !is_array($manifest['items'] ?? null) || count($manifest['items']) > 10000
+        || ($manifest['next'] ?? -1) !== count($manifest['items'])) {
+        throw new RuntimeException('recovery_unavailable');
+    }
+
+    $runtime = $directory . '/runtime';
+
+    if (is_link($runtime)) {
+        throw new RuntimeException('recovery_unavailable');
+    }
+
+    foreach ($manifest['items'] as $item) {
+        $path = $item['path'] ?? '';
+
+        if (!is_string($path) || preg_match('~^[A-Za-z0-9_.@+-]+(?:/[A-Za-z0-9_.@+-]+)*$~D', $path) !== 1
+            || !is_string($item['hash'] ?? null) || preg_match('/^[a-f0-9]{64}$/D', $item['hash']) !== 1) {
+            throw new RuntimeException('recovery_unavailable');
+        }
+
+        $file = $runtime;
+
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '.' || $segment === '..') {
+                throw new RuntimeException('recovery_unavailable');
+            }
+
+            $file .= '/' . $segment;
+
+            if (is_link($file)) {
+                throw new RuntimeException('recovery_unavailable');
+            }
+        }
+
+        if (!is_file($file) || hash_file('sha256', $file) !== $item['hash']) {
+            throw new RuntimeException('recovery_unavailable');
+        }
+    }
+
+    // Post-switch commands bootstrap only a complete, verified target in this fresh PHP request.
+    $body = file_get_contents('php://input', false, null, 0, 1025);
+    $command = is_string($body) && strlen($body) <= 1024 ? json_decode($body, true) : null;
+    $action = is_array($command) ? ($command['action'] ?? null) : null;
+
+    if (in_array($action, ['migrate', 'smoke', 'finish'], true)) {
+        if (($_SERVER['HTTP_ORIGIN'] ?? '') !== $context['origin']) {
+            throw new RuntimeException('recovery_request_refused');
+        }
+
+        $jobFile = $private . '/jobs/' . $job . '.json';
+
+        if (is_link($private . '/jobs') || is_link($jobFile) || !is_file($jobFile)
+            || filesize($jobFile) > 4194304) {
+            throw new RuntimeException('recovery_context_missing');
+        }
+
+        $approved = json_decode((string) file_get_contents($jobFile), true, 16, JSON_THROW_ON_ERROR);
+        $signed = json_decode($approved['body'] ?? '', true, 4, JSON_THROW_ON_ERROR);
+        $key = base64_decode($approved['keys'][$signed['key_id'] ?? ''] ?? '', true);
+        $signature = base64_decode($approved['signature'] ?? '', true);
+
+        if (($approved['job'] ?? null) !== $job || $key === false || strlen($key) !== 32
+            || $signature === false || strlen($signature) !== 64
+            || !sodium_crypto_sign_verify_detached($signature, $approved['body'], $key)
+            || hash('sha256', $approved['body']) !== ($approved['manifest_hash'] ?? null)
+            || !is_array($approved['operations'] ?? null) || count($approved['operations']) > 20000) {
+            throw new RuntimeException('recovery_context_invalid');
+        }
+
+        $required = ['vendor/autoload.php' => false, 'src/Core/Http/FrozenRecoveryEntry.php' => false];
+
+        foreach ($approved['operations'] as $operation) {
+            $path = $operation['path'] ?? '';
+
+            if (!is_string($path) || strlen($path) > 240
+                || preg_match('~^[A-Za-z0-9_.@+-]+(?:/[A-Za-z0-9_.@+-]+)*$~D', $path) !== 1) {
+                throw new RuntimeException('recovery_target_invalid');
+            }
+
+            $file = $site;
+
+            foreach (explode('/', $path) as $segment) {
+                if ($segment === '.' || $segment === '..') {
+                    throw new RuntimeException('recovery_target_invalid');
+                }
+
+                $file .= '/' . $segment;
+
+                if (is_link($file)) {
+                    throw new RuntimeException('recovery_target_invalid');
+                }
+            }
+
+            $hash = $operation['hash'] ?? null;
+
+            if ($hash === null ? file_exists($file)
+                : (!is_string($hash) || !is_file($file) || hash_file('sha256', $file) !== $hash)) {
+                throw new RuntimeException('recovery_target_incomplete');
+            }
+
+            if (array_key_exists($path, $required) && $hash !== null) {
+                $required[$path] = true;
+            }
+        }
+
+        if (in_array(false, $required, true)) {
+            throw new RuntimeException('recovery_target_protocol_missing');
+        }
+
+        $runtime = $site;
+    }
+
+    require $runtime . '/vendor/autoload.php';
+    $environment = getenv();
+    Nolviko\Core\Http\FrozenRecoveryEntry::respond(
+        $runtime, $site, $storage, $private, $context['origin'], is_array($environment) ? $environment : [],
+    )->send();
+} catch (Throwable) {
+    http_response_code(503);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo '{"error":"recovery_unavailable"}';
+}

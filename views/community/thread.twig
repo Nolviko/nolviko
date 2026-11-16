@@ -1,0 +1,62 @@
+{% set undo_labels = {follow: t('community.undo_follow'), block: t('community.undo_block'), bookmark: t('community.undo_bookmark'), subscribe: t('community.undo_subscribe')} %}
+{% set reaction_labels = {like: t('community.reaction_like'), thanks: t('community.reaction_thanks'), insightful: t('community.reaction_insightful')} %}
+<h2 dir="auto">{{ data.thread.title }}</h2>
+<p><a href="{{ path('threads.id', {thread: thread_id})|safe_url }}">{{ t('community.back_thread') }}</a></p>
+{% if actor %}
+{% for action in ['bookmark', 'subscribe'] %}
+<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="target" value="{{ thread_id }}">
+<button name="enable" value="1">{{ t('community.' ~ action) }}</button>
+<button name="enable" value="0">{{ undo_labels[action] }}</button></form>
+{% endfor %}
+{% endif %}
+{% if data.solution %}<p><a href="{{ path('posts.show', {post: data.solution})|safe_url }}">{{ t('community.solution') }}</a></p>{% endif %}
+{% if data.poll %}
+<h3 dir="auto">{{ data.poll.question }}</h3>
+{% if data.poll.imported_lock|default(0) %}<p>{{ t('operations.poll_locked') }}</p>{% endif %}
+{% if not (data.poll_results_visible ?? true) %}<p>{{ t('operations.poll_results_hidden') }}</p>{% endif %}
+{% if data.poll.imported_max_choices|default(null) %}<p>{{ t('operations.poll_limit', {count: data.poll.imported_max_choices}) }}</p>{% endif %}
+<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'vote' }}"><input type="hidden" name="target" value="{{ thread_id }}">
+<fieldset><legend>{{ t('community.poll_options') }}</legend>
+{% for option in data.options %}
+<p><label><input type="{% if data.poll.multiple_choice %}checkbox{% else %}radio{% endif %}" name="options[]" value="{{ option.id }}"> <bdi>{{ option.label }}</bdi> {% if (data.poll_results_visible ?? true) %}({{ option.votes|format_number }}){% endif %}</label></p>
+{% endfor %}</fieldset>
+{% if actor and not data.relationship.voted and not data.poll.imported_lock|default(0) %}<button>{{ t('community.vote') }}</button>{% endif %}</form>
+{% elseif data.can_manage %}
+<details><summary>{{ t('community.create_poll') }}</summary><form method="post">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'poll' }}">
+<input type="hidden" name="target" value="{{ thread_id }}">
+<p><label>{{ t('community.question') }} <input name="question" maxlength="240" required></label></p>
+<p><label>{{ t('community.poll_options') }}<textarea name="options" maxlength="1610" required></textarea></label></p>
+<p><label><input type="checkbox" name="multiple" value="1"> {{ t('community.multiple') }}</label></p>
+<p><label>{{ t('community.close_days') }} <input type="number" name="days" min="0" max="365" value="0"></label></p>
+<button>{{ t('community.create_poll') }}</button></form></details>
+{% endif %}
+{% for post in data.posts %}
+<section><h3><a href="{{ path('posts.show', {post: post.id})|safe_url }}">{{ t('community.post', {id: post.id}) }}</a></h3>
+{% if actor and actor != post.user_id %}
+<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'react' }}"><input type="hidden" name="target" value="{{ post.id }}">
+{% for type in ['like', 'thanks', 'insightful'] %}<button name="reaction" value="{{ type }}">{{ reaction_labels[type] }}</button>{% endfor %}
+<button name="reaction" value="">{{ t('community.remove_reaction') }}</button></form>{% endif %}
+{% if data.questions|default(false) and data.can_manage and post.id != data.thread.first_post_id %}
+<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'solution' }}"><input type="hidden" name="target" value="{{ thread_id }}">
+<button name="post" value="{{ post.id }}">{{ t('community.accept_solution') }}</button>
+<button name="post" value="0">{{ t('community.remove_solution') }}</button></form>{% endif %}
+{% if actor == post.user_id %}
+<form method="post" enctype="multipart/form-data"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'upload' }}"><input type="hidden" name="target" value="{{ post.id }}">
+<label>{{ t('community.attachment') }} <input type="file" name="file" accept="image/jpeg,image/png,text/plain,application/pdf" required></label>
+<button>{{ t('community.upload') }}</button></form>
+{% endif %}
+{% if data.extras[post.id].attachments_more|default(false) %}<p><a href="{{ (path('community', {section: 'attachments'}) ~ '?post=' ~ post.id)|safe_url }}">{{ t('operations.all_files') }}</a></p>{% endif %}
+{% for file in data.extras[post.id].attachments %}
+<p><a href="{{ path('community.media', {media: file.id})|safe_url }}"><bdi>{{ file.original_name }}</bdi></a></p>
+{% if actor == post.user_id %}<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'remove_media' }}"><input type="hidden" name="media" value="{{ file.id }}">
+<button>{{ t('community.remove_attachment') }}</button></form>{% endif %}
+{% endfor %}
+</section>
+{% endfor %}

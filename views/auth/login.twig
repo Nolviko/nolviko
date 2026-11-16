@@ -1,0 +1,32 @@
+{# Login (M02.04). Context: language, title, action, csrf_field, csrf_token, identifier, error (translated or
+   null), register_url, resend_url, forgot_url. The password field is never filled in. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="login-identifier">{{ t('auth.login.identifier') }}</label>
+<input id="login-identifier" name="identifier" type="text" required autocomplete="username" value="{{ identifier }}"></p>
+<p><label for="login-password">{{ t('auth.login.password') }}</label>
+<input id="login-password" name="password" type="password" required autocomplete="current-password"></p>
+<p><input id="login-remember" name="remember" type="checkbox" value="1">
+<label for="login-remember">{{ t('auth.login.remember') }}</label></p>
+<p><button type="submit">{{ t('auth.login.submit') }}</button></p>
+</form>
+{% if external|default([]) is not empty %}
+<div class="stack external-logins">
+<p class="muted">{{ t('auth.external.or') }}</p>
+{% for button in external %}<a class="btn btn-s" href="{{ button.url|safe_url }}">{{ button.label }}</a>
+{% endfor %}
+</div>
+{% endif %}
+<p><a href="{{ forgot_url|safe_url }}">{{ t('auth.login.forgot') }}</a></p>
+<p><a href="{{ register_url|safe_url }}">{{ t('auth.login.register') }}</a></p>
+<p><a href="{{ resend_url|safe_url }}">{{ t('auth.login.resend') }}</a></p>
+{% endblock %}

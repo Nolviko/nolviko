@@ -1,0 +1,79 @@
+{# One member (V1 gap list, 2026-11-07). Context: title, nav, member (id, username, email, status, joined), groups
+   (id, name, primary, url), available (id, name), protected (another administrator: no identity or reset forms),
+   username_value, email_value, action, list_url, error, notice, fresh, reauth_url, csrf_field,
+   csrf_token. Every change needs a fresh password confirmation and is audited. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+<p><a href="{{ list_url|safe_url }}">{{ t('admin.member.back') }}</a></p>
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.groups.reauth') }}</a></p>{% endif %}
+<dl>
+<dt>{{ t('admin.members.name') }}</dt><dd><bdi>{{ member.username }}</bdi></dd>
+<dt>{{ t('admin.members.email') }}</dt><dd><bdi>{{ member.email }}</bdi></dd>
+<dt>{{ t('admin.members.status_filter') }}</dt><dd>{{ member.status }}</dd>
+<dt>{{ t('admin.members.joined') }}</dt><dd>{{ member.joined|format_datetime }}</dd>
+</dl>
+
+<h2>{{ t('admin.member.groups') }}</h2>
+<ul>
+{% for group in groups %}
+<li><a href="{{ group.url|safe_url }}"><bdi>{{ group.name }}</bdi></a>{% if group.primary %} <span class="chip">{{ t('admin.groups.primary') }}</span>{% endif %}
+{% if fresh %}<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="group" value="{{ group.id }}">
+{% if not group.primary %}<button type="submit" name="action" value="{{ 'primary' }}">{{ t('admin.member.make_primary') }}</button>
+<button class="btn-d" type="submit" name="action" value="{{ 'remove_group' }}" aria-label="{{ t('admin.member.remove_label', {group: group.name}) }}">{{ t('admin.groups.remove') }}</button>{% endif %}
+</form>{% endif %}</li>
+{% else %}
+<li>{{ t('admin.member.no_groups') }}</li>
+{% endfor %}
+</ul>
+{% if available is not empty %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="member-group">{{ t('admin.member.add_group') }}</label>
+<select id="member-group" name="group">
+{% for group in available %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}
+</select></p>
+<p><button type="submit" name="action" value="{{ 'add_group' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.groups.add') }}</button></p>
+</form>
+{% endif %}
+
+<h2>{{ t('admin.member.account') }}</h2>
+{% if protected %}
+<p class="hint">{{ t('admin.groups.error.member_admin_protected') }}</p>
+{% else %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="member-username">{{ t('admin.members.name') }}</label>
+<input id="member-username" name="username" type="text" required minlength="3" maxlength="32" autocomplete="off" dir="auto" value="{{ username_value }}"></p>
+<p><button type="submit" name="action" value="{{ 'rename' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.member.rename') }}</button></p>
+</form>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="member-email">{{ t('admin.members.email') }}</label>
+<input id="member-email" name="email" type="email" required maxlength="254" autocomplete="off" value="{{ email_value }}">
+<span class="hint">{{ t('admin.member.email_hint') }}</span></p>
+<p><button type="submit" name="action" value="{{ 'change_email' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.member.change_email') }}</button></p>
+</form>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p>{{ t('admin.member.reset_help') }}</p>
+<p><button class="btn-s" type="submit" name="action" value="{{ 'reset_password' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.member.reset') }}</button></p>
+</form>
+{% if second_factor|default(false) %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p>{{ t('admin.member.second_factor_help') }}</p>
+<p><button class="btn-d" type="submit" name="action" value="{{ 'reset_second_factor' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.member.second_factor_reset') }}</button></p>
+</form>
+{% endif %}
+{% if pending_verification|default(false) %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p>{{ t('admin.member.verify_help') }}</p>
+<p><button class="btn-s" type="submit" name="action" value="{{ 'resend_verification' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.member.verify_resend') }}</button></p>
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

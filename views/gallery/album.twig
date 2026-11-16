@@ -1,0 +1,54 @@
+{# One gallery album (2026-11-08). Context: title, album (id, user_id, username, title, description, visibility,
+   manageable), action, back_url, images (id, title, status), more, visibilities, rules (max_mb, types, accept,
+   quota_mb, approval, used_mb), error, notice, csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ path('gallery')|safe_url }}">{{ t('gallery.title') }}</a><span aria-hidden="true">/</span><a href="{{ back_url|safe_url }}"><bdi>{{ album.username }}</bdi></a></nav>
+<h1 dir="auto">{{ album.title }}</h1>
+<p class="meta">{{ t('gallery.visibility', {mode: album.visibility}) }}</p>
+{% if album.description %}<p class="lead" dir="auto">{{ album.description }}</p>{% endif %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+
+{% if album.manageable %}
+<section class="panel gallery-upload" aria-labelledby="gallery-upload-heading">
+<h2 id="gallery-upload-heading">{{ t('gallery.upload') }}</h2>
+<form method="post" action="{{ action|safe_url }}" enctype="multipart/form-data">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="gallery-file">{{ t('gallery.file') }}</label>
+<input id="gallery-file" name="file" type="file" required accept="{{ rules.accept }}" aria-describedby="gallery-limits"></p>
+<p><label for="gallery-image-title">{{ t('gallery.image_title') }}</label>
+<input id="gallery-image-title" name="title" type="text" maxlength="100" dir="auto"></p>
+<p id="gallery-limits" class="hint">{{ t('gallery.limits', {max: rules.max_mb, types: rules.types}) }}{% if rules.quota_mb > 0 %} {{ t('gallery.quota', {used: rules.used_mb, max: rules.quota_mb}) }}{% endif %}{% if rules.approval %} {{ t('gallery.approval_note') }}{% endif %}</p>
+<p><button type="submit" name="action" value="{{ 'upload' }}">{{ t('gallery.upload') }}</button></p>
+</form>
+</section>
+{% endif %}
+
+{% if images is empty %}
+<div class="panel empty"><p>{{ t('gallery.no_images') }}</p></div>
+{% else %}
+<ul class="gallery-grid">
+{% for image in images %}<li><a href="{{ path('gallery.item', {item: image.id})|safe_url }}" data-lightbox="{{ path('gallery.file', {item: image.id, variant: 'full'}) }}" data-lightbox-alt="{{ image.title }}"><img src="{{ path('gallery.file', {item: image.id, variant: 'thumb'})|safe_url }}" alt="{{ image.title }}" loading="lazy"></a>{% if image.status == 'pending' %}<span class="chip chip-amber">{{ t('gallery.awaiting') }}</span>{% endif %}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if more %}<p><a class="btn btn-s" href="{{ more|safe_url }}">{{ t('forums.feed.more') }}</a></p>{% endif %}
+
+{% if album.manageable %}
+<details class="panel gallery-settings">
+<summary>{{ t('gallery.edit_album') }}</summary>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% include 'gallery/album_fields.twig' %}
+<p><button type="submit" name="action" value="{{ 'save' }}">{{ t('gallery.save') }}</button></p>
+</form>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><button class="btn-danger" type="submit" name="action" value="{{ 'delete_album' }}">{{ t('gallery.delete_album') }}</button></p>
+</form>
+</details>
+{% endif %}
+<div id="lightbox-labels" hidden data-title="{{ t('core.lightbox.title') }}" data-close="{{ t('core.lightbox.close') }}"></div>
+<script src="{{ asset('lightbox.js') }}" defer></script>
+{% endblock %}

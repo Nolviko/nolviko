@@ -1,0 +1,7 @@
+{# Installer progress (design "Kurulum sihirbazı"). Context: step (1-5), set by the including page. #}
+{% set labels = [t('installer.steps.prerequisites'), t('installer.steps.database'), t('installer.steps.migrate'), t('installer.steps.mail'), t('installer.steps.admin')] %}
+<ol class="steps" aria-label="{{ t('installer.steps.label') }}">
+{% for label in labels %}
+<li{% if loop.index == step %} aria-current="step"{% endif %}>{{ label }}</li>
+{% endfor %}
+</ol>

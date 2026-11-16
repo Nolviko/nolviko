@@ -1,0 +1,16 @@
+{# After registering (M02.03). Context: title, open (open mode, M02.03a), resend_url, login_url. The same page for every accepted form, so
+   it does not tell whether the address had an account already. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if open %}
+<p role="status">{{ t('auth.register.sent_open') }}</p>
+{% else %}
+<p role="status">{{ t('auth.register.sent') }}</p>
+<p><a href="{{ resend_url|safe_url }}">{{ t('auth.register.no_mail') }}</a></p>
+{% endif %}
+<p><a href="{{ login_url|safe_url }}">{{ t('auth.register.to_login') }}</a></p>
+{% endblock %}

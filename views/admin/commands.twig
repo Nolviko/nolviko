@@ -1,0 +1,16 @@
+{# Only links from the existing administrator navigation; no destructive command or arbitrary destination. #}
+<details class="admin-commands" data-admin-commands>
+<summary aria-keyshortcuts="Control+K Meta+K">{{ t('admin.commands.title') }}</summary>
+<div data-command-tools hidden>
+<label for="admin-command-filter">{{ t('admin.commands.filter') }}</label>
+<input id="admin-command-filter" data-command-filter type="search" maxlength="120" autocomplete="off"
+       aria-controls="admin-command-results" aria-describedby="admin-command-help">
+<p id="admin-command-help">{{ t('admin.commands.help') }}</p>
+</div>
+<ul id="admin-command-results" data-command-results>
+{% for item in nav %}
+<li><a href="{{ item.url|safe_url }}">{{ item.label }}</a></li>
+{% endfor %}
+</ul>
+<p role="status" data-command-status data-empty-message="{{ t('admin.commands.empty') }}"></p>
+</details>

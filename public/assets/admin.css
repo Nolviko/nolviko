@@ -1,0 +1,116 @@
+/* Admin-only additions on top of theme.css (layout, navigation and tables live there). */
+:root { --admin-focus: var(--theme-focus, #1a5fb4); --admin-gap: 1rem; --admin-sidebar: 15rem; }
+.admin-commands { padding: 10px 14px; margin: 0; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-l); }
+.admin-commands summary { cursor: pointer; color: var(--ink-2); }
+.admin-commands [data-command-results] { max-block-size: 22rem; overflow: auto; padding-inline-start: 1.5rem; }
+.admin-commands [data-command-results] a { display: inline-block; padding-block: .4rem; }
+.admin-commands [hidden] { display: none !important; }
+.admin-commands input { inline-size: 100%; }
+.admin form[aria-busy="true"] { cursor: progress; }
+.admin button[aria-disabled="true"] { cursor: progress; opacity: .7; }
+.admin-main table { display: block; max-inline-size: 100%; overflow: auto; background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--r-l); }
+.admin-main td, .admin-main th { overflow-wrap: anywhere; }
+.admin-main td form { display: inline-flex; flex-flow: row wrap; gap: 6px; align-items: center; }
+.admin-main td button { min-block-size: 36px; padding: 6px 12px; font-size: 13.5px; }
+.admin-main > form, .admin-main > section, .admin-main > fieldset { padding: 20px 22px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--r-l); }
+.admin-main > ul:not([class]) { padding: 14px 20px 14px 36px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-l); }
+.admin-main progress { inline-size: 100%; accent-color: var(--accent); }
+
+/* Admin page polish (design pass 2026-11-07): styles the existing markup only, so the server-rendered forms and the
+   admin tests keep their structure. */
+.admin-main table { border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.admin-main table th { padding: 10px 14px; background: var(--sunken); color: var(--ink-3); font-size: 12px;
+    font-weight: 650; letter-spacing: .04em; text-align: start; text-transform: uppercase; white-space: nowrap;
+    border-block-end: 1px solid var(--line); }
+.admin-main table td { padding: 12px 14px; vertical-align: middle; border-block-end: 1px solid var(--line); }
+.admin-main table tbody tr:last-child td { border-block-end: 0; }
+.admin-main table tbody tr:hover td { background: color-mix(in srgb, var(--sunken) 55%, transparent); }
+.admin-main table td:first-child input[type="checkbox"] { margin: 0; }
+/* GET filter bars (search, members, audit, settings): fields sit side by side and wrap; works both when every field
+   has its own <p> and when one <p> holds them all. Fields never grow (a flex basis in a column became a height). */
+.admin-main > form[method="get"] { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px;
+    padding: 14px 18px; }
+.admin-main > form[method="get"] > p { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.admin-main > form[method="get"] > p:has(> label ~ label) { flex-direction: row; flex-wrap: wrap; align-items: center;
+    gap: 8px 12px; flex: 1 1 100%; }
+.admin-main > form[method="get"] label { font-size: 13px; color: var(--ink-3); font-weight: 600; }
+.admin-main > form[method="get"] :where(input:not([type="checkbox"]), select) { flex: none; inline-size: auto;
+    min-inline-size: 180px; max-inline-size: 100%; min-block-size: 38px; block-size: auto; }
+.admin-main > form[method="get"] > p:has(> button) { margin-inline-start: auto; flex-direction: row; }
+.admin-main > form[method="get"] > p > button:last-child { margin-inline-start: auto; }
+.admin-main > form[method="get"] > [data-submit-status] { flex-basis: 100%; }
+/* Empty states */
+.admin-empty { margin: 0; padding: 32px 20px; text-align: center; color: var(--ink-3); background: var(--surface);
+    border: 1px dashed var(--line-strong); border-radius: var(--r-l); }
+/* Lone links under a block read as quiet buttons (save filter, re-authenticate, older pages) */
+.admin-main > p > a:only-child, .admin-main a[rel="next"], .admin-main a[rel="prev"] { display: inline-flex;
+    align-items: center; min-block-size: 36px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--ink-2); font-size: 14px; font-weight: 600; text-decoration: none; }
+.admin-main > p > a:only-child:hover, .admin-main a[rel="next"]:hover, .admin-main a[rel="prev"]:hover {
+    border-color: var(--accent); color: var(--accent-text); }
+/* Action rows under tables and forms */
+.admin-main form > p:last-child:has(> button) { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 14px 0; }
+.admin-main > form:not([method="get"]):has(> table) { padding: 0; border: 0; background: transparent; }
+.admin-main section > h2, .admin-main > form > h2, .admin-main fieldset > legend { font: 650 17px/1.3 var(--display);
+    margin-block-end: 10px; }
+.admin-main fieldset { border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+@media (max-width: 760px) {
+    .admin-main > form[method="get"] > p { flex: 1 1 100%; }
+    .admin-main > form[method="get"] :where(input:not([type="checkbox"]), select) { inline-size: 100%; }
+}
+@media (min-width: 761px) {
+    .admin-main table { display: table; inline-size: 100%; overflow: hidden; }
+}
+
+/* Row lists with inline forms (forum tree, saved searches, forum moderators; 2026-11-07): one compact row per
+   item instead of stacked full-width controls. */
+.admin-main > ul:not([class]) { list-style: none; padding: 0 18px; gap: 0; }
+.admin-main > ul:not([class]) > li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    padding: 12px 0; border-block-end: 1px solid var(--line); }
+.admin-main > ul:not([class]) > li:last-child { border-block-end: 0; }
+.admin-main li > form, .admin-main td > form { display: flex; flex-flow: row wrap; align-items: center; gap: 8px;
+    margin: 0; padding: 0; background: none; border: 0; flex: 1 1 auto; }
+.admin-main li > form > strong { margin-inline-end: 4px; }
+.admin-main li > form label, .admin-main td > form label { display: inline; font-size: 13px; font-weight: 500;
+    color: var(--ink-3); }
+.admin-main li > form select, .admin-main td > form select { inline-size: auto; min-inline-size: 9rem;
+    min-block-size: 34px; padding: 4px 10px; flex: 0 1 auto; }
+.admin-main li > form button, .admin-main td > form button { min-block-size: 34px; padding: 5px 12px; font-size: 13px;
+    background: var(--surface); color: var(--ink-2); border: 1px solid var(--line-strong); }
+.admin-main li > form button:hover, .admin-main td > form button:hover { border-color: var(--accent);
+    color: var(--accent-text); background: var(--accent-soft); }
+.admin-main li > form button.btn-d, .admin-main td > form button.btn-d { color: var(--danger-text);
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.admin-main li > form button.btn-d:hover, .admin-main td > form button.btn-d:hover { background: var(--danger-soft);
+    color: var(--danger-text); border-color: var(--danger); }
+.admin-main li > form [data-submit-status] { flex-basis: 100%; }
+/* Forum tree depth */
+.admin-main > ul:not([class]) > li.forum-depth-1 { padding-inline-start: 24px; }
+.admin-main > ul:not([class]) > li.forum-depth-2 { padding-inline-start: 48px; }
+.admin-main > ul:not([class]) > li[class*="forum-depth-"]:not(.forum-depth-0):not(.forum-depth-1):not(.forum-depth-2) {
+    padding-inline-start: 72px; }
+/* Grouped sidebar */
+.admin-nav-group + .admin-nav-group { margin-block-start: 10px; padding-block-start: 10px;
+    border-block-start: 1px solid var(--line); }
+.admin-nav-group > .admin-nav-label { padding: 4px 12px 6px; }
+@media (max-width: 760px) {
+    /* One horizontally scrolling row of links on small screens; section headings are hidden there. */
+    .admin-nav { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 2px; }
+    .admin-nav-group, .admin-nav-group > ul { display: contents; }
+    .admin-nav-group > .admin-nav-label { display: none; }
+    .admin-nav-group + .admin-nav-group { margin: 0; padding: 0; border: 0; }
+}
+/* Read-only definition lists (registration policy, diagnostics) sit on a card like the forms. */
+.admin-main > dl:not([class]) { margin: 0; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-l); }
+/* Forum tree: the edit panel opens under its row (2026-11-07). */
+.admin-main li > details.forum-edit { flex-basis: 100%; padding: 0; border: 0; background: none; }
+.admin-main li > details.forum-edit > summary { font-size: 13px; color: var(--accent-text); cursor: pointer; }
+.admin-main li > details.forum-edit > form { display: flex; flex-direction: column; gap: 10px; margin-block-start: 10px;
+    padding: 14px 16px; background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r); }
+.admin-main li > details.forum-edit > form label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.admin-main li > details.forum-edit textarea { min-block-size: 80px; font-family: var(--body); }

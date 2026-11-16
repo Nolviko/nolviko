@@ -1,0 +1,38 @@
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+<p>{{ t('admin.settings.intro') }}</p>
+<form data-admin-progress method="get" action="{{ action|safe_url }}" role="search">
+<p><label for="settings-query">{{ t('admin.settings.search') }}</label>
+<input id="settings-query" name="q" type="search" maxlength="120" value="{{ query }}"></p>
+<p><label for="settings-group">{{ t('admin.settings.group') }}</label>
+<select id="settings-group" name="group">
+<option value="">{{ t('admin.settings.all_groups') }}</option>
+{% for group in groups %}
+<option value="{{ group.id }}"{% if group.id == selected_group %} selected{% endif %}>{{ group.label }}</option>
+{% endfor %}
+</select></p>
+<p><button type="submit">{{ t('admin.settings.search') }}</button></p>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% if save_filter_url is defined %}<p><a href="{{ save_filter_url|safe_url }}">{{ t('admin.saved.current') }}</a></p>{% endif %}
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% else %}
+<p role="status">{{ t('admin.settings.results', {count: rows|length}) }}</p>
+{% if rows is empty %}<p class="admin-empty">{{ t('admin.settings.empty') }}</p>{% endif %}
+{% for row in rows %}
+<section aria-labelledby="setting-{{ loop.index }}">
+<h2 id="setting-{{ loop.index }}">{{ row.label }}</h2>
+<dl>
+<dt>{{ t('admin.settings.key') }}</dt><dd><code>{{ row.key }}</code></dd>
+<dt>{{ t('admin.settings.group') }}</dt><dd>{{ row.group }}</dd>
+<dt>{{ t('admin.settings.type') }}</dt><dd>{{ row.type }}</dd>
+<dt>{{ t('admin.settings.value') }}</dt><dd>{{ row.value }}</dd>
+</dl>
+<p>{{ t('admin.settings.readonly') }}</p>
+{% if row.url is not null %}<p><a href="{{ row.url|safe_url }}">{{ t('admin.settings.related') }}</a></p>{% endif %}
+</section>
+{% endfor %}
+{% endif %}
+{% endblock %}

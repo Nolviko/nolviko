@@ -1,0 +1,13 @@
+{# Confirm a new email address, HTML (M02.16). Context: name, url, subject, language. Extends mail/layout.html.twig (design pass 2026-11-07). #}
+{% extends 'mail/layout.html.twig' %}
+{% set action_url = url %}
+{% set action_label = t('mail.email_change.button') %}
+{% block body %}
+<p style="margin:0 0 14px;">{{ t('mail.email_change.greeting', {name: name}) }}</p>
+<p style="margin:0 0 14px;">{{ t('mail.email_change.body') }}</p>
+{% endblock %}
+{% block after_action %}
+<p style="margin:0 0 14px;color:#414f48;font-size:13px;word-break:break-all;"><a href="{{ url|safe_url }}" style="color:#0a6e5c;">{{ url }}</a></p>
+<p style="margin:0 0 14px;color:#414f48;font-size:14px;">{{ t('mail.email_change.expiry') }}</p>
+<p style="margin:0 0 14px;color:#414f48;font-size:14px;">{{ t('mail.email_change.not_you') }}</p>
+{% endblock %}

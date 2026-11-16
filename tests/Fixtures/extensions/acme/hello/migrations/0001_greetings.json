@@ -1,0 +1,8 @@
+{
+  "tables": {
+    "greetings": {
+      "id": "bigint",
+      "message": "string"
+    }
+  }
+}

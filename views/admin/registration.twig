@@ -1,0 +1,24 @@
+{# Registration settings, read only (M02.03a). Context: title, nav, mode and challenge (translated),
+   min_seconds, network_seconds, approval (accounts wait in the queue), queue_url. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+<dl>
+<dt>{{ t('admin.registration.mode') }}</dt><dd>{{ mode }}</dd>
+<dt>{{ t('admin.registration.honeypot') }}</dt><dd>{{ t('admin.registration.honeypot_on') }}</dd>
+<dt>{{ t('admin.registration.min_time') }}</dt><dd>{{ t('admin.registration.seconds', {seconds: min_seconds}) }}</dd>
+<dt>{{ t('admin.registration.challenge') }}</dt><dd>{{ challenge }}</dd>
+<dt>{{ t('admin.registration.network_limit') }}</dt>
+{% if network_seconds > 0 %}
+<dd>{{ t('admin.registration.network_every', {seconds: network_seconds}) }}</dd>
+{% else %}
+<dd>{{ t('admin.registration.network_off') }}</dd>
+{% endif %}
+<dt>{{ t('admin.registration.third_party') }}</dt><dd>{{ t('admin.registration.third_party_none') }}</dd>
+</dl>
+{% if approval %}
+<p><a href="{{ queue_url|safe_url }}">{{ t('admin.registration.queue') }}</a></p>
+{% endif %}
+<p>{{ t('admin.registration.change') }}</p>
+<p><a href="{{ path('admin.site')|safe_url }}">{{ t('admin.site.edit_link') }}</a></p>
+{% endblock %}

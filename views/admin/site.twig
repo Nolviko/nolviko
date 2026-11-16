@@ -1,0 +1,25 @@
+{# Site settings (ADR-034). Context: title, nav, action, fields (key, id, label, hint, type, value, options, min, max,
+   pinned, default), error, notice, fresh, reauth_url, csrf_field, csrf_token. Pinned fields come from config/local.php and
+   are read-only here; database credentials, secrets and SMTP access are never editable in the browser. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('admin.site.intro') }}</p>
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.site.reauth') }}</a></p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% for field in fields %}
+<p><label for="{{ field.id }}">{{ field.label }}</label>
+{% if field.type == 'enum' %}<select id="{{ field.id }}" name="setting[{{ field.key }}]"{% if field.pinned %} disabled{% endif %}>
+{% for option in field.options %}<option value="{{ option.value }}"{% if option.value == field.value or (field.value == '' and option.value == field.default) %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select>
+{% elseif field.type == 'int' %}<input id="{{ field.id }}" name="setting[{{ field.key }}]" type="number" min="{{ field.min }}" max="{{ field.max }}" value="{{ field.value }}"{% if field.pinned %} disabled{% endif %}>
+{% else %}<input id="{{ field.id }}" name="setting[{{ field.key }}]" type="{{ field.type == 'email' ? 'email' : 'text' }}" maxlength="{{ field.max }}" value="{{ field.value }}" dir="auto"{% if field.pinned %} disabled{% endif %}>
+{% endif %}
+{% if field.pinned %}<span class="hint">{{ t('admin.site.pinned') }}</span>{% elseif field.hint %}<span class="hint">{{ field.hint }}</span>{% endif %}</p>
+{% endfor %}
+<p><button type="submit"{% if not fresh %} disabled{% endif %}>{{ t('admin.site.save') }}</button></p>
+</form>
+<p class="hint">{{ t('admin.site.secrets_note') }}</p>
+{% endblock %}

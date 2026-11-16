@@ -1,0 +1,7 @@
+{# An extension's settings page inside the admin area (2026-11-15, first used by the SEO extension). Context:
+   title, nav (AdminNavigation items), body (SafeHtml the extension built and escaped itself). #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{{ body }}
+{% endblock %}

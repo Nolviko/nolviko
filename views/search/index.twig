@@ -1,0 +1,36 @@
+{% extends 'layouts/page.twig' %}
+{% block head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ index_url|safe_url }}">{{ t('forums.show.back') }}</a></nav>
+<form class="card search-form" method="get" action="{{ action|safe_url }}" role="search" aria-label="{{ t('search.title') }}">
+<p><label for="search-query">{{ t('search.query') }}</label>
+<input id="search-query" type="search" name="q" required maxlength="120" value="{{ query }}"
+ aria-describedby="search-help" dir="auto"></p>
+<p id="search-help" class="hint">{{ t('search.help') }}</p>
+<p><button type="submit">{{ t('search.submit') }}</button></p>
+<div class="filters-grid">
+<p><label>{{ t('search.filter_forum') }} {% if forum_options|default([]) is not empty %}<select name="forum"><option value="">{{ t('search.filter_forum_any') }}</option>
+{% for option in forum_options %}<option value="{{ option.id }}"{% if not option.selectable %} disabled{% endif %}{% if filters.forum|default(null) == option.id %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select>{% else %}<input type="number" name="forum" min="1" value="{{ filters.forum|default('') }}">{% endif %}</label></p>
+<p><label>{{ t('search.filter_author') }} <input type="text" name="author_name" maxlength="64" autocomplete="off" dir="auto" data-autocomplete="members" value="{{ author_name|default('') }}"></label></p>
+<p><label>{{ t('search.filter_from') }} <input type="date" name="from" value="{{ filters.from|default('') }}"></label></p>
+<p><label>{{ t('search.filter_until') }} <input type="date" name="until" value="{{ filters.until|default('') }}"></label></p>
+</div>
+</form>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if searched %}
+<p role="status">{% if partial|default(false) %}{{ t('search.count_partial', {count: count}) }}{% else %}{{ capped ? t('search.count_capped', {count: count}) : t('search.count', {count: count}) }}{% endif %}</p>
+<div class="panel">
+{% for item in rows %}
+<article class="result">
+<h2 dir="auto"><a href="{{ item.url|safe_url }}">{{ item.title }}</a></h2>
+<p class="meta">{% if item.author is not null %}<bdi>{{ item.author }}</bdi>{% else %}{{ t('threads.show.removed_account') }}{% endif %}
+ · <time datetime="{{ item.date|date('c') }}">{{ item.date|format_datetime }}</time></p>
+<p dir="auto">{{ item.excerpt }}</p>
+</article>
+{% else %}<p class="empty">{{ t('search.empty') }}</p>{% endfor %}
+</div>
+{% if next %}<p><a rel="next" href="{{ next|safe_url }}" class="btn btn-s">{{ t('search.older') }}</a></p>{% endif %}
+{% endif %}
+{% endblock %}

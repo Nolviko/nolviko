@@ -1,0 +1,22 @@
+{# Ask for a new verification link (M02.03). Context: title, action, csrf_field, csrf_token, sent, error
+   (translated or null), login_url. The answer is the same for every address. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% elseif sent %}
+<p role="status">{{ t('auth.resend.sent') }}</p>
+{% endif %}
+<p>{{ t('auth.resend.intro') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="resend-email">{{ t('auth.register.email') }}</label>
+<input id="resend-email" name="email" type="email" required autocomplete="email" maxlength="254"></p>
+<p><button type="submit">{{ t('auth.resend.submit') }}</button></p>
+</form>
+<p><a href="{{ login_url|safe_url }}">{{ t('auth.register.to_login') }}</a></p>
+{% endblock %}

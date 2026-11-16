@@ -1,0 +1,71 @@
+{
+  "name": "nolviko/nolviko",
+  "description": "Nolviko forum software",
+  "type": "project",
+  "license": "Apache-2.0",
+  "homepage": "https://nolviko.com",
+  "require": {
+    "php": "~8.4.27 || ~8.5.12",
+    "ext-fileinfo": "*",
+    "ext-intl": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-openssl": "*",
+    "ext-pdo": "*",
+    "ext-session": "*",
+    "ext-sodium": "*",
+    "ext-zip": "*",
+    "doctrine/dbal": "~4.5.0",
+    "symfony/event-dispatcher": "~7.4.17",
+    "symfony/http-foundation": "~7.4.23",
+    "symfony/mailer": "~7.4.22",
+    "symfony/mime": "~7.4.22",
+    "symfony/routing": "~7.4.23",
+    "symfony/translation": "~7.4.22",
+    "twig/twig": "~3.30.0",
+    "composer/semver": "~3.5.2"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "12.5.42",
+    "squizlabs/php_codesniffer": "~4.0.4"
+  },
+  "replace": {
+    "symfony/polyfill-intl-idn": "*",
+    "symfony/polyfill-intl-normalizer": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Nolviko\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Nolviko\\Tests\\": "tests/",
+      "Nolviko\\Tools\\": "tools/src/"
+    }
+  },
+  "scripts": {
+    "test": [
+      "@style",
+      "@php -d memory_limit=128M vendor/bin/phpunit --testsuite Unit,Contract --colors=never"
+    ],
+    "bench": "@php -d memory_limit=128M vendor/bin/phpunit --testsuite Performance --colors=never",
+    "smoke": "@php tools/check-foundation.php",
+    "style": "@php -d memory_limit=128M vendor/bin/phpcs --standard=phpcs.xml.dist",
+    "style:fix": "@php -d memory_limit=128M vendor/bin/phpcbf --standard=phpcs.xml.dist"
+  },
+  "suggest": {
+    "ext-pdo_mysql": "Required for the selected MySQL or MariaDB backend",
+    "ext-pdo_pgsql": "Required for the selected PostgreSQL backend",
+    "ext-gd": "Optional JPEG/PNG avatar and image re-encoding; ordinary forum and file downloads work without it"
+  },
+  "config": {
+    "allow-plugins": false,
+    "sort-packages": true,
+    "optimize-autoloader": true,
+    "platform": {
+      "php": "8.4.27"
+    },
+    "process-timeout": 0
+  }
+}

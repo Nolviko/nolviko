@@ -1,0 +1,9 @@
+{# A refused report decision (M04.07). Context: title, error (translated), queue_url. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p role="alert">{{ error }}</p>
+<p><a href="{{ queue_url|safe_url }}">{{ t('moderation.decision.back') }}</a></p>
+{% endblock %}

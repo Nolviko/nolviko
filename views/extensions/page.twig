@@ -1,0 +1,10 @@
+{# A page an extension shows inside the site layout (2026-11-15, first used by the TOTP extension). Context: title,
+   body (SafeHtml the extension built and escaped itself), wide (optional bool). #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<div class="stack-l{{ wide|default(false) ? '' : ' ext-page-narrow' }}">
+{{ body }}
+</div>
+{% endblock %}

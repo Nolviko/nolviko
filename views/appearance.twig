@@ -1,0 +1,16 @@
+{% extends 'layouts/page.twig' %}
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>{{ t('core.theme.intro') }}</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="appearance-mode">{{ t('core.theme.mode') }}</label>
+<select name="appearance" id="appearance-mode">
+{% for choice in modes %}
+<option value="{{ choice }}"{% if choice == mode %} selected{% endif %}>{{ t('core.theme.mode_value', {mode: choice}) }}</option>
+{% endfor %}</select></p>
+<button type="submit">{{ t('core.theme.save') }}</button>
+</form>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'layouts/page.twig' %}
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ index_url|safe_url }}">{{ t('conversations.back') }}</a></nav>
+<h1>{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if conversation %}
+<h2 dir="auto">{{ conversation.subject }}</h2>
+{% if conversation.import_job_id|default(null) %}<p>{{ t('operations.private_archive') }}</p>{% endif %}
+{% for file in files|default([]) %}<p><a href="{{ path('import.private_file', {file: file.id})|safe_url }}"><bdi>{{ file.original_name }}</bdi></a></p>{% endfor %}
+{% if files_older|default(null) %}<p><a href="{{ files_older|safe_url }}">{{ t('operations.more_files') }}</a></p>{% endif %}
+{% if older %}<p><a href="{{ older|safe_url }}">{{ t('conversations.older_messages') }}</a></p>{% endif %}
+<div class="panel posts">
+{% for item in conversation.messages %}
+<article class="post"><span class="av av-l c{{ (item.author ?? '')|length % 5 + 1 }}" aria-hidden="true">{{ (item.author ?? '?')|first }}</span><div class="post-content"><h3 class="post-head">{% if item.author is not null %}<bdi>{{ item.author }}</bdi>{% else %}{{ t('threads.show.removed_account') }}{% endif %}</h3>
+<p class="meta"><time datetime="{{ item.date|date('c') }}">{{ item.date|format_datetime }}</time></p>
+<div class="private-message post-body" dir="auto">{{ item.html }}</div></div></article>
+{% endfor %}
+</div>
+{% if conversation.reply %}
+{% if preview|default(null) %}<section class="card post-preview" aria-labelledby="post-preview-heading"><h2 id="post-preview-heading">{{ t('threads.preview.heading') }}</h2><div class="post-body" dir="auto">{{ preview }}</div></section>{% endif %}
+<form class="card" method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="reply">{{ t('conversations.message') }}</label>
+{% include 'components/editor_toolbar.twig' with {target: 'reply'} only %}
+<textarea id="reply" data-mentions name="content" required maxlength="8000" rows="6" dir="auto">{{ content }}</textarea></p>
+<p><button>{{ t('conversations.reply') }}</button>
+<button class="btn-s" type="submit" name="intent" value="{{ preview_intent }}" formnovalidate>{{ t('threads.preview.button') }}</button></p>
+</form>
+{% else %}<p class="alert alert-info">{{ t('conversations.closed') }}</p>{% endif %}
+{% endif %}
+{% endblock %}

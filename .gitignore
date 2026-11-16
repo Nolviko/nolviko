@@ -1,0 +1,12 @@
+# vendor/ is committed on purpose: it is the production install (composer install --no-dev), so a copy of
+# this folder runs on shared hosting without Composer. Never install development packages into it.
+/.env
+/build/
+# storage/ holds runtime data (sessions, caches, logs, keys): only its deny-all .htaccess is committed.
+/storage/*
+!/storage/.htaccess
+/.phpunit.cache/
+/node_modules/
+/config/local.php
+/config/install.lock
+/config/maintenance.lock

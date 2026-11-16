@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'gallery.title' => 'Gallery',
+    'gallery.latest' => 'Latest images',
+    'gallery.albums' => 'Albums',
+    'gallery.all' => 'All albums',
+    'gallery.mine' => 'My albums',
+    'gallery.new_album' => 'New album',
+    'gallery.create' => 'Create album',
+    'gallery.no_albums' => 'There are no albums to show yet.',
+    'gallery.no_images' => 'This album has no images yet.',
+    'gallery.count' => '{count, plural, one {# image} other {# images}}',
+    'gallery.visibility' => '{mode, select, public {Everyone} members {Members only} private {Only me} other {{mode}}}',
+    'gallery.visibility_long' => '{mode, select, public {Everyone, guests included} members {Signed-in members} '
+        . 'private {Only me (and administrators)} other {{mode}}}',
+    'gallery.who_sees' => 'Who can see this album',
+    'gallery.album_title' => 'Album title',
+    'gallery.description' => 'Description',
+    'gallery.upload' => 'Upload image',
+    'gallery.file' => 'Image file',
+    'gallery.image_title' => 'Image title (optional)',
+    'gallery.limits' => 'Up to {max} MB; {types}.',
+    'gallery.quota' => 'You use {used} MB of {max} MB.',
+    'gallery.approval_note' => 'New images wait for a moderator before others see them.',
+    'gallery.awaiting' => 'Awaiting approval',
+    'gallery.edit_album' => 'Album settings',
+    'gallery.save' => 'Save',
+    'gallery.delete_album' => 'Delete album and all its images',
+    'gallery.delete_image' => 'Delete image',
+    'gallery.pending' => 'Images awaiting approval',
+    'gallery.no_pending' => 'No images are waiting.',
+    'gallery.approve' => 'Approve',
+    'gallery.reject' => 'Delete',
+    'gallery.notice.uploaded' => 'The image was added.',
+    'gallery.notice.pending' => 'The image was added and waits for approval.',
+    'gallery.notice.saved' => 'The album was saved.',
+    'gallery.notice.deleted' => 'The image was deleted.',
+    'gallery.attach_album' => 'Post images',
+    'gallery.attach_pending' => 'The image was added; others see it once a moderator approves it.',
+];

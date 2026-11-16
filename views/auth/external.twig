@@ -1,0 +1,38 @@
+{# Signing in with an outside account (2026-11-15). Context: title, message (translated or null), register (null
+   or {action, email, username, csrf_field, csrf_token}), link (null or {action, email, csrf_field, csrf_token}:
+   confirm an existing account's password), errors (translated), login_url, forgot_url. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if message %}
+<p role="alert">{{ message }}</p>
+<p><a class="btn" href="{{ login_url|safe_url }}">{{ t('auth.external.back_to_login') }}</a>
+<a class="btn btn-g" href="{{ forgot_url|safe_url }}">{{ t('auth.login.forgot') }}</a></p>
+{% endif %}
+{% if link|default(null) %}
+{% for error in errors %}<p role="alert">{{ error }}</p>{% endfor %}
+<p>{{ t('auth.external.link_intro', {email: link.email}) }}</p>
+<form method="post" action="{{ link.action|safe_url }}">
+<input type="hidden" name="{{ link.csrf_field }}" value="{{ link.csrf_token }}">
+<p><label for="external-link-password">{{ t('auth.login.password') }}</label>
+<input id="external-link-password" name="password" type="password" required autofocus autocomplete="current-password"></p>
+<p><button type="submit">{{ t('auth.external.link_submit') }}</button>
+<a class="btn btn-g" href="{{ login_url|safe_url }}">{{ t('auth.login_verify.cancel') }}</a></p>
+</form>
+<p><a href="{{ forgot_url|safe_url }}">{{ t('auth.external.link_forgot') }}</a></p>
+{% endif %}
+{% if register %}
+{% for error in errors %}<p role="alert">{{ error }}</p>{% endfor %}
+<p>{{ t('auth.external.register_intro', {email: register.email}) }}</p>
+<form method="post" action="{{ register.action|safe_url }}">
+<input type="hidden" name="{{ register.csrf_field }}" value="{{ register.csrf_token }}">
+<p><label for="external-username">{{ t('auth.external.username') }}</label>
+<input id="external-username" name="username" type="text" required maxlength="32" autocomplete="username" value="{{ register.username }}"></p>
+<p><button type="submit">{{ t('auth.external.register_submit') }}</button>
+<a class="btn btn-g" href="{{ login_url|safe_url }}">{{ t('auth.login_verify.cancel') }}</a></p>
+</form>
+{% endif %}
+{% endblock %}

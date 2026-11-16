@@ -1,0 +1,12 @@
+# When this folder is the document root (shared hosting without a separate public/ document root),
+# serve only public/. Pointing the document root at public/ directly is preferred.
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>
+<IfModule !mod_rewrite.c>
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</IfModule>

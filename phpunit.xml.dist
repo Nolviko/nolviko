@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php" colors="false" failOnWarning="true" failOnRisky="true" cacheResult="false">
+ <testsuites>
+  <testsuite name="Unit"><directory>tests/Unit</directory></testsuite>
+  <testsuite name="Contract"><directory>tests/Contract</directory></testsuite>
+  <testsuite name="Performance"><directory>tests/Performance</directory></testsuite>
+  <!-- Real database engines; skipped unless FORUM_TEST_DB_HOST is set (run-checks docker mode). -->
+  <testsuite name="Integration"><directory>tests/Integration</directory></testsuite>
+ </testsuites>
+ <php>
+  <!-- Tests never write into app/storage: a missing directory means in-memory route compilation. -->
+  <env name="FORUM_STORAGE_DIR" value="tests/.no-storage" force="true"/>
+ </php>
+</phpunit>

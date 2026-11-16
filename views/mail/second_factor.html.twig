@@ -1,0 +1,8 @@
+{# Second sign-in step changed, HTML (2026-11-15). Context: name, event (enabled, disabled, reset), url, subject,
+   language. Extends mail/layout.html.twig. #}
+{% extends 'mail/layout.html.twig' %}
+{% block body %}
+<p style="margin:0 0 14px;">{{ t('mail.email_change_notice.greeting', {name: name}) }}</p>
+<p style="margin:0 0 14px;">{{ event == 'enabled' ? t('mail.second_factor.enabled') : (event == 'reset' ? t('mail.second_factor.reset') : t('mail.second_factor.disabled')) }}</p>
+<p style="margin:0 0 14px;color:#414f48;font-size:14px;">{{ t('mail.second_factor.not_you') }} <a href="{{ url|safe_url }}" style="color:#0a6e5c;word-break:break-all;">{{ url }}</a></p>
+{% endblock %}

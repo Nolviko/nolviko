@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'forums.index.title' => 'Forumlar',
+    'forums.index.empty' => 'Henüz gösterilecek forum yok.',
+    'forums.index.threads' => '{count, plural, one {# konu} other {# konu}}',
+    'forums.index.posts' => '{count, plural, one {# ileti} other {# ileti}}',
+    'forums.index.last_post' => '“{thread}” konusundaki son ileti: {poster}, {date}',
+    'forums.index.last_post_removed' => '“{thread}” konusundaki son ileti: silinmiş hesap, {date}',
+    'forums.index.no_posts' => 'Henüz ileti yok',
+    'forums.index.new_thread' => 'Yeni konu',
+    'forums.show.back' => 'Tüm forumlar',
+    'forums.show.empty' => 'Bu forumda henüz konu yok.',
+    'forums.show.replies' => '{count, plural, other {yanıt}}',
+    'forums.show.subforums' => 'Alt forumlar',
+    'forums.show.moved' => 'Taşındı: {title}',
+    'forums.show.sticky' => 'Sabit',
+    'forums.show.unread' => 'Yeni',
+    'forums.show.mark_read' => 'Tüm konuları okundu işaretle',
+    'forums.show.locked' => 'Kilitli',
+    'forums.show.activity' => 'Başlatan: {author} · son ileti: {poster}, {date}',
+    'forums.show.pages' => 'Konu sayfaları',
+    'forums.show.newer' => 'Daha yeni konular',
+    'forums.show.older' => 'Daha eski konular',
+    'forums.feed.title' => 'Son tartışmalar',
+    'forums.feed.empty' => 'Henüz tartışma yok.',
+    'forums.feed.more' => 'Daha fazla göster',
+    'forums.feed.forums' => 'Forumlar',
+    'forums.show.views' => '{count, plural, other {görüntülenme}}',
+    'forums.feed.tag_title' => 'Etiket: {tag}',
+    'forums.feed.tags' => 'Etiketler',
+    'forums.feed.tag_description' => '{tag} etiketli tartışmalar.',
+    'forums.index.subforums' => 'Alt forumlar:',
+    'forums.index.stat_threads' => 'Konular',
+    'forums.index.stat_posts' => 'İletiler',
+];

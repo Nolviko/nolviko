@@ -1,0 +1,39 @@
+{# Thread commands (M03.08). Context: title, action (form URL), csrf_field, csrf_token, choices (the
+   ThreadCommands values), reason, max_reason, posts_url (split/move/merge page), error (translated or null). The target forum is entered by ID
+   until the admin forum picker exists; the server checks every choice. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<fieldset>
+<legend>{{ t('threads.manage.choose') }}</legend>
+<p><input id="manage-sticky" name="command" type="radio" value="{{ choices.sticky }}" required>
+<label for="manage-sticky">{{ t('threads.manage.command.sticky') }}</label></p>
+<p><input id="manage-unsticky" name="command" type="radio" value="{{ choices.unsticky }}">
+<label for="manage-unsticky">{{ t('threads.manage.command.unsticky') }}</label></p>
+<p><input id="manage-lock" name="command" type="radio" value="{{ choices.lock }}">
+<label for="manage-lock">{{ t('threads.manage.command.lock') }}</label></p>
+<p><input id="manage-unlock" name="command" type="radio" value="{{ choices.unlock }}">
+<label for="manage-unlock">{{ t('threads.manage.command.unlock') }}</label></p>
+<p><input id="manage-move" name="command" type="radio" value="{{ choices.move }}">
+<label for="manage-move">{{ t('threads.manage.command.move') }}</label></p>
+</fieldset>
+<p><label for="manage-forum">{{ t('threads.manage.forum') }}</label>
+{% if forum_options|default([]) is not empty %}<select id="manage-forum" name="forum"><option value="">{{ t('threads.manage.forum_none') }}</option>
+{% for option in forum_options %}<option value="{{ option.id }}"{% if not option.selectable %} disabled{% endif %}>{{ option.label }}</option>{% endfor %}
+</select>{% else %}<input id="manage-forum" name="forum" type="number" min="1" inputmode="numeric">{% endif %}</p>
+<p><input id="manage-stub" name="stub" type="checkbox" value="1" checked>
+<label for="manage-stub">{{ t('threads.manage.stub') }}</label></p>
+<p><label for="manage-reason">{{ t('threads.manage.reason') }}</label>
+<input id="manage-reason" name="reason" type="text" maxlength="{{ max_reason }}" value="{{ reason }}"></p>
+<p><button type="submit">{{ t('threads.manage.submit') }}</button></p>
+</form>
+{% if posts_url|default(null) %}<p><a class="btn btn-s" href="{{ posts_url|safe_url }}">{{ t('threads.manage.posts_link') }}</a>
+{% if labels_url|default(null) %}<a class="btn btn-s" href="{{ labels_url|safe_url }}">{{ t('threads.labels.edit') }}</a>{% endif %}</p>{% endif %}
+{% endblock %}

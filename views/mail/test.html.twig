@@ -1,0 +1,6 @@
+{# Test mail, HTML part (M02.02a). Context: name, subject, language. Extends mail/layout.html.twig (design pass 2026-11-07). #}
+{% extends 'mail/layout.html.twig' %}
+{% block body %}
+<p style="margin:0 0 14px;">{{ t('mail.test.greeting', {name: name}) }}</p>
+<p style="margin:0 0 14px;">{{ t('mail.test.body') }}</p>
+{% endblock %}

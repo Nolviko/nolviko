@@ -1,0 +1,39 @@
+{# Shared HTML mail layout (design pass 2026-11-07). Context: subject, language; children fill `body` and may set
+   `action_url`/`action_label` for one button. Email-safe on purpose: table layout and inline styles only (mail
+   clients drop <style> and CSS variables), no images, scripts, fonts or remote resources, system fonts, colours
+   that keep 4.5:1 contrast on the white card. The plain-text part (.txt.twig) stays the authoritative copy. #}
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{{ subject }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f7f4;color:#15211c;font:16px/1.6 -apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f7f4;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;">
+<tr><td style="padding:0 4px 20px;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
+<td width="28" height="28" align="center" valign="middle" style="width:28px;height:28px;background:#0a6e5c;color:#ffffff;border-radius:9px 9px 9px 2px;font:800 17px/28px -apple-system,'Segoe UI',Roboto,Arial,sans-serif;">{{ (site.name|default('') ?: 'nolviko')|first|lower }}</td>
+<td style="padding-left:9px;font:800 20px/28px -apple-system,'Segoe UI',Roboto,Arial,sans-serif;letter-spacing:-0.5px;color:#15211c;">{{ site.name|default('') ?: 'nolviko' }}</td>
+</tr></table>
+</td></tr>
+<tr><td style="background:#ffffff;border:1px solid #dfe5e0;border-radius:16px;padding:32px;">
+<h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;color:#15211c;">{{ subject }}</h1>
+{% block body %}{% endblock %}
+{% if action_url|default(null) %}
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0 8px;"><tr>
+<td style="background:#0a6e5c;border-radius:10px;"><a href="{{ action_url|safe_url }}" style="display:inline-block;padding:12px 22px;color:#ffffff;font-weight:600;text-decoration:none;border-radius:10px;">{{ action_label }}</a></td>
+</tr></table>
+{% block after_action %}{% endblock %}
+{% endif %}
+</td></tr>
+<tr><td style="padding:20px 4px 0;color:#414f48;font-size:13px;line-height:1.5;">{{ t('mail.footer') }}</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

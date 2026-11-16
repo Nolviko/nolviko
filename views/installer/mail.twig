@@ -1,0 +1,60 @@
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-install' }}{% endblock %}
+{% block header %}<header class="top"><div class="top-in"><span class="wm"><span class="mark" aria-hidden="true">n</span>{{ 'nolviko' }}</span></div></header>{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% include 'installer/steps.twig' with {step: 4} %}
+<h2>{{ t('installer.mail.heading') }}</h2>
+<p>{{ t('installer.mail.intro') }}</p>
+{% if errors is not empty %}
+<div role="alert"><p>{{ t('installer.form.errors') }}</p><ul>
+{% for error in errors %}<li>{{ error }}</li>{% endfor %}
+</ul></div>
+{% endif %}
+{% if sent %}<p role="status">{{ t('installer.mail.sent') }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% if needs_code %}
+<p id="setup-code-help">{{ t('installer.setup_code.help', {file: code_file}) }}</p>
+<p><label for="setup-code">{{ t('installer.setup_code.label') }}</label>
+<input id="setup-code" name="setup_code" required autocomplete="off" aria-describedby="setup-code-help"></p>
+{% endif %}
+<p><label for="mail-transport">{{ t('installer.mail.transport') }}</label>
+<select id="mail-transport" name="transport">
+<option value="mail"{% if values.transport != 'smtp' %} selected{% endif %}>{{ t('installer.mail.native') }}</option> {# i18n-ignore: protocol value; visible label is translated. #}
+<option value="smtp"{% if values.transport == 'smtp' %} selected{% endif %}{% if not secure %} disabled{% endif %}>{{ t('installer.mail.smtp_transport') }}</option> {# i18n-ignore: protocol value; visible label is translated. #}
+</select></p>
+<p><label for="mail-from">{{ t('installer.mail.from_address') }}</label>
+<input id="mail-from" name="from_address" type="email" maxlength="320" value="{{ values.from_address }}"></p>
+<p><label for="mail-name">{{ t('installer.mail.from_name') }}</label>
+<input id="mail-name" name="from_name" maxlength="320" value="{{ values.from_name }}"></p>
+{% if not secure %}<p role="status">{{ t('diagnostics.installer_mail_https_required') }}</p>{% endif %}
+<fieldset{% if not secure %} disabled{% endif %}>
+<legend>{{ t('installer.mail.smtp') }}</legend>
+<p>{{ t('installer.mail.tls') }}</p>
+<p><label for="smtp-host">{{ t('installer.mail.host') }}</label>
+<input id="smtp-host" name="smtp_host" maxlength="253" autocomplete="off" value="{{ values.smtp_host }}"></p>
+<p><label for="smtp-port">{{ t('installer.mail.port') }}</label>
+<input id="smtp-port" name="smtp_port" inputmode="numeric" maxlength="5" value="{{ values.smtp_port }}"></p>
+<p><label for="smtp-encryption">{{ t('installer.mail.encryption') }}</label>
+<select id="smtp-encryption" name="smtp_encryption">
+<option value="starttls"{% if values.smtp_encryption != 'smtps' %} selected{% endif %}>{{ t('installer.mail.starttls') }}</option> {# i18n-ignore: protocol value; visible label is translated. #}
+<option value="smtps"{% if values.smtp_encryption == 'smtps' %} selected{% endif %}>{{ t('installer.mail.smtps') }}</option> {# i18n-ignore: protocol value; visible label is translated. #}
+</select></p>
+<p><label for="smtp-user">{{ t('installer.mail.user') }}</label>
+<input id="smtp-user" name="smtp_user" maxlength="320" autocomplete="off" value="{{ values.smtp_user }}"></p>
+<p><label for="smtp-password">{{ t('installer.mail.password') }}</label>
+<input id="smtp-password" name="smtp_password" type="password" maxlength="4096" autocomplete="new-password"></p>
+<p>{{ t('installer.mail.password_notice') }}</p>
+</fieldset>
+<p><label for="mail-recipient">{{ t('installer.mail.recipient') }}</label>
+<input id="mail-recipient" name="recipient" type="email" maxlength="320" value="{{ values.recipient }}"></p>
+<p><button name="action" value="test">{{ t('installer.mail.test') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+<button name="action" value="save">{{ t('installer.mail.save') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+<button name="action" value="skip" formnovalidate>{{ t('installer.mail.skip') }}</button></p> {# i18n-ignore: protocol value; visible label is translated. #}
+<p>{{ t('installer.mail.skip_notice') }}</p>
+</form>
+{% endblock %}

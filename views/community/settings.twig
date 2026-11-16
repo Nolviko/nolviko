@@ -1,0 +1,37 @@
+{% set visibility_labels = {everyone: t('community.visibility_everyone'), members: t('community.visibility_members'), private: t('community.visibility_private')} %}
+<form method="post">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'profile' }}">
+<p><label>{{ t('community.biography') }}<textarea name="biography" maxlength="4000">{{ profile.biography }}</textarea></label></p>
+<p><label>{{ t('community.location') }}<input name="location" maxlength="120" value="{{ profile.location }}"></label></p>
+<p><label>{{ t('community.signature') }}<textarea name="signature" maxlength="1000">{{ profile.signature }}</textarea></label></p>
+{% for field in profile_fields|default([]) %}
+<p><label>{{ field.label }}<input name="field_{{ field.id }}" maxlength="255" value="{{ field.value }}"{% if field.kind == 'url' %} type="url" inputmode="url"{% endif %} dir="auto"></label></p>
+{% endfor %}
+<p>{{ t('community.plain_text') }}</p>
+<p><label>{{ t('community.visibility') }}<select name="visibility">
+{% for value in ['everyone', 'members', 'private'] %}
+<option value="{{ value }}"{% if profile.visibility == value %} selected{% endif %}>{{ visibility_labels[value] }}</option>
+{% endfor %}
+</select></label></p>
+{% for key in ['allow_messages', 'show_online', 'notify_replies', 'notify_reactions', 'notify_follows', 'email_notifications'] %}
+<p><label><input type="checkbox" name="{{ key }}" value="1"{% if attribute(profile, key) %} checked{% endif %}> {{ t('community.' ~ key) }}</label></p>
+{% endfor %}
+<button>{{ t('community.save') }}</button></form>
+<h2>{{ t('community.avatar') }}</h2><p>{{ t('community.upload_policy') }}</p>
+{% if avatar %}<img src="{{ path('community.media', {media: avatar})|safe_url }}" width="128" height="128" alt="{{ t('community.avatar') }}">
+<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'remove_media' }}">
+<input type="hidden" name="media" value="{{ avatar }}"><button>{{ t('community.remove_avatar') }}</button></form>{% endif %}
+<form method="post" enctype="multipart/form-data"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'avatar' }}"><label>{{ t('community.avatar') }} <input type="file" name="file" accept="image/jpeg,image/png" required></label>
+<button>{{ t('community.upload') }}</button></form>
+
+<h2>{{ t('community.block') }}</h2>
+{% for member in blocks %}<form method="post"><bdi>{{ member.username }}</bdi>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'block' }}">
+<input type="hidden" name="target" value="{{ member.target_id }}"><button name="enable" value="0">{{ t('community.undo_block') }}</button></form>{% endfor %}
+
+{% if may_moderate %}
+<h2>{{ t('community.reset_avatar') }}</h2><form method="post">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'reset_avatar' }}">
+<label>{{ t('community.member_name') }} <input type="text" name="target_name" maxlength="64" autocomplete="off" required dir="auto"></label>
+<button>{{ t('community.reset_avatar') }}</button></form>{% endif %}

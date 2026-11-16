@@ -1,0 +1,9 @@
+{# Opt-in community notification, HTML (M07). Context: url, subject, language. Extends mail/layout.html.twig (design pass 2026-11-07). #}
+{% extends 'mail/layout.html.twig' %}
+{% set action_url = url %}
+{% set action_label = t('community.notifications') %}
+{% block body %}
+<p style="margin:0 0 14px;">{{ t('community.mail_body') }}</p>
+{% endblock %}
+{% block after_action %}
+{% endblock %}

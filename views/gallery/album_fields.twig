@@ -1,0 +1,11 @@
+{# Album title, description and visibility fields. Context: album (title, description, visibility), visibilities. #}
+<p><label for="album-title">{{ t('gallery.album_title') }}</label>
+<input id="album-title" name="title" type="text" maxlength="100" required value="{{ album.title }}" dir="auto"></p>
+<p><label for="album-description">{{ t('gallery.description') }}</label>
+<textarea id="album-description" name="description" rows="3" maxlength="500" dir="auto">{{ album.description ?? '' }}</textarea></p>
+<fieldset>
+<legend>{{ t('gallery.who_sees') }}</legend>
+{% for mode in visibilities %}<p><input id="visibility-{{ mode }}" name="visibility" type="radio" value="{{ mode }}"{% if mode == album.visibility %} checked{% endif %}>
+<label for="visibility-{{ mode }}">{{ t('gallery.visibility_long', {mode: mode}) }}</label></p>
+{% endfor %}
+</fieldset>

@@ -1,0 +1,29 @@
+{# Edit post (M03.06). Context: title, action (null when the form is refused), csrf_field, csrf_token, content
+   (current or typed source), reason, max_content, max_reason, thread_title (first post only: the thread title,
+   editable), max_title, error (translated or null). #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+{% if preview|default(null) %}
+<section class="card post-preview" aria-labelledby="post-preview-heading"><h2 id="post-preview-heading">{{ t('threads.preview.heading') }}</h2><div class="post-body" dir="auto">{{ preview }}</div></section>
+{% endif %}
+{% if action is not null %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% if thread_title|default(null) is not null %}<p><label for="edit-title">{{ t('threads.create.subject') }}</label>
+<input id="edit-title" name="title" type="text" required maxlength="{{ max_title }}" value="{{ thread_title }}" dir="auto"></p>{% endif %}
+<p><label for="edit-content">{{ t('threads.edit.content') }}</label>
+{% include 'components/editor_toolbar.twig' with {target: 'edit-content', image_upload: csrf_token|default('') and site.post_images|default('off') == 'on' ? {url: path('gallery.attach'), token: csrf_token, max: site.images_per_post|default('5')} : null} only %}
+<textarea dir="auto" id="edit-content" data-mentions name="content" rows="12" required maxlength="{{ max_content }}">{{ content }}</textarea></p>
+<p><label for="edit-reason">{{ t('threads.edit.reason') }}</label>
+<input id="edit-reason" name="reason" type="text" maxlength="{{ max_reason }}" value="{{ reason }}"></p>
+<p><button type="submit">{{ t('threads.edit.submit') }}</button>
+{% if preview_intent|default(null) %}<button class="btn-s" type="submit" name="intent" value="{{ preview_intent }}">{{ t('threads.preview.button') }}</button>{% endif %}</p>
+</form>
+{% endif %}
+{% endblock %}

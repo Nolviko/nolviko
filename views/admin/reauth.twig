@@ -1,0 +1,24 @@
+{# Admin re-authentication (M02.15). Context: title, nav, action, csrf_field, csrf_token, minutes (length of the
+   window), remaining (minutes left in an open window, 0 when closed), return (admin path to go back to, or null),
+   error (translated or null), needs_code (the administrator has a second sign-in step, 2026-11-15). The password
+   is never filled in. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if remaining > 0 %}<p role="status">{{ t('admin.reauth.active', {minutes: remaining}) }}</p>{% endif %}
+<p>{{ t('admin.reauth.intro', {minutes: minutes}) }}</p>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% if return %}<input type="hidden" name="return" value="{{ return }}">{% endif %}
+<p><label for="reauth-password">{{ t('admin.reauth.password') }}</label>
+<input id="reauth-password" name="password" type="password" required autocomplete="current-password"></p>
+{% if needs_code|default(false) %}
+<p><label for="reauth-code">{{ t('auth.login_verify.code') }}</label>
+<input id="reauth-code" name="code" type="text" required autocomplete="one-time-code" maxlength="64" spellcheck="false" autocapitalize="off"></p>
+{% endif %}
+<p><button type="submit">{{ t('admin.reauth.submit') }}</button></p>
+</form>
+{% endblock %}

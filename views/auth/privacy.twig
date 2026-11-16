@@ -1,0 +1,45 @@
+{% extends 'layouts/page.twig' %}
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('auth.privacy.policy', {days: grace_days}) }}</p>
+<p>{{ t('auth.privacy.scope') }}</p>
+<p>{{ t('auth.privacy.export_help') }}</p>
+{% if export_progress %}
+<p role="status">{{ t('auth.privacy.export_status', {status: export_progress.status, count: export_progress.rows}) }}</p>
+{% endif %}
+{% if admin %}
+<p>{{ t('auth.privacy.admin_notice') }}</p>
+<form method="get" action="{{ action|safe_url }}">
+<label for="privacy-target">{{ t('auth.privacy.target') }}</label>
+<input id="privacy-target" name="target_name" type="text" maxlength="64" autocomplete="off" required dir="auto" value="{{ target_name|default('') }}">
+<button>{{ t('auth.privacy.select') }}</button>
+</form>
+{% endif %}
+{% if target_unknown|default(false) %}<p role="alert">{{ t('auth.privacy.target_unknown') }}</p>{% endif %}
+{% if target is not null %}
+<p>{% if target_name|default(null) %}{{ t('auth.privacy.selected_name', {name: target_name, id: target}) }}{% else %}{{ t('auth.privacy.selected', {id: target}) }}{% endif %}</p>
+{% if pending and pending.processing_started_at %}<p role="status">{{ t('auth.privacy.processing') }}</p>{% endif %}
+{% if pending %}<p role="status">{{ t(pending.auto_finalize == 1 ? 'auth.privacy.pending_auto' : 'auth.privacy.pending', {date: pending.delete_after}) }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% if admin %}<input type="hidden" name="target" value="{{ target }}">{% endif %}
+{% if self %}
+<p><label for="privacy-password">{{ t('auth.account.current_password') }}</label>
+<input id="privacy-password" name="current_password" type="password" required autocomplete="current-password"></p>
+{% endif %}
+<p><label><input type="checkbox" name="confirm" value="1">{{ t('auth.privacy.confirm') }}</label></p>
+<p><button name="action" value="export">{{ t('auth.privacy.export') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+<button name="action" value="request">{{ t('auth.privacy.request') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+{% if pending %}<button name="action" value="cancel">{{ t('auth.privacy.cancel') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+<button name="action" value="finalize">{{ t('auth.privacy.finalize') }}</button>{% endif %}</p> {# i18n-ignore: protocol value; visible label is translated. #}
+</form>
+{% endif %}
+{% if admin %}
+<h2>{{ t('auth.privacy.due') }}</h2>
+<ul>{% for item in due %}<li>{{ t('auth.privacy.due_item', {id: item.user_id, date: item.delete_after}) }}</li>
+{% else %}<li>{{ t('auth.privacy.none_due') }}</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

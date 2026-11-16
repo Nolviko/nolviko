@@ -1,0 +1,22 @@
+{# Confirm a new email address (M02.16). Context: title, state (confirm, done or invalid), token, action,
+   csrf_field, csrf_token, login_url. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if state == 'confirm' %}
+<p>{{ t('auth.email_confirm.intro') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="token" value="{{ token }}">
+<p><button type="submit">{{ t('auth.email_confirm.submit') }}</button></p>
+</form>
+{% elseif state == 'done' %}
+<p role="status">{{ t('auth.email_confirm.done') }}</p>
+<p><a href="{{ login_url|safe_url }}">{{ t('auth.register.to_login') }}</a></p>
+{% else %}
+<p role="alert">{{ t('auth.email_confirm.invalid') }}</p>
+{% endif %}
+{% endblock %}

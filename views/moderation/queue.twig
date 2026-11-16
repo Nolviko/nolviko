@@ -1,0 +1,63 @@
+{# Moderator queue (M04.07). Context: title, tab (reports, posts or users), tabs (name => URL, only those the
+   moderator may use), rows (list of QueueRowView), older (next keyset page or null), csrf_field, csrf_token,
+   choices (resolve, dismiss action values), bulk_target (post, user or null on the reports tab), bulk_url, bulk
+   (approve, reject action values). Every field is escaped; excerpts are source text, not HTML. #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<nav class="tabs" aria-label="{{ t('moderation.queue.tabs') }}">
+<ul>
+{% for name, url in tabs %}
+<li><a href="{{ url|safe_url }}"{% if name == tab %} aria-current="page"{% endif %}>{% if name == 'reports' %}{{ t('moderation.queue.reports') }}{% elseif name == 'posts' %}{{ t('moderation.queue.posts') }}{% else %}{{ t('moderation.queue.users') }}{% endif %}</a></li>
+{% endfor %}
+</ul>
+</nav>
+{% if rows is empty %}
+<div class="panel empty"><p>{{ t('moderation.queue.empty') }}</p></div>
+{% else %}
+{% if bulk_target is not null %}
+<form method="post" action="{{ bulk_url|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="target" value="{{ bulk_target }}">
+{% endif %}
+<ul class="queue panel list">
+{% for row in rows %}
+<li id="queue-{{ row.id }}">
+{% if bulk_target is not null %}
+<input id="pick-{{ row.id }}" name="ids[]" type="checkbox" value="{{ row.id }}">
+<label for="pick-{{ row.id }}">{{ t('moderation.queue.pick', {id: row.id}) }}</label>
+{% endif %}
+{% if row.username is not null %}
+<p>{{ row.username }} · {{ row.email }} · {{ row.createdAt|format_datetime }}</p>
+{% else %}
+<p><a href="{{ row.postUrl|safe_url }}">{{ row.title }}</a> · {{ row.authorName ?? t('threads.show.removed_account') }} · {{ row.createdAt|format_datetime }}</p>
+<blockquote class="quote">{{ row.excerpt }}</blockquote>
+{% if row.reason is not null %}
+<p class="chip chip-amber">{{ t('moderation.queue.reported_by', {name: row.reporterName ?? t('threads.show.removed_account'), reason: row.reason}) }}</p>
+<form method="post" action="{{ row.actionUrl|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="note-{{ row.id }}">{{ t('moderation.queue.note') }}</label>
+<input id="note-{{ row.id }}" name="note" type="text" required maxlength="500"></p>
+<p><button type="submit" name="action" value="{{ choices.resolve }}">{{ t('moderation.queue.resolve') }}</button>
+<button class="btn-s" type="submit" name="action" value="{{ choices.dismiss }}">{{ t('moderation.queue.dismiss') }}</button></p>
+</form>
+{% else %}
+<p><a class="btn btn-s btn-sm" href="{{ row.actionUrl|safe_url }}">{{ t('moderation.queue.review') }}</a></p>
+{% endif %}
+{% endif %}
+</li>
+{% endfor %}
+</ul>
+{% if bulk_target is not null %}
+<p><label for="bulk-reason">{{ t('moderation.queue.note') }}</label>
+<input id="bulk-reason" name="reason" type="text" maxlength="255"></p>
+<p><button type="submit" name="action" value="{{ bulk.approve }}">{{ t('moderation.bulk.approve') }}</button>
+<button class="btn-d" type="submit" name="action" value="{{ bulk.reject }}">{{ t('moderation.bulk.reject') }}</button></p>
+</form>
+{% endif %}
+{% endif %}
+{% if older is not null %}
+<p><a rel="next" href="{{ older|safe_url }}" class="btn btn-s">{{ t('moderation.queue.older') }}</a></p>
+{% endif %}
+{% endblock %}

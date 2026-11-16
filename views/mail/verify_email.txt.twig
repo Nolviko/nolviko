@@ -1,0 +1,12 @@
+{# Verification mail, plain text (M02.03). Context: name, url, subject, language. #}
+{{ t('mail.verify_email.greeting', {name: name}) }}
+
+{{ t('mail.verify_email.body') }}
+
+{{ url }}
+
+{{ t('mail.verify_email.expiry') }}
+
+{{ t('mail.verify_email.not_you') }}
+
+{{ t('mail.footer') }}

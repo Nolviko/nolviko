@@ -1,0 +1,96 @@
+{# Forum management (M04.05). Context: title, nav, action, csrf_field, csrf_token, rows (id, title, indent, kind,
+   locked, parent, slug, description), parents (value, label), categories and parent_forums (value, label; create
+   form groups, 2026-11-09), types (value, label), choices (action values), error (translated or null), fresh,
+   reauth_url. Every change is a small form with buttons, usable with the keyboard alone. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<div class="grid2">
+<section class="panel panel-pad" aria-labelledby="new-category">
+<h2 id="new-category">{{ t('admin.forums.new_category') }}</h2>
+<p class="hint">{{ t('admin.forums.category_hint') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="type" value="{{ types[1].value }}">
+<p><label for="category-title">{{ t('admin.forums.name') }}</label>
+<input id="category-title" name="title" required maxlength="100" dir="auto"></p>
+<p><label for="category-slug">{{ t('admin.forums.slug_optional') }}</label>
+<input id="category-slug" name="slug" maxlength="100"></p>
+<p><button type="submit" name="action" value="{{ choices.create }}">{{ t('admin.forums.create_category') }}</button></p>
+</form>
+</section>
+<section class="panel panel-pad" aria-labelledby="new-forum">
+<h2 id="new-forum">{{ t('admin.forums.new_forum') }}</h2>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="type" value="{{ types[0].value }}">
+<p><label for="forum-title">{{ t('admin.forums.name') }}</label>
+<input id="forum-title" name="title" required maxlength="100" dir="auto"></p>
+<p><label for="forum-parent">{{ t('admin.forums.in_category') }}</label>
+<select id="forum-parent" name="parent">
+<option value="">{{ t('admin.forums.root') }}</option>
+{% if categories is not empty %}<optgroup label="{{ t('admin.forums.categories') }}">{% for option in categories %}<option value="{{ option.value }}"{% if loop.first %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</optgroup>{% endif %}
+{% if parent_forums is not empty %}<optgroup label="{{ t('admin.forums.as_subforum') }}">{% for option in parent_forums %}<option value="{{ option.value }}">{{ option.label }}</option>{% endfor %}</optgroup>{% endif %}
+</select>
+{% if categories is empty %}<span class="hint">{{ t('admin.forums.no_categories') }}</span>{% endif %}</p>
+<p><label for="forum-slug">{{ t('admin.forums.slug_optional') }}</label>
+<input id="forum-slug" name="slug" maxlength="100"></p>
+<p><button type="submit" name="action" value="{{ choices.create }}">{{ t('admin.forums.create_forum') }}</button></p>
+</form>
+</section>
+</div>
+
+<h2>{{ t('admin.forums.tree') }}</h2>
+{% if rows is empty %}
+<p class="admin-empty">{{ t('admin.dashboard.empty') }}</p>
+{% else %}
+{% if not fresh %}
+<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.forums.reauth') }}</a></p>
+{% endif %}
+<ul>
+{% for row in rows %}
+<li class="forum-depth-{{ row.indent }}">
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="forum" value="{{ row.id }}">
+<strong>{{ row.title }}</strong> ({{ row.kind }}{% if row.locked %}, {{ t('forums.show.locked') }}{% endif %})
+<button type="submit" name="action" value="{{ choices.up }}" aria-label="{{ t('admin.forums.up_label', {name: row.title}) }}">{{ t('admin.forums.up') }}</button>
+<button type="submit" name="action" value="{{ choices.down }}" aria-label="{{ t('admin.forums.down_label', {name: row.title}) }}">{{ t('admin.forums.down') }}</button>
+<label for="move-{{ row.id }}">{{ t('admin.forums.move_to') }}</label>
+<select id="move-{{ row.id }}" name="parent">
+{% for parent in parents %}
+<option value="{{ parent.value }}"{% if parent.value == row.parent %} selected{% endif %}>{{ parent.label }}</option>
+{% endfor %}
+</select>
+<button type="submit" name="action" value="{{ choices.move }}">{{ t('admin.forums.move') }}</button>
+{% if row.locked %}
+<button type="submit" name="action" value="{{ choices.unlock }}">{{ t('admin.forums.unlock') }}</button>
+{% else %}
+<button type="submit" name="action" value="{{ choices.lock }}">{{ t('admin.forums.lock') }}</button>
+{% endif %}
+<button class="btn-d" type="submit" name="action" value="{{ choices.delete }}">{{ t('admin.forums.delete') }}</button>
+</form>
+<details class="forum-edit"><summary>{{ t('admin.forums.edit') }}</summary>
+<form method="post" action="{{ action|safe_url }}" class="forum-edit-form">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="forum" value="{{ row.id }}">
+<p><label for="edit-title-{{ row.id }}">{{ t('admin.forums.name') }}</label>
+<input id="edit-title-{{ row.id }}" name="title" required maxlength="200" value="{{ row.title }}" dir="auto"></p>
+<p><label for="edit-slug-{{ row.id }}">{{ t('admin.forums.slug') }}</label>
+<input id="edit-slug-{{ row.id }}" name="slug" required maxlength="100" value="{{ row.slug }}"></p>
+<p><label for="edit-description-{{ row.id }}">{{ t('admin.forums.description') }}</label>
+<textarea id="edit-description-{{ row.id }}" name="description" rows="3" maxlength="2000" dir="auto">{{ row.description }}</textarea></p>
+{% if row.is_forum|default(false) %}<input type="hidden" name="kind" value="{{ 'forum' }}">
+<p><label class="row"><input type="checkbox" name="questions" value="1"{% if row.questions|default(false) %} checked{% endif %} aria-describedby="edit-questions-{{ row.id }}-hint"> {{ t('admin.forums.questions') }}</label>
+<span id="edit-questions-{{ row.id }}-hint" class="meta">{{ t('admin.forums.questions_hint') }}</span></p>{% endif %}
+<p><button type="submit" name="action" value="{{ choices.edit }}">{{ t('admin.forums.save') }}</button></p>
+</form>
+</details>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

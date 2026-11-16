@@ -1,0 +1,57 @@
+{# Installer step 4 (M02.15a). Context: language, title, action, csrf_field, csrf_token, needs_code, code_file,
+   finish_only (an administrator exists: only the lock is missing), username, email, accents (colour names),
+   accent (chosen), errors (translated). The
+   passwords are never filled in again. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-install' }}{% endblock %}
+{% block header %}<header class="top"><div class="top-in"><span class="wm"><span class="mark" aria-hidden="true">n</span>{{ 'nolviko' }}</span></div></header>{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% include 'installer/steps.twig' with {step: 5} %}
+<h2>{{ t('installer.admin.heading') }}</h2>
+
+{% if errors is not empty %}
+<div role="alert">
+<p>{{ t('installer.form.errors') }}</p>
+<ul>
+{% for error in errors %}
+<li>{{ error }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
+
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% if needs_code %}
+<p id="setup-code-help">{{ t('installer.setup_code.help', {file: code_file}) }}</p>
+<p><label for="setup-code">{{ t('installer.setup_code.label') }}</label>
+<input id="setup-code" name="setup_code" type="text" required autocomplete="off" spellcheck="false" aria-describedby="setup-code-help"></p>
+{% endif %}
+{% if finish_only %}
+<p role="status">{{ t('installer.admin.exists') }}</p>
+<p><button type="submit">{{ t('installer.admin.finish') }}</button></p>
+{% else %}
+<p>{{ t('installer.admin.intro') }}</p>
+<p><label for="admin-username">{{ t('installer.admin.username') }}</label>
+<input id="admin-username" name="username" type="text" required autocomplete="username" maxlength="32" value="{{ username }}"></p>
+<p><label for="admin-email">{{ t('installer.admin.email') }}</label>
+<input id="admin-email" name="email" type="email" required autocomplete="email" maxlength="254" value="{{ email }}"></p>
+<p><label for="admin-password">{{ t('installer.admin.password') }}</label>
+<input id="admin-password" name="password" type="password" required autocomplete="new-password" minlength="8" maxlength="256"></p>
+<p><label for="admin-password-confirmation">{{ t('installer.admin.password_confirmation') }}</label>
+<input id="admin-password-confirmation" name="password_confirmation" type="password" required autocomplete="new-password" minlength="8" maxlength="256"></p>
+<fieldset class="accent-picks">
+<legend>{{ t('installer.admin.accent') }}</legend>
+{% for name in accents %}<span><input id="accent-{{ name }}" name="accent" type="radio" value="{{ name }}"{% if name == accent %} checked{% endif %}>
+<label for="accent-{{ name }}"><span class="accent-swatch accent-{{ name }}" aria-hidden="true"></span>{{ t('admin.site.accent', {mode: name}) }}</label></span>
+{% endfor %}
+<p class="hint">{{ t('installer.admin.accent_hint') }}</p>
+</fieldset>
+<p><button type="submit">{{ t('installer.admin.submit') }}</button></p>
+{% endif %}
+</form>
+{% endblock %}

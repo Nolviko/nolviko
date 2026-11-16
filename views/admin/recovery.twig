@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="{{ language }}">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ t('admin.recovery.title') }}</title>
+<style nonce="__RECOVERY_NONCE__">
+body{font:1rem/1.6 system-ui,sans-serif;max-width:48rem;margin:3rem auto;padding:0 1rem;color:#17283f;background:#f5f7fb}
+input{display:block;width:100%;box-sizing:border-box;padding:.7rem;margin:.5rem 0 1rem}
+button{padding:.65rem 1rem;margin:0 .5rem .5rem 0;cursor:pointer}
+:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+</style>
+</head>
+<body>
+<h1>{{ t('admin.recovery.title') }}</h1>
+<p>{{ t('admin.recovery.readonly') }}</p>
+<p>{{ t('admin.recovery.session') }}</p>
+<form id="recovery-form" method="post">
+<label for="recovery-key">{{ t('admin.updates.recovery_code') }}</label>
+<input id="recovery-key" type="password" autocomplete="off" spellcheck="false" required>
+<button type="submit" value="status">{{ t('admin.recovery.status') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+<button id="next-step" type="submit" value="step" hidden>{{ t('admin.recovery.step') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+<button type="submit" value="revoke">{{ t('admin.recovery.revoke') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+</form>
+<p id="result" role="status" aria-live="polite"
+ data-confirm="{{ t('admin.recovery.finish_confirm') }}"
+ data-actions="{{ {'backup': t('admin.recovery.backup'), 'resume': t('admin.recovery.resume'), 'migrate': t('admin.recovery.migrate'), 'smoke': t('admin.recovery.smoke'), 'finish': t('admin.recovery.finish')}|json_encode|e('html_attr') }}"
+ data-ready="{{ t('admin.recovery.ready') }}" data-error="{{ t('admin.recovery.error') }}"
+ data-revoked="{{ t('admin.recovery.revoked') }}" data-step="{{ t('admin.updates.step') }}"
+ data-stages="{{ stage_labels|json_encode|e('html_attr') }}">{{ t('admin.recovery.ready') }}</p>
+<noscript><p>{{ t('admin.recovery.manual') }}</p></noscript>
+<p>{{ t('admin.recovery.manual') }}</p>
+<script nonce="__RECOVERY_NONCE__">
+'use strict';
+const form=document.getElementById('recovery-form');
+const key=document.getElementById('recovery-key');
+const output=document.getElementById('result');
+const labels=JSON.parse(output.dataset.stages);
+const actions=JSON.parse(output.dataset.actions);
+const step=document.getElementById('next-step');
+let nextAction=null;
+let sequence=0;
+let currentKey='';
+async function send(action, reconcile=true){
+ const parts=key.value.trim().split('.');
+ if(parts.length!==3||parts[0].length!==32||parts[1].length!==43||parts[2].length!==43){throw new Error();}
+ if(currentKey!==key.value){sequence=0;currentKey=key.value;}
+ const response=await fetch(window.location.pathname,{
+  method:'POST',credentials:'same-origin',cache:'no-store',
+  headers:{'Content-Type':'application/json','X-Nolviko-Recovery-Grant':parts[0],
+   'X-Nolviko-Recovery-Code':parts[1],'X-Nolviko-Recovery-Nonce':parts[2],
+   'X-Nolviko-Recovery-Sequence':String(sequence)},body:JSON.stringify({action})
+ });
+ const result=await response.json();
+ if(Number.isSafeInteger(result.next_sequence)){sequence=result.next_sequence;}
+ if(response.status===409&&result.error==='recovery_sequence_conflict'&&reconcile){return send('status',false);}
+ if(!response.ok){throw new Error();}
+ if(result.revoked){key.value='';currentKey='';nextAction=null;step.hidden=true;output.textContent=output.dataset.revoked;return;}
+ nextAction=Object.hasOwn(actions,result.next_action)?result.next_action:null;
+ step.hidden=!nextAction;
+ if(nextAction){step.textContent=actions[nextAction];}
+ output.textContent=(labels[result.stage]||output.dataset.ready)+
+  (Number.isSafeInteger(result.cursor)?' - '+output.dataset.step+': '+result.cursor:'');
+}
+form.addEventListener('submit',async(event)=>{
+ event.preventDefault();
+ const action=event.submitter?.value==='step'?nextAction:
+  (event.submitter?.value==='revoke'?'revoke':'status');
+ if(!action||(action==='finish'&&!window.confirm(output.dataset.confirm))){return;}
+ const buttons=form.querySelectorAll('button');
+ buttons.forEach(button=>button.disabled=true);
+ try{await send(action);if(action!=='status'&&action!=='revoke'){await send('status');}}
+ catch{nextAction=null;step.hidden=true;output.textContent=output.dataset.error;}
+ finally{buttons.forEach(button=>button.disabled=false);}
+});
+</script>
+</body>
+</html>

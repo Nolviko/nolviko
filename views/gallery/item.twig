@@ -1,0 +1,27 @@
+{# One gallery image (2026-11-08). Context: title, item (id, album_id, username, title, width, height, status,
+   created_at, album_title, manageable), album_url, delete_action (or null), csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+
+{% if seo.origin|default(null) %}
+{% set og_image = seo.origin ~ path('gallery.file', {item: item.id, variant: 'full'}) %}
+{% set og_type = 'article' %}
+{% set meta_description = item.title ~ ' · ' ~ item.album_title %}
+{% set structured_data = [{'@context': 'https://schema.org', '@type': 'ImageObject', name: item.title, contentUrl: og_image, thumbnailUrl: seo.origin ~ path('gallery.file', {item: item.id, variant: 'thumb'}), width: item.width, height: item.height, uploadDate: item.created_at|date('c'), creator: {'@type': 'Person', name: item.username}}] %}
+{% endif %}
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ path('gallery')|safe_url }}">{{ t('gallery.title') }}</a><span aria-hidden="true">/</span><a href="{{ album_url|safe_url }}"><bdi>{{ item.album_title }}</bdi></a></nav>
+<h1 dir="auto">{{ item.title }}</h1>
+{% if item.status == 'pending' %}<p class="chip chip-amber">{{ t('gallery.awaiting') }}</p>{% endif %}
+<figure class="gallery-figure">
+<a href="{{ path('gallery.file', {item: item.id, variant: 'full'})|safe_url }}" data-lightbox="{{ path('gallery.file', {item: item.id, variant: 'full'}) }}" data-lightbox-alt="{{ item.title }}"><img src="{{ path('gallery.file', {item: item.id, variant: 'full'})|safe_url }}" alt="{{ item.title }}" width="{{ item.width }}" height="{{ item.height }}"></a>
+<figcaption class="meta"><bdi>{{ item.username }}</bdi> · {{ item.created_at|date('Y-m-d') }}</figcaption>
+</figure>
+{% if delete_action %}
+<form method="post" action="{{ delete_action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="item" value="{{ item.id }}">
+<p><button class="btn-danger" type="submit" name="action" value="{{ 'delete_item' }}">{{ t('gallery.delete_image') }}</button></p>
+</form>
+{% endif %}
+<div id="lightbox-labels" hidden data-title="{{ t('core.lightbox.title') }}" data-close="{{ t('core.lightbox.close') }}"></div>
+<script src="{{ asset('lightbox.js') }}" defer></script>
+{% endblock %}

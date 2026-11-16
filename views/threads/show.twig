@@ -1,0 +1,81 @@
+{# Thread page (M03.10; design "Konu sayfası ve yanıt"). Context: title (thread title), canonical, page, pages,
+   thread_status (null or the marker moderators see), locked, posts (list of PostView: id, authorName, createdAt,
+   editedAt, html, status, permalink, reportUrl), links (list of PageLinkView), previous, next, reply_total, reply_url (null when
+   the reader may not reply), labels (prefix, tags with slug, manage_url; or null), trail (root-to-forum list of {title, url|null}). Post bodies are SafeHtml from the render cache; everything else is escaped. #}
+{% extends 'layouts/page.twig' %}
+
+{% set first = page == 1 and posts is not empty and posts[0].status is null ? posts[0] : null %}
+{% set meta_description = first ? first.html|plain(160) : title %}
+{% set og_type = 'article' %}
+{% set og_title = title|censor %}
+{% if seo.origin|default(null) %}
+{% set crumbs = [{'@type': 'ListItem', position: 1, name: t('forums.show.back'), item: seo.origin ~ forum_home_url}] %}
+{% for step in trail|default([]) %}{% if step.url %}{% set crumbs = crumbs|merge([{'@type': 'ListItem', position: crumbs|length + 1, name: step.title, item: seo.origin ~ step.url}]) %}{% endif %}{% endfor %}
+{% set structured_data = [{'@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs|merge([{'@type': 'ListItem', position: crumbs|length + 1, name: title}])}] %}
+{% if first %}
+{% set comments = [] %}
+{% for post in posts|slice(1) %}{% if post.status is null %}{% set comments = comments|merge([{'@type': 'Comment', text: post.html|plain(5000), datePublished: post.createdAt|date('c'), url: seo.origin ~ post.permalink, author: {'@type': 'Person', name: post.authorName ?? t('threads.show.removed_account')}|merge(post.profileUrl|default(null) ? {url: seo.origin ~ post.profileUrl} : {})}]) %}{% endif %}{% endfor %}
+{% set posting = {'@context': 'https://schema.org', '@type': 'DiscussionForumPosting', headline: title|censor, text: first.html|plain(5000), url: seo.canonical, datePublished: first.createdAt|date('c'), author: {'@type': 'Person', name: first.authorName ?? t('threads.show.removed_account')}|merge(first.profileUrl|default(null) ? {url: seo.origin ~ first.profileUrl} : {}), interactionStatistic: {'@type': 'InteractionCounter', interactionType: 'https://schema.org/CommentAction', userInteractionCount: reply_total|default(0)}, comment: comments} %}
+{% if first.editedAt is not null %}{% set posting = posting|merge({dateModified: first.editedAt|date('c')}) %}{% endif %}
+{% set structured_data = structured_data|merge([posting]) %}
+{% endif %}
+{% endif %}
+{% block title %}{% if page > 1 %}{{ t('threads.show.title_page', {title: title|censor, page: page}) }}{% else %}{{ title|censor }}{% endif %}{% endblock %}
+
+{% block content %}
+{{ theme_slot('thread.header.before') }}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ forum_home_url|safe_url }}">{{ t('forums.show.back') }}</a>{% for step in trail|default([]) %}<span aria-hidden="true">/</span>{% if step.url %}<a href="{{ step.url|safe_url }}"><bdi>{{ step.title }}</bdi></a>{% else %}<span><bdi>{{ step.title }}</bdi></span>{% endif %}{% endfor %}</nav>
+<div class="head-row">
+<h1 dir="auto">{% if labels.prefix|default(null) %}<span class="{{ labels.prefix.class }} title-prefix"><bdi>{{ labels.prefix.label }}</bdi></span> {% endif %}{{ title|censor }}</h1>
+<div class="actions">
+{% if community_url|default(null) %}<a class="btn btn-s" href="{{ community_url|safe_url }}">{{ t('community.thread') }}</a>{% endif %}
+{% if reply_url is not null %}<a class="btn" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>{% endif %}
+</div>
+</div>
+{% if labels|default(null) and (labels.tags is not empty or labels.manage_url) %}
+<p class="row thread-tags">{% for tag in labels.tags %}<a class="chip chip-tag" href="{{ path('tags.show', {tag: tag.slug})|safe_url }}">#<bdi>{{ tag.name }}</bdi></a>{% endfor %}
+{% if labels.manage_url %}<a class="btn-s" href="{{ labels.manage_url|safe_url }}">{{ t('threads.labels.edit') }}</a>{% endif %}</p>
+{% endif %}
+{{ theme_slot('thread.header.after') }}
+{% if thread_status is not null or locked %}
+<div class="row">
+{% if thread_status is not null %}<p class="thread-marker chip chip-danger">{{ t('threads.show.marker', {status: thread_status}) }}</p>{% endif %}
+{% if locked %}<p class="chip chip-amber">{{ t('threads.show.locked') }}</p>{% endif %}
+</div>
+{% endif %}
+{% if tools|default(null) %}{% include 'community/thread_tools.twig' with {tools: tools, thread_id: thread_id, csrf_field: csrf_field|default(null), csrf_token: csrf_token|default(null)} only %}{% endif %}
+{% if posts is empty %}
+<div class="panel empty"><p>{{ t('threads.show.empty') }}</p></div>
+{% else %}
+<div class="panel posts">
+{% for post in posts %}
+{{ theme_fragment('components/post.twig', {post: post}) }}
+{% if community_extras[post.id]|default(null) %}{% include 'community/post_extras.twig' with {extra: community_extras[post.id], tools: tools|default(null), thread_id: thread_id, csrf_field: csrf_field|default(null), csrf_token: csrf_token|default(null)} only %}{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+<div class="head-row">
+{% if links is not empty %}
+<nav aria-label="{{ t('threads.show.pages', {page: page, pages: pages}) }}">
+<ul class="pagination">
+{% if previous is not null %}<li><a rel="prev" href="{{ previous|safe_url }}">{{ t('threads.show.previous') }}</a></li>{% endif %}
+{% for link in links %}
+{% if link.url is null %}<li aria-hidden="true">…</li>{% elseif link.current %}<li aria-current="page">{{ link.number|format_number }}</li>{% else %}<li><a href="{{ link.url|safe_url }}">{{ link.number|format_number }}</a></li>{% endif %}
+{% endfor %}
+{% if next is not null %}<li><a rel="next" href="{{ next|safe_url }}">{{ t('threads.show.next') }}</a></li>{% endif %}
+</ul>
+</nav>
+{% endif %}
+{% if reply_url is not null %}
+<a class="btn row-end" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>
+{% endif %}
+</div>
+{% if reply_url is not null %}
+<a id="multi-quote" class="btn multi-quote" href="{{ reply_url|safe_url }}" hidden>{{ t('threads.show.multi_quote_go') }} <span class="chip" data-count>0</span></a>
+<script src="{{ asset('quote.js') }}" defer></script>
+{% endif %}
+<div id="embed-labels" hidden data-play="{{ t('threads.show.embed_play') }}" data-notice="{{ t('threads.show.embed_notice') }}"></div>
+<script src="{{ asset('embed.js') }}" defer></script>
+<div id="lightbox-labels" hidden data-title="{{ t('core.lightbox.title') }}" data-close="{{ t('core.lightbox.close') }}"></div>
+<script src="{{ asset('lightbox.js') }}" defer></script>
+{% endblock %}

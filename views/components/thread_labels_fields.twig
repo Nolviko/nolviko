@@ -1,0 +1,16 @@
+{# Prefix and tag fields (2026-11-08) for the create-thread and thread-labels forms. Context: prefix_options (id,
+   label, class), tag_options (id, name, slug), selected_prefix (id or null), selected_tags (list of ids),
+   max_tags. Nothing is shown when the administrator has defined neither. #}
+{% if prefix_options is not empty %}
+<p><label for="thread-prefix">{{ t('threads.labels.prefix') }}</label>
+<select id="thread-prefix" name="prefix"><option value="">{{ t('threads.labels.no_prefix') }}</option>
+{% for prefix in prefix_options %}<option value="{{ prefix.id }}"{% if prefix.id == selected_prefix %} selected{% endif %}>{{ prefix.label }}</option>{% endfor %}
+</select></p>
+{% endif %}
+{% if tag_options is not empty %}
+<fieldset class="tag-picks">
+<legend>{{ t('threads.labels.tags', {max: max_tags}) }}</legend>
+{% for tag in tag_options %}<span><input id="tag-{{ tag.id }}" name="tags[]" type="checkbox" value="{{ tag.id }}"{% if tag.id in selected_tags %} checked{% endif %}> <label for="tag-{{ tag.id }}"><bdi>{{ tag.name }}</bdi></label></span>
+{% endfor %}
+</fieldset>
+{% endif %}

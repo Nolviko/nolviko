@@ -1,0 +1,50 @@
+{# Admin dashboard (M04.01). Context: title, nav, stats (users, forums, threads, posts; null on a database
+   failure), empty (no forum yet), confirmed (just re-authenticated), fresh (re-authenticated recently),
+   reauth_url. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{{ theme_slot('admin.dashboard.widgets') }}
+{% if confirmed %}
+<p role="status">{{ t('admin.dashboard.confirmed') }}</p>
+{% endif %}
+{% if second_factor_off|default(0) > 0 %}
+<p role="alert">{{ t('admin.dashboard.second_factor_off', {count: second_factor_off}) }}</p>
+{% endif %}
+{% if stats is null %}
+<div role="alert">
+<p>{{ t('admin.dashboard.error') }}</p>
+</div>
+{% else %}
+{% if empty %}
+<p class="alert alert-info">{{ t('admin.dashboard.empty') }}</p>
+{% endif %}
+<dl class="admin-stats">
+<dt>{{ t('admin.dashboard.users') }}</dt><dd>{{ stats.users|format_number }}</dd>
+<dt>{{ t('admin.dashboard.forums') }}</dt><dd>{{ stats.forums|format_number }}</dd>
+<dt>{{ t('admin.dashboard.threads') }}</dt><dd>{{ stats.threads|format_number }}</dd>
+<dt>{{ t('admin.dashboard.posts') }}</dt><dd>{{ stats.posts|format_number }}</dd>
+</dl>
+{% endif %}
+{% if fresh %}
+<p class="meta">{{ t('admin.dashboard.fresh') }}</p>
+{% else %}
+<p class="alert alert-warn"><a href="{{ reauth_url|safe_url }}">{{ t('admin.dashboard.reauth') }}</a></p>
+{% endif %}
+{% if exposure is not null %}
+<h2>{{ t('admin.exposure.title') }}</h2>
+<p>{{ t('admin.exposure.help') }}</p>
+<ul>{% for directory, state in exposure %}
+<li{% if state != 'protected' %} role="alert"{% endif %}>
+{% if state == 'exposed' %}{{ t('installer.check.web_exposed', {directory: directory}) }}
+{% elseif state == 'protected' %}{{ t('installer.check.web_protected', {directory: directory}) }}
+{% else %}{{ t('installer.check.web_unknown', {directory: directory}) }}{% endif %}
+</li>{% endfor %}</ul>
+{% if fresh %}
+<form method="post" action="{{ check_action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button name="action" value="check_exposure">{{ t('admin.exposure.check') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

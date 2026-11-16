@@ -1,0 +1,21 @@
+{# Second sign-in step (2026-11-15). Context: title, action, cancel_url, csrf_field, csrf_token, error (translated
+   or null). One field takes a code from the member's method or a recovery code. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<p>{{ t('auth.login_verify.intro') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="login-code">{{ t('auth.login_verify.code') }}</label>
+<input id="login-code" name="code" type="text" required autofocus autocomplete="one-time-code" inputmode="text" maxlength="64" spellcheck="false" autocapitalize="off"></p>
+<p class="muted">{{ t('auth.login_verify.recovery_hint') }}</p>
+<p><button type="submit">{{ t('auth.login_verify.submit') }}</button>
+<a class="btn btn-g" href="{{ cancel_url|safe_url }}">{{ t('auth.login_verify.cancel') }}</a></p>
+</form>
+{% endblock %}

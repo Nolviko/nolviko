@@ -1,0 +1,61 @@
+{# IP and email bans (M04.09a). Context: title, nav, error (translated or null), fresh (password confirmed in the
+   last 15 minutes), reauth_url, rows (id, type, value, reason, expires; all text), types (value, label), value
+   (the refused input), action, csrf_field, csrf_token, choices (add, lift action values), max_reason, max_days. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+{% if not fresh %}
+<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.bans.reauth') }}</a></p>
+{% endif %}
+
+<h2>{{ t('admin.bans.add') }}</h2>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="ban-type">{{ t('admin.bans.type') }}</label>
+<select id="ban-type" name="type">
+{% for type in types %}
+<option value="{{ type.value }}">{{ type.label }}</option>
+{% endfor %}
+</select></p>
+<p><label for="ban-value">{{ t('admin.bans.value') }}</label>
+<input id="ban-value" name="value" required maxlength="254" value="{{ value }}"></p>
+<p><label for="ban-reason">{{ t('admin.bans.reason') }}</label>
+<input id="ban-reason" name="reason" required maxlength="{{ max_reason }}"></p>
+<p><label for="ban-days">{{ t('admin.bans.days') }}</label>
+<input id="ban-days" name="days" type="number" min="0" max="{{ max_days }}"></p>
+<p><button type="submit" name="action" value="{{ choices.add }}">{{ t('admin.bans.add') }}</button></p>
+</form>
+
+<h2>{{ t('admin.bans.active') }}</h2>
+{% if rows is empty %}
+<p class="admin-empty">{{ t('admin.bans.empty') }}</p>
+{% else %}
+<table>
+<thead><tr>
+<th scope="col">{{ t('admin.bans.type') }}</th>
+<th scope="col">{{ t('admin.bans.value') }}</th>
+<th scope="col">{{ t('admin.bans.reason') }}</th>
+<th scope="col">{{ t('admin.bans.expires') }}</th>
+<th scope="col">{{ t('admin.bans.actions') }}</th>
+</tr></thead>
+<tbody>
+{% for row in rows %}
+<tr>
+<td>{{ row.type }}</td>
+<td>{{ row.value }}</td>
+<td>{{ row.reason }}</td>
+<td>{{ row.expires }}</td>
+<td><form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="ban" value="{{ row.id }}">
+<button type="submit" name="action" value="{{ choices.lift }}">{{ t('admin.bans.lift') }}</button>
+</form></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+{% endblock %}

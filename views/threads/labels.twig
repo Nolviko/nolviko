@@ -1,0 +1,16 @@
+{# Thread prefix and tags, moderator form (2026-11-08). Context: title, thread_url, action, csrf_field,
+   csrf_token, prefix_options, tag_options, selected_prefix, selected_tags, max_tags, error (translated or null). #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ thread_url|safe_url }}">{{ t('threads.posts.back') }}</a></nav>
+<h1 dir="auto">{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if prefix_options is empty and tag_options is empty %}<p class="hint">{{ t('threads.labels.none_defined') }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% include 'components/thread_labels_fields.twig' %}
+<p><button type="submit">{{ t('threads.labels.save') }}</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if notice|default(null) %}<p role="status">{{ notice }}</p>{% endif %}
+{% if configured|default(false) %}
+<p>{{ t('operations.notify_policy') }}</p>
+<p>{{ t('operations.update_storage') }}</p>
+<form method="post" action="{{ post_url|safe_url }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+<button name="action" value="{{ 'check_releases' }}">{{ t('operations.check') }}</button></form>
+{% if has_job|default(false) %}
+<form method="post" action="{{ post_url|safe_url }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+<button name="action" value="{{ 'stage_release' }}">{{ t('operations.stage') }}</button>
+<button name="action" value="{{ 'abandon_release' }}">{{ t('operations.abandon') }}</button></form>
+{% else %}
+<form method="post" action="{{ post_url|safe_url }}" enctype="multipart/form-data">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+<p><label>{{ t('operations.archive') }} <input type="file" name="archive" accept=".zip" required></label></p>
+<p><label>{{ t('operations.manifest') }} <input type="file" name="manifest" accept=".json" required></label></p>
+<p><label>{{ t('operations.signature') }} <input type="file" name="signature" accept=".sig,.txt" required></label></p>
+<p><label><input type="checkbox" name="confirmed" value="1" required> {{ t('operations.confirm') }}</label></p>
+<button name="action" value="{{ 'upload_release' }}">{{ t('operations.upload') }}</button></form>
+{% endif %}
+{% else %}<p>{{ t('operations.setup') }}</p>{% endif %}
+
+<p role="note">{{ t('admin.updates.notify') }}</p>
+{% if runs is null %}
+<p role="alert">{{ t('admin.updates.error') }}</p>
+{% elseif runs is empty %}
+<p class="admin-empty">{{ t('admin.updates.empty') }}</p>
+{% else %}
+<table>
+<caption>{{ t('admin.updates.history') }}</caption>
+<thead><tr>
+<th scope="col">{{ t('admin.updates.release') }}</th>
+<th scope="col">{{ t('admin.updates.stage') }}</th>
+<th scope="col">{{ t('admin.updates.state') }}</th>
+<th scope="col">{{ t('admin.updates.step') }}</th>
+<th scope="col">{{ t('admin.updates.updated') }}</th>
+
+</tr></thead>
+<tbody>
+{% for run in runs %}
+<tr>
+<th scope="row">{{ run.target }}</th>
+<td>{{ t(run.stage) }}</td><td>{{ t(run.state) }}</td>
+<td>{{ run.cursor|format_number }}</td><td>{{ run.updated }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+<h2>{{ t('admin.updates.preparation') }}</h2>
+{% if prepare_error %}<p role="alert">{{ t(prepare_error) }}</p>{% endif %}
+{% if prepared %}
+<p role="status">{{ t('admin.updates.prepared_count') }} {{ prepared.progress.copied|format_number }} / {{ prepared.progress.total|format_number }}</p>
+{% if prepared.grant %}
+<p>{{ t('admin.updates.code_notice') }}</p>
+<p><a href="{{ recovery_url|safe_url }}">{{ t('admin.recovery.open') }}</a></p>
+<label for="recovery-code">{{ t('admin.updates.recovery_code') }}</label>
+<textarea id="recovery-code" readonly autocomplete="off" spellcheck="false">{{ prepared.grant.id }}.{{ prepared.grant.code }}.{{ prepared.grant.nonce }}</textarea>
+{% endif %}
+{% endif %}
+{% if prepare_available %}
+<form method="post" action="{{ post_url|safe_url }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="prepare_recovery"> {# i18n-ignore: protocol value; visible label is translated. #}
+<button type="submit">{{ t('admin.updates.prepare') }}</button>
+</form>
+{% else %}
+<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.updates.confirm_first') }}</a></p>
+{% endif %}
+<h2>{{ t('admin.updates.manual') }}</h2>
+<ol>
+<li>{{ t('admin.updates.backup') }}</li>
+<li>{{ t('admin.updates.close') }}</li>
+<li>{{ t('admin.updates.restore') }}</li>
+<li>{{ t('admin.updates.open') }}</li>
+</ol>
+<p>{{ t('admin.updates.pending') }}</p>
+{% endblock %}

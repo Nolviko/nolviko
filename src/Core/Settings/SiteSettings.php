@@ -1,0 +1,227 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Nolviko\Core\Settings;
+
+use Closure;
+use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\Connection;
+use InvalidArgumentException;
+use Nolviko\Core\Cache\Cache;
+use Nolviko\Core\Config\RegistrationRules;
+use Nolviko\Core\View\ThemeTokens;
+use Throwable;
+
+/**
+ * Administrator-editable, non-secret settings stored in the `settings` table (ADR-034). One whitelist defines every
+ * key with its type and limits; nothing else is read or written here. Reads come from a cache entry that a save
+ * removes. When the database cannot be reached the store answers "no stored values", so every page still renders
+ * with `config/local.php` and the built-in defaults.
+ */
+final class SiteSettings
+{
+    /** Home page layouts (2026-11-08): the board index, or the latest discussions across all forums. */
+    public const HOME_LAYOUTS = ['classic', 'discussions'];
+
+    /** Built-in value of each enum setting while nothing is stored (selected in /admin/site). */
+    public const DEFAULTS = ['registration.mode' => 'verify', 'registration.challenge' => 'none',
+        'home.layout' => 'classic', 'appearance.accent' => 'green', 'gallery.enabled' => 'off',
+        'gallery.approval' => 'off', 'api.enabled' => 'on', 'posting.images' => 'off',
+        'seo.indexnow' => 'off'];
+
+    /** Key => [type, limit] (string/email: max length, int: [min, max], enum: options). */
+    public const KEYS = [
+        'site.name' => ['string', 80],
+        'site.description' => ['string', 300],
+        'registration.mode' => ['enum', RegistrationRules::MODES],
+        'registration.min_seconds' => ['int', [0, 60]],
+        'registration.challenge' => ['enum', RegistrationRules::CHALLENGES],
+        'mail.from_address' => ['email', 254],
+        'mail.from_name' => ['string', 100],
+        'home.layout' => ['enum', self::HOME_LAYOUTS],
+        'appearance.accent' => ['enum', ['green', 'blue', 'yellow', 'red', 'purple']],
+        'announcement.text' => ['string', 300],
+        'api.enabled' => ['enum', ['on', 'off']],
+        'seo.indexnow' => ['enum', ['off', 'on']],
+        // Owner decision 2026-11-14: gallery albums and images in posts are separate switches, both off at first.
+        'gallery.enabled' => ['enum', ['off', 'on']],
+        'gallery.max_mb' => ['int', [1, 100]],
+        'gallery.extensions' => ['string', 100],
+        'gallery.quota_mb' => ['int', [0, 1000000]],
+        'gallery.approval' => ['enum', ['off', 'on']],
+        'posting.images' => ['enum', ['off', 'on']],
+        'posting.image_max_mb' => ['int', [1, 100]],
+        'posting.images_per_post' => ['int', [1, 50]],
+        'antispam.blocked_words' => ['string', 2000],
+        'antispam.censored_words' => ['string', 2000],
+        'antispam.blocked_domains' => ['string', 2000],
+        'antispam.new_user_max_links' => ['int', [0, 50]],
+        'antispam.link_min_posts' => ['int', [0, 1000]],
+        'antispam.first_posts_moderated' => ['int', [0, 100]],
+    ];
+
+    private const CACHE_KEY = 'site-settings-v1';
+
+    /** Seconds an unreadable database is remembered as "no stored values". */
+    private const FAILURE_TTL = 30;
+
+    /** @var array<string, string>|null */
+    private ?array $values = null;
+
+    /**
+     * @param Closure(): Connection $connection Built only when the cache misses or on save.
+     */
+    public function __construct(
+        private readonly Closure $connection,
+        private readonly Cache $cache,
+    ) {
+    }
+
+    /**
+     * @param bool $connect False for display-only reads (page header): the database is asked only when this request
+     *     already holds an open connection, so pages that need no database never open one for the site name.
+     * @return array<string, string> Stored values by key; keys without a row are absent.
+     */
+    public function values(bool $connect = true): array
+    {
+        if ($this->values !== null) {
+            return $this->values;
+        }
+
+        $cached = $this->cache->get(self::CACHE_KEY);
+
+        if (is_array($cached)) {
+            return $this->values = array_filter($cached, 'is_string');
+        }
+
+        try {
+            $db = ($this->connection)();
+
+            if (!$connect && !$db->isConnected()) {
+                return [];
+            }
+
+            $rows = $db->fetchAllKeyValue(
+                'SELECT setting_key, setting_value FROM settings WHERE setting_key IN (?)',
+                [array_keys(self::KEYS)],
+                [ArrayParameterType::STRING],
+            );
+        } catch (Throwable) {
+            // Remember the failure briefly, so an unreachable database does not add a connect timeout to every page.
+            $this->cache->set(self::CACHE_KEY, [], self::FAILURE_TTL);
+
+            return $this->values = [];
+        }
+
+        $values = [];
+
+        foreach ($rows as $key => $value) {
+            $values[(string) $key] = (string) $value;
+        }
+
+        $this->cache->set(self::CACHE_KEY, $values, 3600);
+
+        return $this->values = $values;
+    }
+
+    public function get(string $key): ?string
+    {
+        return $this->values()[$key] ?? null;
+    }
+
+    /** Display-only read: never opens a database connection (see values()). */
+    public function peek(string $key): ?string
+    {
+        return $this->values(false)[$key] ?? null;
+    }
+
+    /**
+     * Validates every submitted value, then writes the changed ones (an empty value removes the row) with one
+     * `audit_logs` row, all in one transaction, and drops the cache entry.
+     *
+     * @param array<string, string> $submitted Key => raw form value; unknown keys are refused.
+     * @param list<string> $pinned Keys that `config/local.php` sets; they are never written here.
+     * @return int Number of changed settings.
+     * @throws InvalidArgumentException `setting_invalid:<key>`.
+     */
+    public function save(array $submitted, array $pinned, int $actorId): int
+    {
+        $current = $this->values();
+        $changes = [];
+
+        foreach ($submitted as $key => $raw) {
+            if (!isset(self::KEYS[$key])) {
+                throw new InvalidArgumentException('setting_invalid:' . $key);
+            }
+
+            if (in_array($key, $pinned, true)) {
+                continue;
+            }
+
+            $value = self::normalize($key, $raw);
+
+            if ($value !== ($current[$key] ?? null)) {
+                $changes[$key] = $value;
+            }
+        }
+
+        if ($changes === []) {
+            return 0;
+        }
+
+        $db = ($this->connection)();
+        $db->transactional(static function (Connection $db) use ($changes, $actorId): void {
+            $now = (string) $db->fetchOne('SELECT UTC_TIMESTAMP(6)');
+
+            foreach ($changes as $key => $value) {
+                $db->delete('settings', ['setting_key' => $key]);
+
+                if ($value !== null) {
+                    $db->insert('settings', ['setting_key' => $key, 'setting_value' => $value,
+                        'value_type' => self::KEYS[$key][0] === 'int' ? 'int' : 'string', 'updated_at' => $now]);
+                }
+            }
+
+            $db->insert('audit_logs', ['actor_id' => $actorId, 'action' => 'admin.settings_changed',
+                'target_type' => 'settings', 'target_id' => 0, 'reason' => null,
+                'details' => json_encode(['changed' => array_keys($changes)], JSON_THROW_ON_ERROR),
+                'created_at' => $now]);
+        });
+        $this->cache->delete(self::CACHE_KEY);
+        $this->values = null;
+
+        return count($changes);
+    }
+
+    /**
+     * The stored form of a raw value, or null for "not set".
+     *
+     * @throws InvalidArgumentException `setting_invalid:<key>`.
+     */
+    public static function normalize(string $key, string $raw): ?string
+    {
+        [$type, $limit] = self::KEYS[$key] ?? throw new InvalidArgumentException('setting_invalid:' . $key);
+        $value = trim($raw);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $valid = match ($type) {
+            'string' => mb_check_encoding($value, 'UTF-8') && mb_strlen($value) <= $limit
+                && preg_match('/[\x00-\x1F\x7F]/', $value) !== 1,
+            'email' => strlen($value) <= $limit && filter_var($value, FILTER_VALIDATE_EMAIL) !== false,
+            'int' => preg_match('/^[0-9]{1,6}$/D', $value) === 1 && (int) $value >= $limit[0]
+                && (int) $value <= $limit[1],
+            'enum' => in_array($value, $limit, true),
+            default => false,
+        };
+
+        if (!$valid) {
+            throw new InvalidArgumentException('setting_invalid:' . $key);
+        }
+
+        return $type === 'int' ? (string) (int) $value : $value;
+    }
+}

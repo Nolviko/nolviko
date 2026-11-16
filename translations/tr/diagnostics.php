@@ -1,0 +1,306 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'diagnostics.theme_action_invalid' => 'Tema isteğine izin verilmiyor.',
+    'diagnostics.theme_admin_denied' => 'Tema isteğine izin verilmiyor.',
+    'diagnostics.theme_preference_invalid' => 'Tema isteği geçersiz.',
+    'diagnostics.theme_template_invalid' => 'Tema isteği geçersiz.',
+    'diagnostics.theme_activation_failed' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_asset_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_build_failed' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_build_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_build_limit' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_catalog_limit' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_contrast_failed' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_css_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_draft_stale' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_file_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_fragment_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_id_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_identity_exists' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_manifest_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_missing' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_package_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_package_limit' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_path_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_preview_denied' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_publish_busy' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_publish_incompatible' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_runtime_incompatible' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_slot_context_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_slot_incompatible' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_slot_output_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_storage_unavailable' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_tokens_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_upstream_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.admin_filter_invalid' => 'Geçersiz yönetici isteği.',
+    'diagnostics.admin_filter_name_invalid' => 'Geçersiz yönetici isteği.',
+    'diagnostics.admin_filter_name_taken' => 'Geçersiz yönetici isteği.',
+    'diagnostics.admin_filter_limit' => 'Geçersiz yönetici isteği.',
+    'diagnostics.admin_filter_denied' => 'Geçersiz yönetici isteği.',
+    'diagnostics.forum_moderator_target_invalid' => 'Geçersiz yönetici isteği.',
+    'diagnostics.forum_moderator_limit' => 'Geçersiz yönetici isteği.',
+    'diagnostics.forum_moderator_denied' => 'Geçersiz yönetici isteği.',
+
+    'diagnostics.installer_mail_action_invalid' => 'Bir e-posta kurulum işlemi seçin.',
+    'diagnostics.installer_mail_rate_limited' => 'Yeni test iletisi için 30 saniye bekleyin.',
+    'diagnostics.installer_mail_recipient_invalid' => 'Geçerli bir test alıcı adresi girin.',
+    'diagnostics.installer_mail_https_required' => 'SMTP bilgilerini girmek veya kaydetmek için kurulumu HTTPS ile '
+        . 'açın. Bu bağlantıda SMTP adımını atlayabilirsiniz.',
+    'diagnostics.php_version_unsupported' => 'PHP {version} desteklenmiyor. Resmî PHP 8.4 serisinde 8.4.27 veya daha'
+        . ' yeni, 8.5 serisinde 8.5.12 veya daha yeni bir sürüm kullanın. Dağıtım'
+        . ' eki içeren sürümler (örneğin 8.4.27-1ubuntu1), güvenlik düzeyleri '
+        . 'doğrulanamadığı için kabul edilmez; hosting sağlayıcınızdan resmî '
+        . 'dağıtımı isteyin.',
+    'diagnostics.database_driver_unsupported' => 'Seçilen veritabanı türü desteklenmiyor. MySQL, MariaDB veya '
+        . 'PostgreSQL seçin.',
+    'diagnostics.extension_missing' => 'Gerekli PHP eklentisi {extension} yüklü değil.',
+    'diagnostics.memory_limit_invalid' => 'PHP memory_limit ayarı okunamadı.',
+    'diagnostics.memory_limit_below_128M' => 'PHP memory_limit ayarı en az 128 MB olmalıdır.',
+    'diagnostics.storage_not_writable' => 'Depolama dizini mevcut olmalı ve web sunucusu tarafından yazılabilir '
+        . 'olmalıdır.',
+    'diagnostics.config_missing' => 'Site kurulu olarak işaretlenmiş ancak config/local.php yapılandırma dosyası '
+        . 'eksik. Dosyayı yedeğinizden geri yükleyin.',
+    'diagnostics.config_file_invalid' => 'config/local.php yapılandırma dosyası okunamadı. Dosya bir ayar dizisi '
+        . 'döndürmelidir.',
+    'diagnostics.config_key_unknown' => 'Yapılandırmada bilinmeyen ayar var: {key}.',
+    'diagnostics.config_key_missing' => 'Yapılandırmada gerekli bir ayar eksik: {key}.',
+    'diagnostics.config_type_invalid' => '{key} ayarının türü yanlış.',
+    'diagnostics.config_value_invalid' => '{key} ayarının değeri geçersiz.',
+    'diagnostics.database_auth_failed' => 'Veritabanı kullanıcı adını veya parolayı reddetti.',
+    'diagnostics.database_not_found' => 'Veritabanı adı sunucuda bulunamadı veya kullanıcının bu veritabanına erişim'
+        . ' izni yok.',
+    'diagnostics.database_unreachable' => 'Veritabanı sunucusuna ulaşılamadı. Sunucu adresini ve portu kontrol edin.',
+    'diagnostics.database_connection_failed' => 'Veritabanı bağlantısı kurulamadı.',
+    'diagnostics.database_family_invalid' => '{family, select, mariadb {Sunucu MariaDB ancak yapılandırma MySQL '
+        . 'olarak ayarlı: database.driver değerini mariadb yapın.} other {Sunucu '
+        . 'MySQL ancak yapılandırma MariaDB olarak ayarlı: database.driver '
+        . 'değerini mysql yapın.}}',
+    'diagnostics.database_version_unsupported' => 'Veritabanı sunucusunun {version} sürümü desteklenmiyor. MySQL 8.4'
+        . ' veya MariaDB 10.11 ya da daha yeni bir sürüm kullanın.',
+    'diagnostics.database_backend_unverified' => '{driver} veritabanı türü henüz kullanılamıyor. MySQL 8.4 kullanın.',
+    'diagnostics.database_charset_invalid' => 'Veritabanı bağlantısı utf8mb4 karakter kümesini kullanmıyor.',
+    'diagnostics.database_timezone_invalid' => 'Veritabanı oturumunun saat dilimi UTC değil.',
+    'diagnostics.database_sql_mode_invalid' => 'Veritabanı oturumu gerekli katı SQL kipini kullanmıyor.',
+    'diagnostics.migration_locked' => 'Başka bir istek veritabanını güncelliyor. Biraz bekleyip tekrar deneyin.',
+    'diagnostics.migration_lease_lost' => 'Veritabanı güncellemesi çok uzun sürdü ve başka bir istek tarafından '
+        . 'devralındı. Tekrar deneyin.',
+    'diagnostics.migration_unknown' => 'Veritabanında bu sürümün tanımadığı {migration} geçişi var. Eşleşen veya '
+        . 'daha yeni bir sürüm yükleyin.',
+    'diagnostics.migration_checksum_mismatch' => '{migration} geçişi uygulandıktan sonra değiştirilmiş. Özgün sürüm '
+        . 'dosyalarını geri yükleyin.',
+    'diagnostics.migration_step_failed' => '{migration} veritabanı güncelleme adımı başarısız. Ayrıntılar günlükte '
+        . 'bulunabilir; güncellemeyi yeniden çalıştırmak bu adımdan devam eder.',
+    'diagnostics.migration_contract_requires_admin' => '{migration} geçişi eski veritabanı yapısını kaldırır ve bir '
+        . 'yönetici tarafından başlatılmalıdır.',
+    'diagnostics.migration_backend_unsupported' => '{driver} için veritabanı geçişleri henüz kullanılamıyor. MySQL '
+        . '8.4 kullanın.',
+    'diagnostics.installer_field_missing' => '{field, select, host {Veritabanı sunucusunu girin.} name {Veritabanı '
+        . 'adını girin.} user {Veritabanı kullanıcı adını girin.} other {{field} '
+        . 'alanını girin.}}',
+    'diagnostics.installer_field_invalid' => '{field, select, host {Veritabanı sunucusu} port {Port} name '
+        . '{Veritabanı adı} user {Veritabanı kullanıcı adı} password {Parola} '
+        . 'other {{field}}} geçerli değil.',
+    'diagnostics.installer_setup_code_invalid' => 'Kurulum kodu doğru değil. Sunucunuzdaki storage/install/setup-'
+        . 'code.txt dosyasından kopyalayın.',
+    'diagnostics.config_write_failed' => 'config/local.php dosyası yazılamadı. config dizinini web sunucusu '
+        . 'tarafından yazılabilir yapın veya dosyayı kendiniz yükleyin.',
+    'diagnostics.config_directory_public' => 'config dizini herkese açık web kökünün içinde. Forumu yalnızca public '
+        . 'dizini sunulacak şekilde taşıyın.',
+    'diagnostics.password_too_short' => 'En az 8 karakterlik parola kullanın.',
+    'diagnostics.password_too_long' => 'En fazla 256 karakterlik parola kullanın.',
+    'diagnostics.password_too_common' => 'Bu parola çok yaygın ve kolay tahmin edilebilir. Başka bir parola seçin.',
+    'diagnostics.password_matches_account' => 'Kullanıcı adınızı veya e-posta adresinizi parola olarak kullanmayın.',
+    'diagnostics.login_invalid' => 'Kullanıcı adı, e-posta adresi veya parola doğru değil.',
+    'diagnostics.login_account_pending_verification' => 'Lütfen önce e-posta adresinizi doğrulayın. Gönderdiğimiz '
+        . 'iletiyi kontrol edin.',
+    'diagnostics.login_account_pending_approval' => 'Hesabınız yönetici onayı bekliyor.',
+    'diagnostics.login_throttled' => 'Çok fazla başarısız giriş denemesi. {minutes, plural, one {# dakika} other {# '
+        . 'dakika}} sonra tekrar deneyin.',
+    'diagnostics.login_account_suspended' => 'Bu hesap askıya alınmış.',
+    'diagnostics.permission_value_invalid' => '{key} izni için bu değere izin verilmiyor.',
+    'diagnostics.permission_unknown' => '{key} izni yok.',
+    'diagnostics.migration_registry_invalid' => 'Bu sürümün veritabanı geçiş listesi geçersiz.',
+    'diagnostics.thread_forum_not_found' => 'Bu forum yok veya forumu görme izniniz bulunmuyor.',
+    'diagnostics.thread_forum_is_category' => 'Kategorilerde konu açılamaz. Kategorinin forumlarından birini seçin.',
+    'diagnostics.thread_permission_denied' => 'Bu forumda konu açma izniniz yok.',
+    'diagnostics.thread_forum_locked' => 'Bu forum kilitli. Yeni konu açılamaz.',
+    'diagnostics.thread_title_invalid' => 'Kontrol karakterleri içermeyen, 1 ile {max} karakter arasında bir başlık '
+        . 'girin.',
+    'diagnostics.post_content_invalid' => '1 ile {max} karakter arasında bir ileti girin.',
+    'diagnostics.thread_not_found' => 'Bu konu yok veya konuyu okuma izniniz bulunmuyor.',
+    'diagnostics.reply_permission_denied' => 'Bu forumda yanıt yazma izniniz yok.',
+    'diagnostics.thread_locked' => 'Bu konu kilitli. Yeni yanıt gönderilemez.',
+    'diagnostics.post_token_invalid' => 'Bu form artık geçerli değil. İletinizi kontrol edip tekrar gönderin.',
+    'diagnostics.post_not_found' => 'Bu ileti yok veya iletiyi okuma izniniz bulunmuyor.',
+    'diagnostics.post_edit_denied' => 'Bu iletiyi düzenleme izniniz yok.',
+    'diagnostics.post_edit_window_expired' => 'İletiler yalnızca gönderildikten sonraki {minutes, plural, one {# '
+        . 'dakika} other {# dakika}} içinde düzenlenebilir.',
+    'diagnostics.post_reason_invalid' => 'Kontrol karakterleri içermeyen, en fazla {max} karakterlik bir neden '
+        . 'girin.',
+    'diagnostics.moderation_denied' => 'Bu işlemi yapma izniniz yok.',
+    'diagnostics.moderation_action_invalid' => 'Sunulan işlemlerden birini seçin.',
+    'diagnostics.post_is_first' => 'Konunun ilk iletisi yalnızca konuyla birlikte kaldırılabilir.',
+    'diagnostics.content_already_deleted' => 'Bu içerik zaten silinmiş.',
+    'diagnostics.content_not_deleted' => 'Bu içerik silinmemiş; geri yüklenecek bir şey yok.',
+    'diagnostics.thread_state_unchanged' => 'Konu zaten bu durumda.',
+    'diagnostics.thread_is_redirect' => 'Bu, taşınmış bir konuya yönlendirmedir. Konunun kendisini yönetin.',
+    'diagnostics.thread_move_target_invalid' => 'Konu taşıma izniniz olan bir forum seçin. Kategoriler konu '
+        . 'barındıramaz.',
+    'diagnostics.thread_move_same_forum' => 'Konu zaten bu forumda.',
+    'diagnostics.content_not_pending' => 'Bu içerik onay beklemiyor.',
+    'diagnostics.post_content_blocked' => 'İletiniz burada izin verilmeyen bir sözcük içeriyor.',
+    'diagnostics.post_link_blocked' => 'İletiniz burada izin verilmeyen bir siteye bağlantı içeriyor.',
+    'diagnostics.post_links_limited' => 'Yeni üyeler bir iletiye {max, plural, =0 {bağlantı ekleyemez} one {en fazla'
+        . ' # bağlantı ekleyebilir} other {en fazla # bağlantı ekleyebilir}}. Lütfen '
+        . 'bağlantıları azaltın.',
+    'diagnostics.username_invalid' => 'Harf, rakam, boşluk, nokta, kısa çizgi veya alt çizgiden oluşan 3 ile 32 '
+        . 'karakterlik bir kullanıcı adı seçin; harf veya rakamla başlayıp bitmelidir.',
+    'diagnostics.email_invalid' => 'Geçerli bir e-posta adresi girin.',
+    'diagnostics.password_mismatch' => 'İki parola aynı değil.',
+    'diagnostics.identity_taken' => '{field, select, username {Bu kullanıcı adı zaten alınmış.} email {Bu e-posta '
+        . 'adresi zaten kullanılıyor.} other {Bu hesap zaten var.}}',
+    'diagnostics.installer_admin_exists' => 'Bir yönetici hesabı zaten var.',
+    'diagnostics.installer_lock_failed' => 'config/install.lock dosyası yazılamadığı için kurulum tamamlanamadı. '
+        . 'config dizinini yazılabilir yapıp tekrar deneyin.',
+    'diagnostics.admin_reauth_invalid' => 'Parola doğru değil.',
+    'diagnostics.report_denied' => 'Bu forumda iletileri şikâyet etme izniniz yok.',
+    'diagnostics.report_own_post' => 'Kendi iletinizi şikâyet edemezsiniz. Bunun yerine düzenleyin veya silin.',
+    'diagnostics.report_reason_invalid' => 'Sorunu 1 ile {max} karakter arasında açıklayın.',
+    'diagnostics.report_exists' => 'Bu iletiyi zaten şikâyet ettiniz. Moderatörler inceleyecek.',
+    'diagnostics.report_flood_wait' => 'Çok hızlı şikâyet gönderiyorsunuz. {seconds, plural, one {# saniye} other {#'
+        . ' saniye}} bekleyip tekrar deneyin.',
+    'diagnostics.report_not_found' => 'Bu şikâyet yok veya şikâyeti ele alma izniniz bulunmuyor.',
+    'diagnostics.report_not_open' => 'Bu şikâyet zaten çözülmüş veya reddedilmiş.',
+    'diagnostics.report_note_invalid' => 'Moderasyon günlüğü için 1 ile {max} karakter arasında bir not yazın.',
+    'diagnostics.bulk_empty' => 'En az bir öğe seçin.',
+    'diagnostics.bulk_limit' => 'Bir defada en fazla {max, plural, one {# öğe} other {# öğe}} seçin.',
+    'diagnostics.user_not_pending' => 'Bu hesap onay beklemiyor.',
+    'diagnostics.post_flood_wait' => 'Çok hızlı ileti gönderiyorsunuz. {seconds, plural, one {# saniye} other {# '
+        . 'saniye}} bekleyip tekrar deneyin.',
+    'diagnostics.login_account_banned' => 'Bu hesap yasaklı.',
+    'diagnostics.login_account_banned_until' => 'Bu hesap {until} tarihine kadar yasaklı.',
+    'diagnostics.sanction_self' => 'Kendi hesabınıza yaptırım uygulayamazsınız.',
+    'diagnostics.sanction_admin_denied' => 'Bir yöneticiye yalnızca başka bir yönetici yaptırım uygulayabilir.',
+    'diagnostics.sanction_reason_invalid' => '1 ile {max, number} karakter arasında bir neden belirtin.',
+    'diagnostics.sanction_days_invalid' => '0 ile {max, number} arasında gün sayısı girin.',
+    'diagnostics.warning_points_invalid' => '1 ile {max, number} arasında uyarı puanı girin.',
+    'diagnostics.user_not_banned' => 'Bu kullanıcı yasaklı değil.',
+    'diagnostics.ban_type_invalid' => 'Sunulan yasak türlerinden birini seçin.',
+    'diagnostics.ban_value_invalid' => 'Bu tür için geçerli bir IP adresi, CIDR aralığı, e-posta adresi veya alan '
+        . 'adı girin.',
+    'diagnostics.ban_own_address' => 'Bu yasak şu anda kullandığınız adresi de kapsar.',
+    'diagnostics.ban_not_found' => 'Bu yasak yok veya artık etkin değil.',
+    'diagnostics.admin_reauth_required' => 'Önce parolanızı doğrulayın; doğrulama 15 dakika geçerlidir.',
+    'diagnostics.verify_resend_wait' => 'Yeni bağlantı istemeden önce {seconds, plural, one {# saniye} other {# '
+        . 'saniye}} bekleyin.',
+    'diagnostics.register_too_fast' => 'Formu doldurmak için biraz zaman ayırıp tekrar gönderin.',
+    'diagnostics.register_challenge_failed' => 'Sorunun yanıtı doğru değildi. Lütfen yeni soruyu deneyin.',
+    'diagnostics.register_wait' => 'Ağınızdan kısa sürede çok fazla hesap oluşturuldu. {seconds, plural, one {# '
+        . 'saniye} other {# saniye}} sonra tekrar deneyin.',
+    'diagnostics.registration_closed' => 'Bu forum şu anda yeni hesap kabul etmiyor.',
+    'diagnostics.current_password_invalid' => 'Mevcut parola doğru değil.',
+    'diagnostics.email_unchanged' => 'Bu zaten hesabınızın adresi.',
+    'diagnostics.account_wait' => 'Tekrar denemeden önce {seconds, plural, one {# saniye} other {# saniye}} '
+        . 'bekleyin.',
+    'diagnostics.forum_title_invalid' => '1 ile 100 karakter arasında bir başlık girin.',
+    'diagnostics.forum_slug_invalid' => 'Adres adı için küçük harf, rakam ve kısa çizgi kullanın.',
+    'diagnostics.forum_slug_taken' => 'Bu adres adı başka bir forum tarafından kullanılıyor.',
+    'diagnostics.forum_parent_not_found' => 'Üst forum olarak seçilen forum yok.',
+    'diagnostics.forum_not_found' => 'Bu forum yok.',
+    'diagnostics.forum_too_deep' => 'Forumlar bu kadar derine yerleştirilemez.',
+    'diagnostics.forum_move_into_descendant' => 'Bir forum kendi alt forumlarından birine taşınamaz.',
+    'diagnostics.forum_has_children' => 'Önce alt forumları taşıyın veya silin.',
+    'diagnostics.forum_has_threads' => 'Yalnızca boş forum silinebilir; önce konularını taşıyın.',
+    'diagnostics.mail_send_failed' => 'E-posta gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin.',
+    'diagnostics.mail_not_configured' => 'Bu forumda e-posta henüz yapılandırılmamış. Lütfen yöneticiye bildirin.',
+    'diagnostics.login_access_banned' => 'Bu adresten veya bu e-posta adresiyle giriş yapılmasına izin verilmiyor.',
+    'diagnostics.privacy_denied' => 'Bu işlem hesap sahibini veya parolasını yakın zamanda doğrulamış yöneticiyi '
+        . 'gerektirir.',
+    'diagnostics.privacy_grace_expired' => 'İptal süresi doldu. Yardım için yöneticiyle iletişime geçin.',
+    'diagnostics.privacy_last_admin' => 'Son etkin yönetici silinemez. Önce başka bir yönetici atayın.',
+    'diagnostics.privacy_not_due' => 'Bu hesap için iptal süresi dolmuş bir silme isteği bulunmuyor.',
+    'diagnostics.privacy_confirmation_required' => 'Silme ve içerik saklama politikasını anladığınızı onaylayın.',
+    'diagnostics.privacy_action_invalid' => 'Geçerli bir hesap ve gizlilik işlemi seçin.',
+    'diagnostics.privacy_export_busy' => 'Veri aktarımı meşgul veya özel depolama dolu. Daha sonra tekrar deneyin.',
+    'diagnostics.privacy_export_large' => 'Bu hesap web üzerinden indirme sınırını aşıyor. Tam veri aktarımı için '
+        . 'yöneticiden yardım isteyin; eksik arşiv sunulmadı.',
+    'diagnostics.privacy_export_failed' => 'Özel veri arşivi hazırlanamadı. Daha sonra tekrar deneyin.',
+    'diagnostics.privacy_unavailable' => 'Hesap gizlilik işlemleri kullanılamıyor. Yöneticiyle iletişime geçin.',
+    'diagnostics.privacy_https_required' => 'Hesap gizlilik araçları için bu sayfayı HTTPS üzerinden açın.',
+    'diagnostics.privacy_delete_large' => 'Bu hesap tek web isteğinde silinemeyecek kadar büyük. Yöneticiden yardım '
+        . 'isteyin.',
+    'diagnostics.outbox_payload_too_large' => 'Arka plan görevi izin verilen veri boyutunu aşıyor.',
+    'diagnostics.outbox_claim_transaction_active' => 'Arka plan görevi başka bir işlem içinde devralınamaz.',
+    'diagnostics.outbox_guard_transaction_required' => 'Arka plan görevi korumalı işlem gerektirir.',
+    'diagnostics.outbox_lease_lost' => 'Arka plan görevinin işlem sahipliği sona erdi. Görev kurtarma için '
+        . 'saklanıyor.',
+    'diagnostics.outbox_runner_budget_invalid' => 'Arka plan görevi çalışma sınırı geçerli değil.',
+    'diagnostics.outbox_budget_or_maintenance' => 'Arka plan işlemi bakım veya süre sınırı nedeniyle duraklatıldı.',
+    'diagnostics.outbox_payload_invalid' => 'Arka plan görevi verileri geçerli değil.',
+    'diagnostics.conversation_recipient_invalid' => 'Alıcı olarak başka bir etkin üye seçin.',
+    'diagnostics.conversation_not_found' => 'Bu konuşma yok veya katılımcısı değilsiniz.',
+    'diagnostics.conversation_closed' => 'Bu konuşma artık yeni yanıtlara açık değil.',
+    'diagnostics.conversation_content_invalid' => 'Geçerli bir konu (en fazla 160 karakter) ve ileti (en fazla 8000 '
+        . 'karakter) girin.',
+    'diagnostics.privacy_cleanup_review' => 'Hesap silme için yüklü veritabanının saklama kuralları yönetici '
+        . 'tarafından incelenmelidir.',
+    'diagnostics.privacy_deletion_in_progress' => 'Silme başladığı için artık tam arşiv oluşturulamaz. Yöneticiyle '
+        . 'iletişime geçin.',
+    'diagnostics.community_denied' => 'Bu işlem kullanılamıyor.',
+    'diagnostics.community_not_found' => 'Bu içerik kullanılamıyor.',
+    'diagnostics.community_invalid' => 'Değerleri kontrol edip tekrar deneyin. Daha önce oy vermiş veya anket '
+        . 'kapanmış olabilir.',
+    'diagnostics.community_images_unavailable' => 'Görsel yüklemek için sunucuda GD görsel desteği gereklidir.',
+    'diagnostics.community_upload_invalid' => 'Yükleme sınırları içinde izin verilen bir dosya seçin.',
+    'diagnostics.community_upload_failed' => 'Özel dosya yüklemesi tamamlanamadı. Daha sonra tekrar deneyin.',
+    'diagnostics.community_upload_limit' => 'Dosya depolama sınırınıza ulaştınız. Eski bir dosyayı kaldırın.',
+    'diagnostics.community_member_unknown' => 'Bu kullanıcı adıyla bir üye yok.',
+    'diagnostics.forum_description_invalid' => 'Açıklama en fazla 2.000 karakter olabilir.',
+    'diagnostics.admin_https_required' => 'Bu işlem yalnızca HTTPS üzerinden çalışır; yönetim alanını https:// '
+        . 'ile açıp yeniden deneyin.',
+    'diagnostics.thread_posts_invalid' => 'Bu konudan 1 ile 200 arasında ileti seçin.',
+    'diagnostics.thread_posts_all' => 'Tüm iletiler seçili. Konunun tamamı için "Taşı"yı kullanın ya da "Tüm '
+        . 'iletiler" ile var olan bir konuyla birleştirin.',
+    'diagnostics.thread_merge_target_invalid' => 'Moderatörü olduğunuz başka bir konu girin (numarası veya adresi).',
+    'diagnostics.thread_prefix_invalid' => 'Bu önek bu forumda kullanılamaz.',
+    'diagnostics.thread_tags_invalid' => 'Listedeki etiketlerden en fazla {max} tane seçin.',
+    'diagnostics.taxonomy_label_invalid' => '1 ile {max} karakter arasında bir ad girin.',
+    'diagnostics.taxonomy_color_invalid' => 'Listedeki renklerden birini seçin.',
+    'diagnostics.taxonomy_tag_taken' => 'Bu adda bir etiket zaten var.',
+    'diagnostics.gallery_denied' => 'Bu albümü değiştiremezsiniz.',
+    'diagnostics.gallery_disabled' => 'Galeri kapalı.',
+    'diagnostics.gallery_title_invalid' => '1 ile 100 karakter arasında bir ad girin.',
+    'diagnostics.gallery_description_invalid' => 'Açıklama en fazla 500 karakter olabilir.',
+    'diagnostics.gallery_visibility_invalid' => 'Albümü kimin görebileceğini seçin.',
+    'diagnostics.gallery_upload_invalid' => 'Yüklenecek bir görsel dosyası seçin.',
+    'diagnostics.gallery_upload_failed' => 'Görsel kaydedilemedi. Daha sonra yeniden deneyin.',
+    'diagnostics.gallery_too_large' => 'Görsel {max} MB sınırından büyük.',
+    'diagnostics.gallery_too_large_to_process' => 'Görselin piksel sayısı bu sunucu için çok fazla.',
+    'diagnostics.gallery_type_refused' => 'Bu dosya izin verilen bir görsel değil. İzin verilenler: {types}.',
+    'diagnostics.gallery_images_unavailable' => 'Bu sunucuda görsel işleme (PHP GD) yok.',
+    'diagnostics.gallery_quota' => 'Galeri alanınız ({max} MB) doldu. Yenilerini yüklemek için görsel silin.',
+    'diagnostics.webhook_url_invalid' => 'İnternette erişilebilen bir https adresi girin.',
+    'diagnostics.webhook_events_invalid' => 'En az bir olay seçin.',
+    'diagnostics.post_images_limited' => 'Bir iletide en fazla {max} resim olabilir.',
+    'diagnostics.gallery_post_images_off' => 'İletilere resim ekleme kapalı.',
+    'diagnostics.community_solution_off' => 'Yanıt yalnızca soru-cevap forumlarında kabul edilebilir.',
+    'diagnostics.second_factor_invalid' => 'Kod doğru değil ya da daha önce kullanılmış.',
+    'diagnostics.second_factor_unavailable' => 'Bu doğrulama yöntemi kullanılamıyor.',
+    'diagnostics.external_unavailable' => 'Bu hesapla giriş şu anda bu sitede kullanılamıyor.',
+    'diagnostics.external_expired' => 'Giriş çok uzun sürdü ya da başka bir pencerede başlatıldı. Lütfen tekrar '
+        . 'deneyin.',
+    'diagnostics.external_cancelled' => 'Giriş iptal edildi.',
+    'diagnostics.external_failed' => 'Diğer hizmet girişi onaylamadı. Lütfen tekrar deneyin.',
+    'diagnostics.external_unverified' => 'Bu hesabın doğrulanmış bir e-posta adresi yok; kayıt için kullanılamaz.',
+    'diagnostics.external_email_taken' => 'Bu e-posta adresiyle bir hesap zaten var. Parolanızla giriş yapın, sonra '
+        . 'bu hesabı hesap sayfanızdan bağlayın.',
+    'diagnostics.external_taken' => 'Bu dış hesap başka bir üyeye bağlı.',
+    'diagnostics.external_linked' => 'Bu hizmetten bir hesap size zaten bağlı.',
+    'diagnostics.external_inactive' => 'Bu hesap henüz etkin değil ya da askıya alınmış.',
+    'diagnostics.external_banned' => 'Bu adresle hesap oluşturulamaz.',
+    'diagnostics.external_pending_approval' => 'Hesabınız oluşturuldu; bir yöneticinin onayını bekliyor.',
+    'diagnostics.external_link_password' => 'Parola doğru değil.',
+];

@@ -1,0 +1,59 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+{% set statuses = {pending: t('tasks.status_pending'), running: t('tasks.status_running'), failed: t('tasks.status_failed'), completed: t('tasks.status_completed')} %}
+{% set jobs = {'post.created': t('tasks.job_post'), 'thread.created': t('tasks.job_post'), 'post.approved': t('tasks.job_post'), 'thread.approved': t('tasks.job_post'), 'user.export_requested': t('tasks.job_export'), 'user.deletion_requested': t('tasks.job_delete'), 'community.mail': t('tasks.job_mail')} %}
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+{% if cache_mode %}
+<p>{{ t('tasks.cache_policy') }}</p>
+<p>{{ t('tasks.cache_state', {enabled: redis.enabled ? 1 : 0}) }}</p>
+{% if redis.reason %}<p role="status">{{ t('tasks.fallback') }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label>{{ t('tasks.host') }} <input name="host" maxlength="45" value="127.0.0.1" required></label></p>
+<p><label>{{ t('tasks.port') }} <input type="number" name="port" min="1" max="65535" value="6379" required></label></p>
+<p><label>{{ t('tasks.username') }} <input name="username" maxlength="128" autocomplete="off"></label></p>
+<p><label>{{ t('tasks.password') }} <input type="password" name="password" maxlength="512" autocomplete="new-password"></label></p>
+<p><label>{{ t('tasks.database') }} <input type="number" name="database" min="0" max="15" value="0"></label></p>
+<p><label><input type="checkbox" name="tls" value="1" checked> {{ t('tasks.tls') }}</label></p>
+<p><label>{{ t('tasks.peer') }} <input name="peer_name" maxlength="253"></label></p>
+<fieldset><legend>{{ t('tasks.features') }}</legend>
+<label><input type="checkbox" name="namespaces[]" value="{{ 'theme-render' }}" checked> {{ t('tasks.theme_cache') }}</label>
+<label><input type="checkbox" name="namespaces[]" value="{{ 'community-presence' }}"> {{ t('tasks.presence_cache') }}</label>
+</fieldset>
+<button name="action" value="{{ 'preflight' }}">{{ t('tasks.preflight') }}</button>
+<button name="action" value="{{ 'enable' }}">{{ t('tasks.enable') }}</button>
+</form>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button name="action" value="{{ 'disable' }}">{{ t('tasks.disable') }}</button></form>
+{% else %}
+<p>{{ t('tasks.policy') }}</p>
+{% if summary.capped|default(false) %}<p>{{ t('tasks.count_capped') }}</p>{% endif %}
+{% if summary.overdue or summary.expired or summary.failed %}
+<p role="status">{{ t('tasks.warning', {overdue: summary.overdue, expired: summary.expired, failed: summary.failed}) }}</p>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button name="action" value="{{ 'run' }}">{{ t('tasks.run') }}</button></form>
+<p>{{ t('tasks.cli_state', {enabled: cli_enabled ? 1 : 0}) }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button name="action" value="{{ 'enable_cli' }}">{{ t('tasks.cli_enable') }}</button>
+<button name="action" value="{{ 'disable_cli' }}">{{ t('tasks.cli_disable') }}</button></form>
+<form method="get" action="{{ action|safe_url }}"><label>{{ t('tasks.status') }}
+<select name="status"><option value="">{{ t('tasks.all') }}</option>
+{% for value in ['pending', 'running', 'failed', 'completed'] %}
+<option value="{{ value }}"{% if filter == value %} selected{% endif %}>{{ statuses[value] }}</option>
+{% endfor %}</select></label><button>{{ t('tasks.filter') }}</button></form>
+<table><thead><tr><th>{{ t('tasks.id') }}</th><th>{{ t('tasks.type') }}</th>
+<th>{{ t('tasks.status') }}</th><th>{{ t('tasks.attempts') }}</th><th>{{ t('tasks.action') }}</th></tr></thead>
+<tbody>{% for item in items %}<tr><td>{{ item.id }}</td><td>{{ jobs[item.event_type]|default(t('tasks.unknown')) }}<details><summary>{{ t('tasks.details') }}</summary><bdi>{{ item.event_type }}</bdi></details></td>
+<td>{{ statuses[item.status]|default(t('tasks.unknown')) }}</td><td>{{ item.attempts|format_number }}</td><td>
+{% if item.status == 'failed' %}<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ item.id }}">
+<button name="action" value="{{ 'retry' }}">{{ t('tasks.retry') }}</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="5">{{ t('tasks.empty') }}</td></tr>{% endfor %}</tbody></table>
+{% if older %}<p><a href="{{ older|safe_url }}">{{ t('tasks.older') }}</a></p>{% endif %}
+{% endif %}
+{% endblock %}

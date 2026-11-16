@@ -1,0 +1,31 @@
+{# One post (M03.10; design "Konu sayfası"). Context: post (PostView). Themes override this fragment; the context
+   is fixed to {post} by TwigRenderer::fragment. The body is SafeHtml from the render cache. The hidden
+   multi-quote and quote-selection buttons are shown by quote.js. #}
+<article id="post-{{ post.id }}" class="post{{ post.status is not null ? ' post-' ~ post.status : '' }}">
+<div class="post-side">{% if post.avatarUrl|default(null) %}<img class="av av-l" src="{{ post.avatarUrl|safe_url }}" width="44" height="44" loading="lazy" alt="">{% else %}<span class="av av-l c{{ (post.authorName ?? '')|length % 5 + 1 }}" aria-hidden="true">{{ (post.authorName ?? '?')|first }}</span>{% endif %}</div>
+<div class="post-content">
+<header class="post-head">
+{{ theme_slot('post.header', {post: post}) }}
+{% if post.authorName is not null and post.profileUrl|default(null) %}<a class="post-author" href="{{ post.profileUrl|safe_url }}"><bdi>{{ post.authorName }}</bdi></a>
+{% elseif post.authorName is not null %}<b class="post-author"><bdi>{{ post.authorName }}</bdi></b>{% else %}<b class="post-author">{{ t('threads.show.removed_account') }}</b>{% endif %}
+{% if post.authorRank|default(null) %}<span class="{{ post.authorRank.class }} post-rank"><bdi>{{ post.authorRank.title }}</bdi></span>{% endif %}
+<a href="{{ post.permalink|safe_url }}"><time datetime="{{ post.createdAt|date('c') }}">{{ post.createdAt|format_datetime }}</time></a>
+{% if post.editedAt is not null and post.historyUrl|default(null) %}<a class="meta" href="{{ post.historyUrl|safe_url }}">{{ t('threads.show.edited', {date: post.editedAt|format_datetime}) }}</a>{% elseif post.editedAt is not null %}<span class="meta">{{ t('threads.show.edited', {date: post.editedAt|format_datetime}) }}</span>{% endif %}
+<a class="post-no" href="{{ post.permalink|safe_url }}">#{{ post.number|default(post.id) }}</a>
+</header>
+{% if post.status is not null %}
+<p class="post-marker chip chip-danger">{{ t('threads.show.marker', {status: post.status}) }}</p>
+{% endif %}
+{{ theme_slot('post.body.before', {post: post}) }}
+<div class="post-body" dir="auto">{{ post.html }}</div>
+{{ theme_slot('post.body.after', {post: post}) }}
+{% if post.quoteUrl|default(null) or post.reportUrl is not null or post.editUrl|default(null) %}
+<div class="post-acts">
+{%- if post.quoteUrl|default(null) %}<a href="{{ post.quoteUrl|safe_url }}">{{ t('threads.show.quote') }}</a><button type="button" class="post-mq" data-post="{{ post.id }}" aria-pressed="false" hidden>{{ t('threads.show.multi_quote') }}</button><button type="button" class="post-sq" data-author="{{ post.authorName ?? '' }}" hidden>{{ t('threads.show.quote_selection') }}</button>{% endif %}
+{%- if post.editUrl|default(null) %}<a href="{{ post.editUrl|safe_url }}">{{ t('threads.show.edit') }}</a>{% endif %}
+{%- if post.reportUrl is not null %}<a href="{{ post.reportUrl|safe_url }}">{{ t('threads.show.report') }}</a>{% endif -%}
+</div>
+{% endif %}
+{{ theme_slot('post.actions.after', {post: post}) }}
+</div>
+</article>

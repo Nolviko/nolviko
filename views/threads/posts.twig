@@ -1,0 +1,48 @@
+{# Split, move or merge posts (2026-11-08). Context: title, thread_url, action, csrf_field, csrf_token, posts (id,
+   author (name or null), at, excerpt (plain source), checked), previous, next (page URLs or null), forum_options
+   (id, label, selectable), form (mode: new|existing, title, target, reason, all), max_reason, error (translated
+   or null). The server checks every choice. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ thread_url|safe_url }}">{{ t('threads.posts.back') }}</a></nav>
+<h1 dir="auto">{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<p>{{ t('threads.posts.intro') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<fieldset>
+<legend>{{ t('threads.posts.choose') }}</legend>
+<ul class="panel list post-picks">
+{% for post in posts %}
+<li><input id="pick-{{ post.id }}" name="posts[]" type="checkbox" value="{{ post.id }}"{% if post.checked %} checked{% endif %}>
+<label for="pick-{{ post.id }}"><b><bdi>{{ post.author ?? t('threads.show.removed_account') }}</bdi></b> · <time datetime="{{ post.at|date('c') }}">{{ post.at|format_datetime }}</time> · #{{ post.id }}<br><span class="meta" dir="auto">{{ post.excerpt }}</span></label></li>
+{% endfor %}
+</ul>
+{% if previous is not null or next is not null %}
+<ul class="pagination">{% if previous is not null %}<li><a class="btn btn-s" href="{{ previous|safe_url }}">{{ t('forums.show.newer') }}</a></li>{% endif %}{% if next is not null %}<li><a class="btn btn-s" href="{{ next|safe_url }}">{{ t('forums.show.older') }}</a></li>{% endif %}</ul>
+{% endif %}
+<p><input id="posts-all" name="all" type="checkbox" value="1"{% if form.all %} checked{% endif %}>
+<label for="posts-all">{{ t('threads.posts.all') }}</label></p>
+</fieldset>
+<fieldset>
+<legend>{{ t('threads.posts.destination') }}</legend>
+<p><input id="posts-new" name="mode" type="radio" value="{{ 'new' }}"{% if form.mode == 'new' %} checked{% endif %}>
+<label for="posts-new">{{ t('threads.posts.mode_new') }}</label></p>
+<p><label for="posts-title">{{ t('threads.posts.new_title') }}</label>
+<input id="posts-title" name="title" type="text" maxlength="200" value="{{ form.title }}" dir="auto"></p>
+<p><label for="posts-forum">{{ t('threads.manage.forum') }}</label>
+<select id="posts-forum" name="forum"><option value="">{{ t('threads.manage.forum_none') }}</option>
+{% for option in forum_options %}<option value="{{ option.id }}"{% if not option.selectable %} disabled{% endif %}>{{ option.label }}</option>{% endfor %}
+</select></p>
+<p><input id="posts-existing" name="mode" type="radio" value="{{ 'existing' }}"{% if form.mode == 'existing' %} checked{% endif %}>
+<label for="posts-existing">{{ t('threads.posts.mode_existing') }}</label></p>
+<p><label for="posts-target">{{ t('threads.posts.target') }}</label>
+<input id="posts-target" name="target" type="text" maxlength="300" value="{{ form.target }}" inputmode="url"></p>
+</fieldset>
+<p><label for="posts-reason">{{ t('threads.manage.reason') }}</label>
+<input id="posts-reason" name="reason" type="text" maxlength="{{ max_reason }}" value="{{ form.reason }}"></p>
+<p><button type="submit">{{ t('threads.posts.submit') }}</button></p>
+</form>
+{% endblock %}

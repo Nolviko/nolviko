@@ -1,0 +1,29 @@
+{# Webhooks and API (2026-11-08). Context: title, nav, action, hooks (id, url, events, active, failures,
+   last_status, last_at), events, api_url, error, notice, fresh, reauth_url, csrf_field, csrf_token. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('admin.webhooks.intro') }}</p>
+<p>{{ t('admin.webhooks.api') }} <code>{{ api_url }}</code></p>
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.site.reauth') }}</a></p>{% endif %}
+{% if hooks is empty %}<p class="hint">{{ t('admin.webhooks.none') }}</p>{% else %}
+<ul class="panel list">
+{% for hook in hooks %}<li><code>{{ hook.url }}</code>
+<span class="meta">{{ hook.events }} · {% if hook.active %}{{ t('admin.site.switch', {mode: 'on'}) }}{% else %}{{ t('admin.site.switch', {mode: 'off'}) }}{% endif %}{% if hook.last_status is not null %} · {{ t('admin.webhooks.last', {status: hook.last_status}) }}{% endif %}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ hook.id }}">
+<button class="btn-s" type="submit" name="action" value="{{ 'delete' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="hook-url">{{ t('admin.webhooks.url') }}</label>
+<input id="hook-url" name="url" type="url" maxlength="500" required inputmode="url"></p>
+<fieldset><legend>{{ t('admin.webhooks.events') }}</legend>
+{% for event in events %}<p><input id="event-{{ loop.index }}" name="events[]" type="checkbox" value="{{ event }}" checked>
+<label for="event-{{ loop.index }}">{{ t('admin.webhooks.event', {event: event|replace({'.': '_'})}) }}</label></p>{% endfor %}
+</fieldset>
+<p><button type="submit" name="action" value="{{ 'add' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.webhooks.add') }}</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,15 @@
+{# Logout confirmation (2026-11-14). Context: title, action, home, csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<section class="panel panel-pad stack">
+<p>{{ t('auth.logout.body') }}</p>
+<form method="post" action="{{ action|safe_url }}" class="row">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button type="submit">{{ t('auth.account.logout') }}</button>
+<button class="btn-s" type="submit" name="everywhere" value="1">{{ t('auth.account.logout_everywhere') }}</button> {# i18n-ignore: protocol value; visible label is translated. #}
+<a class="btn btn-g" href="{{ home|safe_url }}">{{ t('auth.logout.cancel') }}</a>
+</form>
+</section>
+{% endblock %}

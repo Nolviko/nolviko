@@ -1,0 +1,29 @@
+{# Delete, restore or purge a post or thread (M03.07). Context: title, action (form URL), csrf_field, csrf_token,
+   choices (the ModerateContent action values), reason, max_reason, error (translated or null). The server
+   decides what the subject may do; the form offers every action. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<fieldset>
+<legend>{{ t('threads.moderate.choose') }}</legend>
+<p><input id="moderate-delete" name="action" type="radio" value="{{ choices.delete }}" required>
+<label for="moderate-delete">{{ t('threads.moderate.action.delete') }}</label></p>
+<p><input id="moderate-restore" name="action" type="radio" value="{{ choices.restore }}">
+<label for="moderate-restore">{{ t('threads.moderate.action.restore') }}</label></p>
+<p><input id="moderate-purge" name="action" type="radio" value="{{ choices.purge }}">
+<label for="moderate-purge">{{ t('threads.moderate.action.purge') }}</label></p>
+<p><input id="moderate-approve" name="action" type="radio" value="{{ choices.approve }}">
+<label for="moderate-approve">{{ t('threads.moderate.action.approve') }}</label></p>
+</fieldset>
+<p><label for="moderate-reason">{{ t('threads.moderate.reason') }}</label>
+<input id="moderate-reason" name="reason" type="text" maxlength="{{ max_reason }}" value="{{ reason }}"></p>
+<p><button type="submit">{{ t('threads.moderate.submit') }}</button></p>
+</form>
+{% endblock %}

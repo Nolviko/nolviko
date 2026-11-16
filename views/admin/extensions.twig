@@ -1,0 +1,62 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+<p>{{ t('admin.extensions.intro') }}</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if safe %}<p role="status">{{ t('admin.extensions.safe_active') }}</p>{% endif %}
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.themes.confirm') }}</a></p>{% endif %}
+{% if diagnostics %}<h2>{{ t('admin.extensions.diagnostics') }}</h2><ul>
+{% for id, diagnostic in diagnostics %}<li><code>{{ id }}</code>: <code>{{ diagnostic }}</code></li>{% endfor %}
+</ul>{% endif %}
+{% if fresh %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{% if safe %}{{ actions.resume }}{% else %}{{ actions.safe }}{% endif %}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
+<button type="submit">{% if safe %}{{ t('admin.extensions.resume') }}{% else %}{{ t('admin.extensions.safe') }}{% endif %}</button>
+</form>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ actions.disable_all }}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
+<button type="submit">{{ t('admin.extensions.disable_all') }}</button></form>
+{% endif %}
+<h2>{{ t('admin.extensions.installed') }}</h2>
+{% for extension in extensions %}
+<section><h3>{{ extension.name }}</h3><p><code>{{ extension.id }}</code> {{ extension.version }}</p>
+<p>{% if extension.enabled %}{{ t('admin.extensions.enabled') }}{% else %}{{ t('admin.extensions.disabled') }}{% endif %}
+{% if extension.settings_url|default(null) %} · <a href="{{ extension.settings_url|safe_url }}">{{ t('admin.extensions.settings') }}</a>{% endif %}</p>
+{% if fresh %}<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="id" value="{{ extension.id }}">
+<input type="hidden" name="action" value="{% if extension.enabled %}{{ actions.disable }}{% else %}{{ actions.enable }}{% endif %}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
+<button type="submit">{% if extension.enabled %}{{ t('admin.extensions.disable') }}{% else %}{{ t('admin.extensions.enable') }}{% endif %}</button>
+</form>{% endif %}</section>
+{% else %}<p class="admin-empty">{{ t('admin.extensions.empty') }}</p>{% endfor %}
+{% if fresh %}
+<h2>{{ t('admin.extensions.stage') }}</h2>
+<form method="post" action="{{ action|safe_url }}" enctype="multipart/form-data">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ actions.stage }}">
+<p><label for="extension-package">{{ t('admin.extensions.package') }}</label>
+<input id="extension-package" type="file" name="package" accept=".zip" required></p>
+<p><label for="extension-sha">{{ t('admin.extensions.sha') }}</label>
+<input id="extension-sha" name="sha256" pattern="[a-f0-9]{64}" maxlength="64" required></p>
+<p><label><input type="checkbox" name="trusted" value="1" required> {{ t('admin.extensions.trusted') }}</label></p>
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
+<button type="submit">{{ t('admin.extensions.stage') }}</button></form>
+{% if stage %}<p role="status">{{ t('admin.extensions.staged') }}</p><code>{{ stage }}</code>{% endif %}
+<h2>{{ t('admin.extensions.install') }}</h2>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ actions.install }}">
+<p><label for="extension-install-token">{{ t('admin.extensions.token') }}</label>
+<input id="extension-install-token" name="token" value="{{ stage ?? '' }}" pattern="[a-f0-9]{32}" required></p>
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
+<button type="submit">{{ t('admin.extensions.install') }}</button></form>
+<h2>{{ t('admin.extensions.rollback') }}</h2>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ actions.rollback }}">
+<p><label for="extension-rollback-token">{{ t('admin.extensions.token') }}</label>
+<input id="extension-rollback-token" name="token" pattern="[a-f0-9]{32}" required></p>
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
+<button type="submit">{{ t('admin.extensions.rollback') }}</button></form>
+{% endif %}
+{% endblock %}

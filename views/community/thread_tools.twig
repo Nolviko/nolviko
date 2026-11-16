@@ -1,0 +1,47 @@
+{# Inline thread tools on the thread page (design pass 2026-11-07): bookmark/subscribe toggles, accepted answer link
+   and the poll (vote form until the reader voted or the poll closed, results otherwise). Context: tools
+   (CommunityRead::threadTools), thread_id, csrf_field and csrf_token (null for guests: no forms then). Poll creation
+   and attachments stay on the community tools page. Every form posts to the community endpoint and returns here. #}
+{% set act = path('community', {section: 'thread'}) ~ '?thread=' ~ thread_id %}
+{% set member = csrf_token is not null %}
+{% if member or tools.solution %}
+<div class="thread-tools row">
+{% if member %}
+{% set states = {bookmark: tools.relationship.bookmarked, subscribe: tools.relationship.subscribed} %}
+{% set undo_labels = {bookmark: t('community.undo_bookmark'), subscribe: t('community.undo_subscribe')} %}
+{% for action in ['bookmark', 'subscribe'] %}
+<form method="post" action="{{ act|safe_url }}" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="target" value="{{ thread_id }}"><input type="hidden" name="return_thread" value="{{ thread_id }}">
+{% if states[action] %}<button class="btn-s btn-sm" name="enable" value="0" aria-pressed="true">{{ undo_labels[action] }}</button>
+{% else %}<button class="btn-g btn-sm" name="enable" value="1" aria-pressed="false">{{ t('community.' ~ action) }}</button>{% endif %}
+</form>
+{% endfor %}
+{% endif %}
+{% if tools.solution %}<a class="chip chip-new" href="{{ path('posts.show', {post: tools.solution})|safe_url }}">{{ t('community.solution') }}</a>{% endif %}
+</div>
+{% endif %}
+{% if tools.poll %}
+{% set total = 0 %}{% for option in tools.options %}{% set total = total + option.votes %}{% endfor %}
+<section class="card poll" aria-labelledby="poll-question">
+<h2 id="poll-question" dir="auto">{{ tools.poll.question }}</h2>
+{% if member and not tools.relationship.voted and not tools.poll_closed %}
+<form method="post" action="{{ act|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'vote' }}"><input type="hidden" name="target" value="{{ thread_id }}"><input type="hidden" name="return_thread" value="{{ thread_id }}">
+<fieldset aria-labelledby="poll-question">
+{% for option in tools.options %}
+<p><label><input type="{{ tools.poll.multiple_choice ? 'checkbox' : 'radio' }}" name="options[]" value="{{ option.id }}"> <bdi>{{ option.label }}</bdi></label></p>
+{% endfor %}</fieldset>
+{% if tools.poll.imported_max_choices|default(null) %}<p class="meta">{{ t('operations.poll_limit', {count: tools.poll.imported_max_choices}) }}</p>{% endif %}
+<p><button>{{ t('community.vote') }}</button></p></form>
+{% else %}
+<ul class="poll-results">
+{% for option in tools.options %}
+<li><span class="row"><bdi>{{ option.label }}</bdi>{% if tools.poll_results_visible %}<span class="meta row-end">{{ option.votes|format_number }}</span>{% endif %}</span>
+{% if tools.poll_results_visible %}<progress max="{{ max(total, 1) }}" value="{{ option.votes }}" aria-hidden="true"></progress>{% endif %}</li>
+{% endfor %}
+</ul>
+{% if not tools.poll_results_visible %}<p class="meta">{{ t('operations.poll_results_hidden') }}</p>{% endif %}
+{% endif %}
+{% if tools.poll_closed %}<p class="meta">{{ t('operations.poll_locked') }}</p>{% endif %}
+</section>
+{% endif %}

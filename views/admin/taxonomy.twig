@@ -1,0 +1,54 @@
+{# Thread prefixes and tags (2026-11-08). Context: title, nav, action, tags (id, name, slug), prefixes (id, label,
+   color, forum_id, forum (title or null: every forum)), forums (id, title), colors, max_label, error, notice,
+   fresh, reauth_url, csrf_field, csrf_token. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('admin.taxonomy.intro') }}</p>
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.site.reauth') }}</a></p>{% endif %}
+
+<h2>{{ t('admin.taxonomy.prefixes') }}</h2>
+{% if prefixes is empty %}<p class="hint">{{ t('admin.taxonomy.no_prefixes') }}</p>{% else %}
+<ul class="panel list">
+{% for prefix in prefixes %}
+<li><span class="chip prefix-{{ prefix.color }}"><bdi>{{ prefix.label }}</bdi></span>
+<span class="meta">{% if prefix.forum is null %}{{ t('admin.taxonomy.every_forum') }}{% else %}<bdi>{{ prefix.forum }}</bdi>{% endif %}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ prefix.id }}">
+<button type="submit" name="action" value="{{ 'delete_prefix' }}" class="btn-s"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button>
+</form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="prefix-label">{{ t('admin.taxonomy.label') }}</label>
+<input id="prefix-label" name="label" type="text" maxlength="{{ max_label }}" required dir="auto"></p>
+<p><label for="prefix-color">{{ t('admin.taxonomy.color') }}</label>
+<select id="prefix-color" name="color">{% for color in colors %}<option value="{{ color }}">{{ t('admin.taxonomy.color_name', {color: color}) }}</option>{% endfor %}</select></p>
+<p><label for="prefix-forum">{{ t('admin.taxonomy.forum') }}</label>
+<select id="prefix-forum" name="forum"><option value="">{{ t('admin.taxonomy.every_forum') }}</option>
+{% for forum in forums %}<option value="{{ forum.id }}">{{ forum.title }}</option>{% endfor %}</select></p>
+<p><button type="submit" name="action" value="{{ 'create_prefix' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.add_prefix') }}</button></p>
+</form>
+
+<h2>{{ t('admin.taxonomy.tags') }}</h2>
+{% if tags is empty %}<p class="hint">{{ t('admin.taxonomy.no_tags') }}</p>{% else %}
+<ul class="panel list">
+{% for tag in tags %}
+<li><a class="chip" href="{{ path('tags.show', {tag: tag.slug})|safe_url }}"><bdi>{{ tag.name }}</bdi></a>
+<form method="post" action="{{ action|safe_url }}" class="row-end">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ tag.id }}">
+<button type="submit" name="action" value="{{ 'delete_tag' }}" class="btn-s"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button>
+</form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="tag-name">{{ t('admin.taxonomy.tag_name') }}</label>
+<input id="tag-name" name="name" type="text" maxlength="{{ max_label }}" required dir="auto"></p>
+<p><button type="submit" name="action" value="{{ 'create_tag' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.add_tag') }}</button></p>
+</form>
+{% endblock %}

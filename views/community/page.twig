@@ -1,0 +1,112 @@
+{# Community pages (M07; design pass 2026-11-06): members, online, settings, notifications, bookmarks, profile,
+   thread tools and attachment lists share one template. Context: title, section, items, older, error, actor, profile,
+   avatar, may_reset_avatar, guest_requests, csrf_field, csrf_token and the section data documented in M07. #}
+{% extends 'layouts/page.twig' %}
+{% block content %}
+{% set undo_labels = {follow: t('community.undo_follow'), block: t('community.undo_block'), bookmark: t('community.undo_bookmark'), subscribe: t('community.undo_subscribe')} %}
+{% set notice_labels = {reply: t('community.notice_reply'), reaction: t('community.notice_reaction'), follow: t('community.notice_follow'), mention: t('community.notice_mention')} %}
+<h1>{{ title }}</h1>
+<nav class="tabs" aria-label="{{ t('community.navigation') }}">
+{% for name in ['members', 'online', 'settings', 'notifications', 'bookmarks'] %}
+<a href="{{ path('community', {section: name})|safe_url }}"{% if name == section %} aria-current="page"{% endif %}>{{ t('community.' ~ name) }}</a>
+{% endfor %}
+</nav>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if section == 'attachments' %}
+<ul class="panel list">
+{% for file in items %}<li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"></path><path d="M14 3v6h6"></path></svg><a href="{{ path('community.media', {media: file.id})|safe_url }}"><bdi>{{ file.original_name }}</bdi></a></li>
+{% else %}<li class="empty">{{ t('operations.no_files') }}</li>{% endfor %}
+</ul>
+{% if older %}<p><a class="btn btn-s" href="{{ older|safe_url }}">{{ t('operations.more_files') }}</a></p>{% endif %}
+{% elseif section == 'settings' %}
+<div class="card community-settings">{% include 'community/settings.twig' %}</div>
+{% elseif section == 'profile' %}
+{% if seo.origin|default(null) and seo.canonical|default(null) %}{% set structured_data = [{'@context': 'https://schema.org', '@type': 'ProfilePage', url: seo.canonical, mainEntity: {'@type': 'Person', name: profile.username, identifier: profile.user_id ~ ''}|merge(joined_at|default(null) ? {} : {})|merge(post_total|default(null) is not null ? {agentInteractionStatistic: {'@type': 'InteractionCounter', interactionType: 'https://schema.org/WriteAction', userInteractionCount: post_total}} : {})}] %}{% endif %}
+<section class="panel">
+<div class="profile-head">
+{% if avatar %}<img class="av av-xl" src="{{ path('community.media', {media: avatar})|safe_url }}" width="88" height="88" alt="{{ t('community.avatar') }}">{% else %}<span class="av av-xl c{{ profile.username|length % 5 + 1 }}" aria-hidden="true">{{ profile.username|first }}</span>{% endif %}
+<div class="stack">
+<h2 dir="auto">{{ profile.username }}</h2>
+{% if profile.location %}<p class="meta" dir="auto">{{ profile.location }}</p>{% endif %}
+{% if standing|default(null) %}<p class="row profile-standing">{% if standing.rank %}<span class="{{ standing.rank.class }}"><bdi>{{ standing.rank.title }}</bdi></span>{% endif %}{% if section != 'profile' %}<span class="meta">{{ t('community.reputation', {count: standing.reputation}) }}</span>{% endif %}</p>{% endif %}
+{% if badges|default([]) is not empty %}<ul class="profile-badges">{% for badge in badges %}<li class="chip chip-blue">{{ t('community.badge', {badge: badge}) }}</li>{% endfor %}</ul>{% endif %}
+{% if section != 'profile' %}<p class="meta">{% if joined_at|default(null) %}{{ t('community.joined', {date: joined_at|format_date}) }}{% endif %}{% if post_total|default(null) is not null %} · {{ post_total_capped ? t('community.post_total_capped', {count: post_total}) : t('community.post_total', {count: post_total}) }}{% endif %}</p>{% endif %}
+</div>
+{% if actor and actor == profile.user_id and settings_url|default(null) %}
+<div class="actions">
+<a class="btn btn-s" href="{{ settings_url|safe_url }}">{{ t('community.edit_profile') }}</a>
+<a class="btn btn-s" href="{{ settings_url|safe_url }}">{{ t('community.change_avatar') }}</a>
+{% if gallery_url|default(null) %}<a class="btn btn-s" href="{{ gallery_url|safe_url }}">{{ t('community.my_gallery') }}</a>{% endif %}
+</div>
+{% endif %}
+{% if actor and actor != profile.user_id %}
+<div class="actions">
+{% if message_url|default(null) and profile.allow_messages|default(1) %}<a class="btn btn-s" href="{{ (message_url ~ '?to=' ~ profile.username|url_encode)|safe_url }}">{{ t('community.send_message') }}</a>{% endif %}
+{% if gallery_url|default(null) %}<a class="btn btn-s" href="{{ gallery_url|safe_url }}">{{ t('community.member_gallery') }}</a>{% endif %}
+{% for action in ['follow', 'block'] %}
+<form method="post" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="target" value="{{ profile.user_id }}">
+<button name="enable" value="1"{% if action == 'block' %} class="btn-s"{% endif %}>{{ t('community.' ~ action) }}</button>
+<button class="btn-g" name="enable" value="0">{{ undo_labels[action] }}</button></form>
+{% endfor %}
+</div>
+{% endif %}
+</div>
+{% if section == 'profile' %}<dl class="profile-stats">
+{% if post_total|default(null) is not null %}<div><dt>{{ t('community.stat_posts') }}</dt><dd>{{ post_total|format_number }}{% if post_total_capped %}+{% endif %}</dd></div>{% endif %}
+{% if threads_total|default(null) is not null %}<div><dt>{{ t('community.stat_threads') }}</dt><dd>{{ threads_total|format_number }}</dd></div>{% endif %}
+{% if standing|default(null) %}<div><dt>{{ t('community.stat_reputation') }}</dt><dd>{{ standing.reputation|format_number }}</dd></div>{% endif %}
+{% if joined_at|default(null) %}<div><dt>{{ t('community.stat_joined') }}</dt><dd>{{ joined_at|format_date }}</dd></div>{% endif %}
+{% if last_seen|default(null) %}<div><dt>{{ t('community.stat_seen') }}</dt><dd>{{ last_seen|format_datetime }}</dd></div>{% endif %}
+</dl>{% endif %}
+{% set filled = profile_fields|default([])|filter(field => field.value) %}
+{% if filled is not empty %}
+<dl class="panel-pad profile-fields">{% for field in filled %}<dt dir="auto">{{ field.label }}</dt><dd dir="auto">{% if field.kind == 'url' %}<a href="{{ field.value|safe_url }}" rel="nofollow ugc noopener">{{ field.value }}</a>{% else %}{{ field.value }}{% endif %}</dd>{% endfor %}</dl>
+{% endif %}
+{% if profile.biography or profile.signature %}
+<div class="panel-pad">
+{% if profile.biography %}<p class="lead" dir="auto">{{ profile.biography }}</p>{% endif %}
+{% if profile.signature %}<hr><p class="meta" dir="auto">{{ profile.signature }}</p>{% endif %}
+</div>
+{% endif %}
+</section>
+{% if recent_posts|default([]) is not empty %}
+<section aria-labelledby="recent-posts"><h2 id="recent-posts" class="h3">{{ t('community.recent_posts') }}</h2>
+<ul class="panel list recent-posts">{% for item in recent_posts %}<li><div class="stack"><a href="{{ item.url|safe_url }}"><bdi>{{ item.title }}</bdi></a>
+<p class="meta" dir="auto">{{ item.excerpt }}</p></div><time class="meta row-end" datetime="{{ item.date|date('c') }}">{{ item.date|format_datetime }}</time></li>{% endfor %}</ul>
+</section>
+{% endif %}
+{{ theme_slot('user.profile.sidebar') }}
+{% if avatar and may_reset_avatar %}
+<form method="post" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'remove_media' }}"><input type="hidden" name="media" value="{{ avatar }}">
+<button class="btn-s">{{ t('community.remove_avatar') }}</button></form>
+{% endif %}
+{% elseif section == 'thread' %}
+<div class="community-tools stack-l">{% include 'community/thread.twig' %}</div>
+{% else %}
+{% if section == 'online' %}<p class="alert alert-info">{{ t('community.online_policy') }} {{ t('community.guest_requests', {count: guest_requests}) }}</p>{% endif %}
+<ul class="panel list{{ section in ['members', 'online'] ? ' member-list' : '' }}">
+{% for item in items %}<li{% if section == 'notifications' and item.read_at is null %} class="t-unread"{% endif %}>
+{% if section in ['members', 'online'] %}
+<span class="av c{{ item.username|length % 5 + 1 }}" aria-hidden="true">{{ item.username|first }}</span>
+<div class="stack"><a class="h3" href="{{ (path('community', {section: 'profile'}) ~ '?user=' ~ item.id)|safe_url }}"><bdi>{{ item.username }}</bdi></a>
+{% if item.joined|default(null) %}<span class="meta">{{ t('community.joined', {date: item.joined|format_date}) }}</span>{% endif %}</div>
+{% elseif section == 'bookmarks' %}
+<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"></path></svg>
+<a href="{{ path('threads.show', {slug: item.slug, thread: item.id})|safe_url }}"><bdi>{{ item.title }}</bdi></a>
+{% else %}
+{% if item.read_at is null %}<span class="dot" aria-hidden="true"></span>{% endif %}
+{% if item.post_id %}<a href="{{ path('posts.show', {post: item.post_id})|safe_url }}">{{ notice_labels[item.kind] }}</a>
+{% elseif item.thread_id %}<a href="{{ path('threads.id', {thread: item.thread_id})|safe_url }}">{{ notice_labels[item.kind] }}</a>
+{% elseif item.actor_id %}<a href="{{ (path('community', {section: 'profile'}) ~ '?user=' ~ item.actor_id)|safe_url }}">{{ notice_labels[item.kind] }}</a>
+{% endif %}
+{% if item.read_at is null %}<form method="post" class="inline-form row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'read' }}"><input type="hidden" name="target" value="{{ item.id }}">
+<button class="btn-g btn-sm">{{ t('community.mark_read') }}</button></form>{% endif %}
+{% endif %}
+</li>{% else %}<li class="empty">{{ t('community.empty') }}</li>{% endfor %}
+</ul>
+{% endif %}
+{% if older %}<p><a rel="next" href="{{ older|safe_url }}" class="btn btn-s">{{ t('community.more') }}</a></p>{% endif %}
+{% endblock %}

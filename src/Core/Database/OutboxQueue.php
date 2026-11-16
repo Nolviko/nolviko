@@ -1,0 +1,139 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Nolviko\Core\Database;
+
+use DateTimeImmutable;
+use DateTimeZone;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Nolviko\Core\Events\OutboxLease;
+use RuntimeException;
+
+/** Claim committed events only, fence acknowledgements and retain exhausted work for owner recovery. */
+final class OutboxQueue
+{
+    public const MAX_ATTEMPTS = 8;
+
+    public function __construct(private readonly Connection $connection)
+    {
+    }
+
+    /** @param list<string> $types Explicit registered handlers only; unknown work is left untouched. */
+    public function claim(array $types): ?OutboxLease
+    {
+        if ($this->connection->isTransactionActive()) {
+            throw new RuntimeException('outbox_claim_transaction_active');
+        }
+
+        if ($types === []) {
+            return null;
+        }
+
+        return $this->connection->transactional(function (Connection $db) use ($types): ?OutboxLease {
+            $now = $this->now();
+            $stamp = $now->format('Y-m-d H:i:s.u');
+            $slots = implode(', ', array_fill(0, count($types), '?'));
+            $row = $db->fetchAssociative(
+                'SELECT id, event_type, aggregate_id, attempts, revision, '
+                    . 'CASE WHEN OCTET_LENGTH(payload) <= 16384 THEN payload ELSE NULL END AS payload '
+                    . 'FROM outbox_events WHERE event_type IN (' . $slots . ') AND '
+                    . "((status = 'pending' AND available_at <= ?) OR (status = 'running' AND lease_expires_at <= ?)) "
+                    . 'ORDER BY available_at, id LIMIT 1 FOR UPDATE SKIP LOCKED',
+                [...$types, $stamp, $stamp],
+            );
+
+            if ($row === false) {
+                return null;
+            }
+
+            if ((int) $row['attempts'] >= self::MAX_ATTEMPTS || !is_string($row['payload'])) {
+                $db->executeStatement(
+                    "UPDATE outbox_events SET status = 'failed', owner_token = NULL, lease_expires_at = NULL, "
+                        . "last_error = 'outbox_attempts_or_payload_invalid', revision = revision + 1 WHERE id = ?",
+                    [$row['id']],
+                );
+
+                return null;
+            }
+
+            $token = bin2hex(random_bytes(32));
+            $revision = (int) $row['revision'] + 1;
+            $db->executeStatement(
+                "UPDATE outbox_events SET status = 'running', owner_token = ?, lease_expires_at = ?, "
+                    . 'revision = ?, attempts = attempts + 1, last_error = NULL WHERE id = ?',
+                [$token, $now->modify('+120 seconds')->format('Y-m-d H:i:s.u'), $revision, $row['id']],
+            );
+
+            return new OutboxLease(
+                (int) $row['id'],
+                $row['event_type'],
+                (int) $row['aggregate_id'],
+                $row['payload'],
+                $token,
+                $revision,
+                (int) $row['attempts'] + 1
+            );
+        });
+    }
+
+    /** Held inside the handler transaction, so another worker cannot mutate the row before this transaction ends. */
+    public function guard(OutboxLease $lease): void
+    {
+        if (!$this->connection->isTransactionActive()) {
+            throw new RuntimeException('outbox_guard_transaction_required');
+        }
+
+        $found = $this->connection->fetchOne(
+            'SELECT 1 FROM outbox_events WHERE id = ? AND owner_token = ? AND revision = ? '
+                . "AND status = 'running' AND lease_expires_at > ? FOR UPDATE",
+            [$lease->id, $lease->token, $lease->revision, $this->now()->format('Y-m-d H:i:s.u')],
+        );
+
+        if ($found === false) {
+            throw new RuntimeException('outbox_lease_lost');
+        }
+    }
+
+    public function complete(OutboxLease $lease): void
+    {
+        $this->guard($lease);
+        $this->connection->executeStatement(
+            "UPDATE outbox_events SET status = 'completed', owner_token = NULL, lease_expires_at = NULL, "
+                . 'completed_at = ?, revision = revision + 1 WHERE id = ? AND revision = ?',
+            [$this->now()->format('Y-m-d H:i:s.u'), $lease->id, $lease->revision],
+        );
+    }
+
+    /** Successful bounded progress is not a failure; retain the same event and reset its consecutive-failure count. */
+    public function defer(OutboxLease $lease): void
+    {
+        $this->guard($lease);
+        $this->connection->executeStatement(
+            "UPDATE outbox_events SET status = 'pending', available_at = ?, owner_token = NULL, "
+                . 'lease_expires_at = NULL, attempts = 0, revision = revision + 1 WHERE id = ? AND revision = ?',
+            [$this->now()->modify('+1 second')->format('Y-m-d H:i:s.u'), $lease->id, $lease->revision],
+        );
+    }
+
+    public function retry(OutboxLease $lease): void
+    {
+        $next = $this->now()->modify('+' . min(3600, 5 * (2 ** $lease->attempt)) . ' seconds');
+        $this->connection->executeStatement(
+            'UPDATE outbox_events SET status = ?, available_at = ?, owner_token = NULL, lease_expires_at = NULL, '
+                . "last_error = 'outbox_handler_failed', revision = revision + 1 "
+                . "WHERE id = ? AND owner_token = ? AND revision = ? AND status = 'running'",
+            [$lease->attempt >= self::MAX_ATTEMPTS ? 'failed' : 'pending', $next->format('Y-m-d H:i:s.u'),
+                $lease->id, $lease->token, $lease->revision],
+        );
+    }
+
+    private function now(): DateTimeImmutable
+    {
+        $sql = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform
+            ? "SELECT clock_timestamp() AT TIME ZONE 'UTC'" : 'SELECT CURRENT_TIMESTAMP(6)';
+
+        return new DateTimeImmutable((string) $this->connection->fetchOne($sql), new DateTimeZone('UTC'));
+    }
+}

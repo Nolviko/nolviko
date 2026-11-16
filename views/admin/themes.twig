@@ -1,0 +1,71 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+<p>{{ t('admin.themes.intro') }}</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p role="status">{{ t('admin.themes.updated') }}</p>{% endif %}
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.themes.confirm') }}</a></p>{% endif %}
+{% if fresh %}
+<h2>{{ t('admin.themes.draft') }}</h2>
+<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="theme-id">{{ t('admin.themes.theme') }}</label>
+<select id="theme-id" name="theme" required>
+{% for theme in themes %}{% if theme.valid %}
+<option value="{{ theme.id }}"{% if selected_theme == theme.id %} selected{% endif %}>{{ theme.id }} ({{ theme.version }})</option>
+{% endif %}{% endfor %}</select></p>
+<p><label for="theme-tokens">{{ t('admin.themes.tokens') }}</label></p>
+<p id="theme-token-help">{{ t('admin.themes.token_help') }}</p>
+<textarea dir="ltr" id="theme-tokens" name="tokens" rows="20" cols="70" maxlength="65536" aria-describedby="theme-token-help" required>{{ tokens }}</textarea>
+<p><button type="submit" name="action" value="{{ actions.draft }}">{{ t('admin.themes.build') }}</button>
+<button type="submit" name="action" value="{{ actions.export }}" data-no-progress>{{ t('admin.themes.export') }}</button></p>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% if draft %}
+<h2>{{ t('admin.themes.ready') }}</h2>
+<p><code dir="ltr">{{ draft.build }}</code></p>
+<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="build" value="{{ draft.build }}">
+<p><button type="submit" name="action" value="{{ actions.preview }}" formnovalidate>{{ t('admin.themes.preview') }}</button>
+<button type="submit" name="action" value="{{ actions.stop }}" formnovalidate>{{ t('admin.themes.stop') }}</button></p>
+{% if warnings is empty %}
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.themes.confirm_publish') }}</label></p>
+<p><button type="submit" name="action" value="{{ actions.publish }}">{{ t('admin.themes.publish') }}</button></p>
+{% endif %}
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% endif %}
+{% if active_build %}
+<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="build" value="{{ active_build }}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.themes.rollback_confirm') }}</label></p>
+<button type="submit" name="action" value="{{ actions.rollback }}">{{ t('admin.themes.rollback') }}</button>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% endif %}
+<h2>{{ t('admin.themes.import') }}</h2>
+<p id="theme-import-help">{{ t('admin.themes.import_help') }}</p>
+<form method="post" action="{{ action|safe_url }}" enctype="multipart/form-data" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="theme-package">{{ t('admin.themes.package') }}</label>
+<input id="theme-package" name="package" type="file" accept=".zip" aria-describedby="theme-import-help" required></p>
+<p><label><input type="checkbox" name="trusted" value="1" required> {{ t('admin.themes.trusted') }}</label></p>
+<button type="submit" name="action" value="{{ actions.import }}">{{ t('admin.themes.import') }}</button>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% endif %}
+<h2>{{ t('admin.themes.installed') }}</h2>
+{% if themes is empty %}<p class="admin-empty">{{ t('admin.themes.empty') }}</p>{% endif %}
+<ul>{% for theme in themes %}<li><bdi>{{ theme.id }}</bdi> — {{ theme.version }}
+{% if not theme.valid %}{{ t('admin.themes.invalid_manifest') }}{% endif %}</li>{% endfor %}</ul>
+{% if warnings is not empty %}
+<h2>{{ t('admin.themes.warnings') }}</h2>
+<p role="alert">{{ t('admin.themes.incompatible') }}</p>
+{% for warning in warnings %}<details>
+<summary><bdi>{{ warning.theme }}/{{ warning.template }}</bdi> — {{ t('admin.themes.compatibility', {status: warning.status}) }}</summary>
+<h3>{{ t('admin.themes.upstream') }}</h3><pre dir="ltr">{{ warning.upstream }}</pre>
+<h3>{{ t('admin.themes.override') }}</h3><pre dir="ltr">{{ warning.override }}</pre>
+</details>{% endfor %}
+{% endif %}
+{% endblock %}

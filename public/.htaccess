@@ -1,0 +1,21 @@
+# Front controller: every path that is not an existing public file goes to index.php.
+Options -Indexes
+DirectoryIndex index.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+# Static files (2026-11-08, Core Web Vitals): fingerprinted release assets (AssetManifest: name.<sha256>.css/js)
+# never change, so browsers keep them a year; fonts and unbuilt development assets for a day.
+<IfModule mod_headers.c>
+    <FilesMatch "\.[a-f0-9]{64}\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(css|js|woff2)$">
+        Header setifempty Cache-Control "public, max-age=86400"
+    </FilesMatch>
+</IfModule>
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/css application/javascript text/javascript image/svg+xml
+</IfModule>

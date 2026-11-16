@@ -1,0 +1,18 @@
+{# Result of a bulk moderation request (M04.08). Context: title, error (translated, the request was refused as a
+   whole) or results (item ID => translated outcome), applied (count), queue_url. #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% else %}
+<p role="status">{{ t('moderation.bulk.summary', {applied: applied, total: results|length}) }}</p>
+<ul class="panel list">
+{% for id, outcome in results %}
+<li>{{ t('moderation.bulk.item', {id: id, outcome: outcome}) }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+<p><a class="btn btn-s" href="{{ queue_url|safe_url }}">{{ t('moderation.decision.back') }}</a></p>
+{% endblock %}

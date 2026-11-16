@@ -1,0 +1,9 @@
+{# Second sign-in step changed (2026-11-15). Context: name, event (enabled, disabled, reset), url, subject, language. #}
+{{ t('mail.email_change_notice.greeting', {name: name}) }}
+
+{{ event == 'enabled' ? t('mail.second_factor.enabled') : (event == 'reset' ? t('mail.second_factor.reset') : t('mail.second_factor.disabled')) }}
+
+{{ t('mail.second_factor.not_you') }}
+{{ url }}
+
+{{ t('mail.footer') }}

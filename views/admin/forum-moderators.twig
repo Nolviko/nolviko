@@ -1,0 +1,45 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+<p>{{ t('admin.forum_mod.intro') }}</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+<form method="get" action="{{ action|safe_url }}" data-admin-progress>
+<p><label for="moderator-filter-forum">{{ t('admin.forum_mod.forum') }}</label>
+<select id="moderator-filter-forum" name="forum"><option value="">{{ t('admin.saved.any') }}</option>
+{% for forum in forums %}<option value="{{ forum.id }}"{% if forum.id == selected_forum %} selected{% endif %}>{{ forum.title }}</option>{% endfor %}
+</select></p>
+<button type="submit">{{ t('admin.saved.choose') }}</button>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.forum_mod.confirm') }}</a></p>{% endif %}
+{% if fresh %}
+<h2>{{ t('admin.forum_mod.add') }}</h2>
+<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="moderator-forum">{{ t('admin.forum_mod.forum') }}</label>
+<select id="moderator-forum" name="forum" required><option value="">{{ t('admin.forum_mod.choose_forum') }}</option>
+{% for forum in forums %}<option value="{{ forum.id }}"{% if forum.id == selected_forum %} selected{% endif %}>{{ forum.title }}</option>{% endfor %}
+</select></p>
+<p>{{ t('admin.forum_mod.one_target') }}</p>
+<p><label for="moderator-member">{{ t('admin.forum_mod.member') }}</label>
+<input id="moderator-member" name="member" maxlength="64" value="{{ member }}"></p>
+<p><label for="moderator-group">{{ t('admin.forum_mod.group') }}</label>
+<select id="moderator-group" name="group_id"><option value="">{{ t('admin.forum_mod.no_group') }}</option>
+{% for group in groups %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}</select></p>
+<button type="submit" name="action" value="{{ actions.assign }}">{{ t('admin.forum_mod.add') }}</button>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% endif %}
+<h2>{{ t('admin.forum_mod.list') }}</h2>
+{% if rows is empty and not error %}<p class="admin-empty">{{ t('admin.forum_mod.empty') }}</p>{% endif %}
+<ul>{% for row in rows %}<li><bdi>{{ row.forum_title }}</bdi> —
+{% if row.username is not null %}{{ t('admin.forum_mod.user_assignment') }}: <bdi>{{ row.username }}</bdi>
+{% else %}{{ t('admin.forum_mod.group_assignment') }}: <bdi>{{ row.group_name }}</bdi>{% endif %}
+{% if fresh %}<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="id" value="{{ row.id }}"><input type="hidden" name="forum" value="{{ row.forum_id }}">
+<button class="btn-d" type="submit" name="action" value="{{ actions.remove }}">{{ t('admin.forum_mod.remove', {forum: row.forum_title}) }}</button>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>{% endif %}</li>{% endfor %}</ul>
+{% if older_url is not null %}<p><a rel="next" href="{{ older_url|safe_url }}">{{ t('admin.forum_mod.older') }}</a></p>{% endif %}
+{% endblock %}

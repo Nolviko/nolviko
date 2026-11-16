@@ -1,0 +1,303 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * English texts for runtime prerequisite diagnostic IDs (app/config/runtime-policy.php, docker checks).
+ * The part after `diagnostics.` is exactly the diagnostic ID; parameters carry the variable part.
+ */
+
+return [
+    'diagnostics.theme_action_invalid' => 'The theme request is not permitted.',
+    'diagnostics.theme_admin_denied' => 'The theme request is not permitted.',
+    'diagnostics.theme_preference_invalid' => 'The theme request is invalid.',
+    'diagnostics.theme_template_invalid' => 'The theme request is invalid.',
+    'diagnostics.theme_activation_failed' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_asset_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_build_failed' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_build_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_build_limit' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_catalog_limit' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_contrast_failed' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_css_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_draft_stale' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_file_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_fragment_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_id_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_identity_exists' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_manifest_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_missing' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_package_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_package_limit' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_path_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_preview_denied' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_publish_busy' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_publish_incompatible' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_runtime_incompatible' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_slot_context_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_slot_incompatible' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_slot_output_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_storage_unavailable' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_tokens_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_upstream_invalid' => 'The theme operation could not be validated or completed.',
+    'diagnostics.admin_filter_invalid' => 'Invalid administrator request.',
+    'diagnostics.admin_filter_name_invalid' => 'Invalid administrator request.',
+    'diagnostics.admin_filter_name_taken' => 'Invalid administrator request.',
+    'diagnostics.admin_filter_limit' => 'Invalid administrator request.',
+    'diagnostics.admin_filter_denied' => 'Invalid administrator request.',
+    'diagnostics.forum_moderator_target_invalid' => 'Invalid administrator request.',
+    'diagnostics.forum_moderator_limit' => 'Invalid administrator request.',
+    'diagnostics.forum_moderator_denied' => 'Invalid administrator request.',
+
+    'diagnostics.php_version_unsupported' => 'PHP {version} is not supported. Use an official upstream '
+        . 'build of PHP 8.4.27 or newer within 8.4, or 8.5.12 or newer within 8.5. Versions with a '
+        . 'distribution suffix (such as 8.4.27-1ubuntu1) are rejected on purpose because their security '
+        . 'level cannot be verified; ask your host for an upstream build.',
+    'diagnostics.database_driver_unsupported' => 'The selected database type is not supported. '
+        . 'Choose MySQL, MariaDB or PostgreSQL.',
+    'diagnostics.extension_missing' => 'The required PHP extension {extension} is not loaded.',
+    'diagnostics.memory_limit_invalid' => 'The PHP memory_limit setting could not be read.',
+    'diagnostics.memory_limit_below_128M' => 'The PHP memory_limit must be at least 128 MB.',
+    'diagnostics.storage_not_writable' => 'The storage directory must exist and be writable by the web server.',
+    'diagnostics.config_missing' => 'The site is marked as installed, but its configuration file '
+        . 'config/local.php is missing. Restore it from your backup.',
+    'diagnostics.config_file_invalid' => 'The configuration file config/local.php could not be read. '
+        . 'It must return an array of settings.',
+    'diagnostics.config_key_unknown' => 'The configuration contains an unknown setting: {key}.',
+    'diagnostics.config_key_missing' => 'A required setting is missing from the configuration: {key}.',
+    'diagnostics.config_type_invalid' => 'The setting {key} has the wrong type.',
+    'diagnostics.config_value_invalid' => 'The setting {key} has an invalid value.',
+    'diagnostics.database_auth_failed' => 'The database rejected the user name or password.',
+    'diagnostics.database_not_found' => 'The database name was not found on the server, or the user may not use it.',
+    'diagnostics.database_unreachable' => 'The database server could not be reached. Check the host and port.',
+    'diagnostics.database_connection_failed' => 'The connection to the database failed.',
+    'diagnostics.database_family_invalid' => '{family, select, mariadb {The server is MariaDB, but the '
+        . 'configuration says MySQL: set database.driver to mariadb.} other {The server is MySQL, but the '
+        . 'configuration says MariaDB: set database.driver to mysql.}}',
+    'diagnostics.database_version_unsupported' => 'Database server version {version} is not supported. Use MySQL '
+        . '8.4 or MariaDB 10.11 or newer.',
+    'diagnostics.database_backend_unverified' => 'The database type {driver} cannot be used yet. '
+        . 'Use MySQL 8.4.',
+    'diagnostics.database_charset_invalid' => 'The database connection does not use the utf8mb4 character set.',
+    'diagnostics.database_timezone_invalid' => 'The database session time zone is not UTC.',
+    'diagnostics.database_sql_mode_invalid' => 'The database session does not use the required strict SQL mode.',
+    'diagnostics.migration_locked' => 'Another request is updating the database. Wait a moment and try again.',
+    'diagnostics.migration_lease_lost' => 'The database update took too long and was taken over by another '
+        . 'request. Try again.',
+    'diagnostics.migration_unknown' => 'The database contains migration {migration}, which this version does not '
+        . 'know. Install the matching or a newer version.',
+    'diagnostics.migration_checksum_mismatch' => 'Migration {migration} was changed after it was applied. '
+        . 'Restore the original release files.',
+    'diagnostics.migration_step_failed' => 'Database update step {migration} failed. Details are in the log; '
+        . 'running the update again continues from this step.',
+    'diagnostics.migration_contract_requires_admin' => 'Migration {migration} removes old database structure '
+        . 'and must be started by an administrator.',
+    'diagnostics.migration_backend_unsupported' => 'Database migrations are not available for {driver} yet. '
+        . 'Use MySQL 8.4.',
+    'diagnostics.installer_field_missing' => 'Enter the {field, select, host {database server} name {database '
+        . 'name} user {database user name} other {{field}}}.',
+    'diagnostics.installer_field_invalid' => 'The {field, select, host {database server} port {port} name '
+        . '{database name} user {database user name} password {password} other {{field}}} is not valid.',
+    'diagnostics.installer_setup_code_invalid' => 'The setup code is not correct. Copy it from the file '
+        . 'storage/install/setup-code.txt on your server.',
+    'diagnostics.config_write_failed' => 'The file config/local.php could not be written. Make the config '
+        . 'directory writable by the web server, or upload the file yourself.',
+    'diagnostics.config_directory_public' => 'The config directory is inside the public web root. Move the '
+        . 'forum so that only the public directory is served.',
+    'diagnostics.password_too_short' => 'Use a password of at least 8 characters.',
+    'diagnostics.password_too_long' => 'Use a password of at most 256 characters.',
+    'diagnostics.password_too_common' => 'This password is too common and easy to guess. Choose another one.',
+    'diagnostics.password_matches_account' => 'Do not use your user name or email address as your password.',
+    'diagnostics.login_invalid' => 'The user name, email address or password is not correct.',
+    'diagnostics.login_account_pending_verification' => 'Please confirm your email address first. Look for '
+        . 'the message we sent you.',
+    'diagnostics.login_account_pending_approval' => 'Your account is waiting for approval by an administrator.',
+    'diagnostics.login_throttled' => 'Too many failed login attempts. Try again in {minutes, plural, one {# minute} '
+        . 'other {# minutes}}.',
+    'diagnostics.login_account_suspended' => 'This account has been suspended.',
+    'diagnostics.permission_value_invalid' => 'The value for permission {key} is not allowed.',
+    'diagnostics.permission_unknown' => 'The permission {key} does not exist.',
+    'diagnostics.migration_registry_invalid' => 'The list of database migrations in this release is invalid.',
+    'diagnostics.thread_forum_not_found' => 'This forum does not exist, or you are not allowed to see it.',
+    'diagnostics.thread_forum_is_category' => 'Threads cannot be started in a category. Choose one of its forums.',
+    'diagnostics.thread_permission_denied' => 'You are not allowed to start threads in this forum.',
+    'diagnostics.thread_forum_locked' => 'This forum is locked. New threads cannot be started in it.',
+    'diagnostics.thread_title_invalid' => 'Enter a title of 1 to {max} characters without control characters.',
+    'diagnostics.post_content_invalid' => 'Enter a message of 1 to {max} characters.',
+    'diagnostics.thread_not_found' => 'This thread does not exist, or you are not allowed to read it.',
+    'diagnostics.reply_permission_denied' => 'You are not allowed to reply in this forum.',
+    'diagnostics.thread_locked' => 'This thread is locked. New replies cannot be posted.',
+    'diagnostics.post_token_invalid' => 'This form is no longer valid. Check your message and send it again.',
+    'diagnostics.post_not_found' => 'This post does not exist, or you are not allowed to read it.',
+    'diagnostics.post_edit_denied' => 'You are not allowed to edit this post.',
+    'diagnostics.post_edit_window_expired' => 'Posts can only be edited within {minutes, plural, one {# minute} '
+        . 'other {# minutes}} of posting.',
+    'diagnostics.post_reason_invalid' => 'Enter a reason of at most {max} characters without control characters.',
+    'diagnostics.moderation_denied' => 'You are not allowed to do this.',
+    'diagnostics.moderation_action_invalid' => 'Choose one of the offered actions.',
+    'diagnostics.post_is_first' => 'The first post of a thread can only be removed with its thread.',
+    'diagnostics.content_already_deleted' => 'This has already been deleted.',
+    'diagnostics.content_not_deleted' => 'This is not deleted, so there is nothing to restore.',
+    'diagnostics.thread_state_unchanged' => 'The thread is already in that state.',
+    'diagnostics.thread_is_redirect' => 'This is only a redirect to a moved thread. Manage the thread itself.',
+    'diagnostics.thread_move_target_invalid' => 'Choose a forum you may move threads into. Categories hold no '
+        . 'threads.',
+    'diagnostics.thread_move_same_forum' => 'The thread is already in that forum.',
+    'diagnostics.content_not_pending' => 'This is not waiting for approval.',
+    'diagnostics.post_content_blocked' => 'Your message contains a word that is not allowed here.',
+    'diagnostics.post_link_blocked' => 'Your message links to a site that is not allowed here.',
+    'diagnostics.post_links_limited' => 'New members may add at most {max, plural, =0 {no links} one {# link} '
+        . 'other {# links}} to a post. Please remove some links.',
+    'diagnostics.username_invalid' => 'Choose a user name of 3 to 32 letters, digits, spaces, dots, hyphens or '
+        . 'underscores, starting and ending with a letter or digit.',
+    'diagnostics.email_invalid' => 'Enter a valid email address.',
+    'diagnostics.password_mismatch' => 'The two passwords are not the same.',
+    'diagnostics.identity_taken' => '{field, select, username {This user name is already taken.} email {This '
+        . 'email address is already in use.} other {This account exists already.}}',
+    'diagnostics.installer_admin_exists' => 'An administrator account exists already.',
+    'diagnostics.installer_lock_failed' => 'The installation could not be finished because the file '
+        . 'config/install.lock could not be written. Make the config directory writable and try again.',
+    'diagnostics.admin_reauth_invalid' => 'The password is not correct.',
+    'diagnostics.report_denied' => 'You are not allowed to report posts in this forum.',
+    'diagnostics.report_own_post' => 'You cannot report your own post. Edit or delete it instead.',
+    'diagnostics.report_reason_invalid' => 'Describe the problem in 1 to {max} characters.',
+    'diagnostics.report_exists' => 'You have already reported this post. The moderators will look at it.',
+    'diagnostics.report_flood_wait' => 'You are sending reports too fast. Wait {seconds, plural, one {# second} '
+        . 'other {# seconds}} and try again.',
+    'diagnostics.report_not_found' => 'This report does not exist, or you may not handle it.',
+    'diagnostics.report_not_open' => 'This report has already been resolved or dismissed.',
+    'diagnostics.report_note_invalid' => 'Write a note of 1 to {max} characters for the moderation log.',
+    'diagnostics.bulk_empty' => 'Select at least one item.',
+    'diagnostics.bulk_limit' => 'Select at most {max, plural, one {# item} other {# items}} at once.',
+    'diagnostics.user_not_pending' => 'This account is not waiting for approval.',
+    'diagnostics.post_flood_wait' => 'You are posting too fast. Wait {seconds, plural, one {# second} '
+        . 'other {# seconds}} and try again.',
+    'diagnostics.login_account_banned' => 'This account is banned.',
+    'diagnostics.login_account_banned_until' => 'This account is banned until {until}.',
+    'diagnostics.sanction_self' => 'You cannot sanction your own account.',
+    'diagnostics.sanction_admin_denied' => 'Only an administrator can sanction an administrator.',
+    'diagnostics.sanction_reason_invalid' => 'Give a reason of 1 to {max, number} characters.',
+    'diagnostics.sanction_days_invalid' => 'Give a number of days from 0 to {max, number}.',
+    'diagnostics.warning_points_invalid' => 'Give warning points from 1 to {max, number}.',
+    'diagnostics.user_not_banned' => 'This user is not banned.',
+    'diagnostics.ban_type_invalid' => 'Choose one of the offered ban types.',
+    'diagnostics.ban_value_invalid' => 'Enter a valid IP address, CIDR range, email address or domain for this type.',
+    'diagnostics.ban_own_address' => 'This ban would include the address you are using now.',
+    'diagnostics.ban_not_found' => 'This ban does not exist or is no longer active.',
+    'diagnostics.admin_reauth_required' => 'Confirm your password first; it stays confirmed for 15 minutes.',
+    'diagnostics.verify_resend_wait' => 'Please wait {seconds, plural, one {# second} other {# seconds}} before '
+        . 'you ask for another link.',
+    'diagnostics.register_too_fast' => 'Please take a moment to fill in the form and send it again.',
+    'diagnostics.register_challenge_failed' => 'The answer to the question was not right. Please try the new one.',
+    'diagnostics.register_wait' => 'Too many accounts were created from your network just now. Please try again '
+        . 'in {seconds, plural, one {# second} other {# seconds}}.',
+    'diagnostics.registration_closed' => 'This forum does not accept new accounts at the moment.',
+    'diagnostics.current_password_invalid' => 'The current password is not correct.',
+    'diagnostics.email_unchanged' => 'This is already the address of your account.',
+    'diagnostics.account_wait' => 'Please wait {seconds, plural, one {# second} other {# seconds}} before you try '
+        . 'again.',
+    'diagnostics.forum_title_invalid' => 'Give a title of 1 to 100 characters.',
+    'diagnostics.forum_slug_invalid' => 'Use lowercase letters, digits and hyphens for the address name.',
+    'diagnostics.forum_slug_taken' => 'Another forum uses this address name already.',
+    'diagnostics.forum_parent_not_found' => 'The forum to put it in does not exist.',
+    'diagnostics.forum_not_found' => 'This forum does not exist.',
+    'diagnostics.forum_too_deep' => 'Forums cannot be nested this deep.',
+    'diagnostics.forum_move_into_descendant' => 'A forum cannot be moved into one of its own subforums.',
+    'diagnostics.forum_has_children' => 'Move or delete the subforums first.',
+    'diagnostics.forum_has_threads' => 'Only an empty forum can be deleted; move its threads first.',
+    'diagnostics.mail_send_failed' => 'The mail could not be sent. Please try again in a few minutes.',
+    'diagnostics.mail_not_configured' => 'Mail is not set up on this forum yet. Please tell the administrator.',
+    'diagnostics.login_access_banned' => 'Logins from this address or for this email address are not allowed.',
+    'diagnostics.installer_mail_action_invalid' => 'Choose a mail setup action.',
+    'diagnostics.installer_mail_rate_limited' => 'Wait 30 seconds before sending another test email.',
+    'diagnostics.installer_mail_recipient_invalid' => 'Enter a valid test recipient email address.',
+    'diagnostics.installer_mail_https_required' => 'Open this installer over HTTPS to enter or save SMTP credentials.'
+        . ' You can skip SMTP over this connection.',
+    'diagnostics.privacy_denied' => 'This privacy action requires the account owner or a freshly confirmed '
+        . 'administrator.',
+    'diagnostics.privacy_grace_expired' => 'The cancellation period has ended. Contact an administrator if you need '
+        . 'help.',
+    'diagnostics.privacy_last_admin' => 'The last active administrator cannot be deleted. Assign another '
+        . 'administrator first.',
+    'diagnostics.privacy_not_due' => 'There is no deletion request whose grace period has ended for this account.',
+    'diagnostics.privacy_confirmation_required' => 'Confirm that you understand the deletion and retention policy.',
+    'diagnostics.privacy_action_invalid' => 'Select a valid account and privacy action.',
+    'diagnostics.privacy_export_busy' => 'Data export is busy or private storage is full. Try again later.',
+    'diagnostics.privacy_export_large' => 'This account exceeds the web export limit. Ask the administrator for a '
+        . 'complete assisted export; no partial archive was delivered.',
+    'diagnostics.privacy_export_failed' => 'The private data archive could not be prepared. Try again later.',
+    'diagnostics.privacy_unavailable' => 'Account privacy services are unavailable. Contact the administrator.',
+    'diagnostics.privacy_https_required' => 'Open this page over HTTPS to access account privacy tools.',
+    'diagnostics.privacy_delete_large' => 'This account is too large for one web deletion request. Ask the '
+        . 'administrator for assisted deletion.',
+    'diagnostics.outbox_payload_too_large' => 'The background task payload exceeds the allowed size.',
+    'diagnostics.outbox_claim_transaction_active' => 'A background task cannot be claimed inside another '
+        . 'transaction.',
+    'diagnostics.outbox_guard_transaction_required' => 'Background task execution requires a protected transaction.',
+    'diagnostics.outbox_lease_lost' => 'The background task ownership expired. It remains available for recovery.',
+    'diagnostics.outbox_runner_budget_invalid' => 'The background task execution limit is not valid.',
+    'diagnostics.outbox_budget_or_maintenance' => 'Background processing paused for maintenance or its time limit.',
+    'diagnostics.outbox_payload_invalid' => 'The background task data is not valid.',
+    'diagnostics.conversation_recipient_invalid' => 'Choose another active member as the recipient.',
+    'diagnostics.conversation_not_found' => 'This conversation does not exist or you are not a participant.',
+    'diagnostics.conversation_closed' => 'This conversation is no longer open for replies.',
+    'diagnostics.conversation_content_invalid' => 'Enter a valid subject (up to 160 characters) and message (up to '
+        . '8000 characters).',
+    'diagnostics.privacy_cleanup_review' => 'Account deletion needs an administrator review of the installed '
+        . 'database retention rules.',
+    'diagnostics.privacy_deletion_in_progress' => 'Deletion has already started; a complete archive is no longer '
+        . 'available. Contact the administrator.',
+    'diagnostics.community_denied' => 'This action is unavailable.',
+    'diagnostics.community_not_found' => 'This content is unavailable.',
+    'diagnostics.community_invalid' => 'Check the values and try again. You may already have voted or the poll may be '
+        . 'closed.',
+    'diagnostics.community_images_unavailable' => 'Image uploads require the server GD image extension.',
+    'diagnostics.community_upload_invalid' => 'Choose an allowed file within the upload limits.',
+    'diagnostics.community_upload_failed' => 'The private upload could not be completed. Try again later.',
+    'diagnostics.community_upload_limit' => 'Your attachment storage limit has been reached. Remove an older file.',
+    'diagnostics.community_member_unknown' => 'No member has that username.',
+    'diagnostics.forum_description_invalid' => 'The description may have up to 2,000 characters.',
+    'diagnostics.admin_https_required' => 'This action works only over HTTPS; open the admin area with https:// '
+        . 'and try again.',
+    'diagnostics.thread_posts_invalid' => 'Choose between 1 and 200 posts of this thread.',
+    'diagnostics.thread_posts_all' => 'Every post is selected. To move the whole thread use "Move", or merge it '
+        . 'into an existing thread with "All posts".',
+    'diagnostics.thread_merge_target_invalid' => 'Enter another thread you may moderate (its number or address).',
+    'diagnostics.thread_prefix_invalid' => 'This prefix cannot be used in this forum.',
+    'diagnostics.thread_tags_invalid' => 'Choose at most {max} of the listed tags.',
+    'diagnostics.taxonomy_label_invalid' => 'Enter a name of 1 to {max} characters.',
+    'diagnostics.taxonomy_color_invalid' => 'Choose one of the listed colours.',
+    'diagnostics.taxonomy_tag_taken' => 'A tag with this name already exists.',
+    'diagnostics.gallery_denied' => 'You cannot change this album.',
+    'diagnostics.gallery_disabled' => 'The gallery is turned off.',
+    'diagnostics.gallery_title_invalid' => 'Enter a title of 1 to 100 characters.',
+    'diagnostics.gallery_description_invalid' => 'The description can be up to 500 characters.',
+    'diagnostics.gallery_visibility_invalid' => 'Choose who can see the album.',
+    'diagnostics.gallery_upload_invalid' => 'Choose an image file to upload.',
+    'diagnostics.gallery_upload_failed' => 'The image could not be saved. Try again later.',
+    'diagnostics.gallery_too_large' => 'The image is larger than {max} MB.',
+    'diagnostics.gallery_too_large_to_process' => 'The image has too many pixels for this server.',
+    'diagnostics.gallery_type_refused' => 'This file is not an allowed image. Allowed: {types}.',
+    'diagnostics.gallery_images_unavailable' => 'Image processing (PHP GD) is not available on this server.',
+    'diagnostics.gallery_quota' => 'Your gallery space ({max} MB) is full. Delete images to upload new ones.',
+    'diagnostics.webhook_url_invalid' => 'Enter an https address on the public internet.',
+    'diagnostics.webhook_events_invalid' => 'Choose at least one event.',
+    'diagnostics.post_images_limited' => 'A post may contain at most {max} images.',
+    'diagnostics.gallery_post_images_off' => 'Adding images to posts is turned off.',
+    'diagnostics.community_solution_off' => 'Answers can be accepted in question and answer forums only.',
+    'diagnostics.second_factor_invalid' => 'The code is not correct or was already used.',
+    'diagnostics.second_factor_unavailable' => 'This verification method is not available.',
+    'diagnostics.external_unavailable' => 'Signing in with this account is not available on this site right now.',
+    'diagnostics.external_expired' => 'The sign-in took too long or was started in another window. Please try again.',
+    'diagnostics.external_cancelled' => 'The sign-in was cancelled.',
+    'diagnostics.external_failed' => 'The other service did not confirm the sign-in. Please try again.',
+    'diagnostics.external_unverified' => 'This account has no verified email address, so it cannot be used to sign up.',
+    'diagnostics.external_email_taken' => 'An account with this email address already exists. Sign in with your '
+        . 'password, then link this account on your account page.',
+    'diagnostics.external_taken' => 'This outside account is already linked to another member.',
+    'diagnostics.external_linked' => 'An account of this service is already linked to you.',
+    'diagnostics.external_inactive' => 'This account is not active yet or is suspended.',
+    'diagnostics.external_banned' => 'Accounts cannot be created from this address.',
+    'diagnostics.external_pending_approval' => 'Your account was created and waits for an administrator\'s approval.',
+    'diagnostics.external_link_password' => 'The password is not correct.',
+];

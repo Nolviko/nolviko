@@ -1,0 +1,39 @@
+{# Installer step 3 (M01.14). Context: language, title, action, csrf_field, csrf_token, needs_code, code_file,
+   pending (count), complete, admin_url, errors (translated). #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-install' }}{% endblock %}
+{% block header %}<header class="top"><div class="top-in"><span class="wm"><span class="mark" aria-hidden="true">n</span>{{ 'nolviko' }}</span></div></header>{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% include 'installer/steps.twig' with {step: 3} %}
+<h2>{{ t('installer.migrate.heading') }}</h2>
+
+{% if errors is not empty %}
+<div role="alert">
+<ul>
+{% for error in errors %}
+<li>{{ error }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
+
+{% if complete %}
+<p role="status">{{ t('installer.migrate.complete') }}</p>
+<p><a href="{{ admin_url|safe_url }}">{{ t('installer.migrate.continue') }}</a></p>
+{% else %}
+<p role="status">{{ t('installer.migrate.pending', {count: pending}) }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% if needs_code %}
+<p id="setup-code-help">{{ t('installer.setup_code.help', {file: code_file}) }}</p>
+<p><label for="setup-code">{{ t('installer.setup_code.label') }}</label>
+<input id="setup-code" name="setup_code" type="text" required autocomplete="off" spellcheck="false" aria-describedby="setup-code-help"></p>
+{% endif %}
+<p><button type="submit">{{ t('installer.migrate.submit') }}</button></p>
+</form>
+{% endif %}
+{% endblock %}

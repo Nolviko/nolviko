@@ -1,0 +1,50 @@
+{# Permission simulator (M04.04). Context: title, nav, action, member (name or empty for the guest), permissions
+   (value, selected), forums (value, label, selected), result (value, reason, rules: level, forum, source, value;
+   or null), error (translated or null). A GET form; it changes nothing. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+<p>{{ t('admin.permissions.intro') }}</p>
+<form method="get" action="{{ action|safe_url }}">
+<p><label for="sim-member">{{ t('admin.permissions.member') }}</label>
+<input id="sim-member" name="member" maxlength="64" value="{{ member }}"></p>
+<p><label for="sim-permission">{{ t('admin.permissions.permission') }}</label>
+<select id="sim-permission" name="permission" required>
+{% for permission in permissions %}
+<option value="{{ permission.value }}"{% if permission.selected %} selected{% endif %}>{{ permission.value }}</option>
+{% endfor %}
+</select></p>
+<p><label for="sim-forum">{{ t('admin.permissions.forum') }}</label>
+<select id="sim-forum" name="forum">
+<option value="">{{ t('admin.permissions.no_forum') }}</option>
+{% for forum in forums %}
+<option value="{{ forum.value }}"{% if forum.selected %} selected{% endif %}>{{ forum.label }}</option>
+{% endfor %}
+</select></p>
+<p><button type="submit">{{ t('admin.permissions.check') }}</button></p>
+</form>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+{% if result %}
+<h2>{{ t('admin.permissions.result', {value: result.value}) }}</h2>
+<p>{{ t('admin.permissions.reason', {reason: result.reason}) }}</p>
+{% if result.rules is empty %}
+<p>{{ t('admin.permissions.no_rules') }}</p>
+{% else %}
+<table>
+<thead><tr>
+<th scope="col">{{ t('admin.permissions.level') }}</th>
+<th scope="col">{{ t('admin.permissions.forum') }}</th>
+<th scope="col">{{ t('admin.permissions.source') }}</th>
+<th scope="col">{{ t('admin.permissions.value') }}</th>
+</tr></thead>
+<tbody>
+{% for rule in result.rules %}
+<tr><td>{{ rule.level }}</td><td>{{ rule.forum }}</td><td>{{ rule.source }}</td><td>{{ rule.value }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,54 @@
+{# Audit log (M04.10). Context: title, nav, action, families (value, label, selected), actor, target_type,
+   target_id, rows (at, actor, action, target, reason, details; all text), older_url (or null). A GET form, so
+   a filtered view can be bookmarked; it changes nothing. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+<form data-admin-progress method="get" action="{{ action|safe_url }}">
+<p><label for="audit-family">{{ t('admin.audit.family') }}</label>
+<select id="audit-family" name="family">
+{% for family in families %}
+<option value="{{ family.value }}"{% if family.selected %} selected{% endif %}>{{ family.label }}</option>
+{% endfor %}
+</select>
+<label for="audit-actor">{{ t('admin.audit.actor') }}</label>
+<input id="audit-actor" name="actor" maxlength="64" value="{{ actor }}">
+<label for="audit-target-type">{{ t('admin.audit.target_type') }}</label>
+<input id="audit-target-type" name="target_type" maxlength="30" value="{{ target_type }}">
+<label for="audit-target-id">{{ t('admin.audit.target_id') }}</label>
+<input id="audit-target-id" name="target_id" inputmode="numeric" maxlength="18" value="{{ target_id }}">
+<button type="submit">{{ t('admin.audit.filter') }}</button></p>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% if save_filter_url is defined %}<p><a href="{{ save_filter_url|safe_url }}">{{ t('admin.saved.current') }}</a></p>{% endif %}
+{% if error is defined and error %}<p role="alert">{{ error }}</p>
+{% elseif rows is empty %}
+<p class="admin-empty">{{ t('admin.audit.empty') }}</p>
+{% else %}
+<table>
+<thead><tr>
+<th scope="col">{{ t('admin.audit.when') }}</th>
+<th scope="col">{{ t('admin.audit.actor') }}</th>
+<th scope="col">{{ t('admin.audit.what') }}</th>
+<th scope="col">{{ t('admin.audit.target_heading') }}</th>
+<th scope="col">{{ t('admin.audit.reason') }}</th>
+<th scope="col">{{ t('admin.audit.details') }}</th>
+</tr></thead>
+<tbody>
+{% for row in rows %}
+<tr>
+<td>{{ row.at }}</td>
+<td>{{ row.actor }}</td>
+<td><code>{{ row.action }}</code></td>
+<td>{{ row.target }}</td>
+<td>{{ row.reason }}</td>
+<td><code>{{ row.details }}</code></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+{% if older_url %}
+<p><a href="{{ older_url|safe_url }}" rel="next">{{ t('admin.audit.older') }}</a></p>
+{% endif %}
+{% endblock %}

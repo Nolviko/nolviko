@@ -1,0 +1,82 @@
+{# One user group (M04.14). Context: title, nav, group (id, name, slug, built_in, guests), action, list_url, members
+   (id, username, primary), older_url, forum (null = site-wide), forums (id, label, selected), rules (key, field,
+   label, type, value, choices, min, max, locked, section), error, notice, fresh, reauth_url, csrf_field, csrf_token.
+   Rules follow ADR-011: "inherit" stores nothing; "never" can not be lifted by any other rule. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+<p><a href="{{ list_url|safe_url }}">{{ t('admin.groups.back') }}</a></p>
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.groups.reauth') }}</a></p>{% endif %}
+
+{% if not group.built_in %}
+<h2>{{ t('admin.groups.rename') }}</h2>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="group-name">{{ t('admin.groups.name') }}</label>
+<input id="group-name" name="name" required maxlength="100" value="{{ group.name }}" dir="auto"></p>
+<p><button type="submit" name="action" value="{{ 'rename' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.groups.rename') }}</button></p>
+</form>
+{% endif %}
+
+<h2>{{ t('admin.groups.members') }}</h2>
+{% if group.guests %}
+<p class="admin-empty">{{ t('admin.groups.guests_note') }}</p>
+{% else %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="group-member">{{ t('admin.groups.add_member') }}</label>
+<input id="group-member" name="member" required maxlength="64" autocomplete="off" dir="auto"></p>
+<p><button type="submit" name="action" value="{{ 'add_member' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.groups.add') }}</button></p>
+</form>
+{% if members is empty %}
+<p class="admin-empty">{{ t('admin.groups.no_members') }}</p>
+{% else %}
+<ul>
+{% for member in members %}
+<li><bdi>{{ member.username }}</bdi>{% if member.primary %} <span class="chip">{{ t('admin.groups.primary') }}</span>{% endif %}
+{% if fresh %}<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="user" value="{{ member.id }}">
+<button class="btn-d" type="submit" name="action" value="{{ 'remove_member' }}" aria-label="{{ t('admin.groups.remove_label', {name: member.username}) }}">{{ t('admin.groups.remove') }}</button>
+</form>{% endif %}</li>
+{% endfor %}
+</ul>
+{% if older_url %}<p><a rel="next" href="{{ older_url|safe_url }}">{{ t('admin.groups.more_members') }}</a></p>{% endif %}
+{% endif %}
+{% endif %}
+
+<h2 id="rules">{{ t('admin.groups.rules') }}</h2>
+<p>{{ t('admin.groups.rules_intro') }}</p>
+<form method="get" action="{{ action|safe_url }}">
+<p><label for="rules-forum">{{ t('admin.groups.scope') }}</label>
+<select id="rules-forum" name="forum">
+<option value="">{{ t('admin.groups.scope_site') }}</option>
+{% for item in forums %}<option value="{{ item.id }}"{% if item.selected %} selected{% endif %}>{{ item.label }}</option>{% endfor %}
+</select></p>
+<p><button type="submit">{{ t('admin.groups.scope_show') }}</button></p>
+</form>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+{% if forum is not null %}<input type="hidden" name="forum" value="{{ forum }}">{% endif %}
+<table>
+<thead><tr>
+<th scope="col">{{ t('admin.groups.permission') }}</th>
+<th scope="col">{{ t('admin.groups.rule') }}</th>
+</tr></thead>
+<tbody>
+{% for rule in rules %}
+{% if loop.first or rule.section != rules[loop.index0 - 1].section %}<tr><th scope="rowgroup" colspan="2">{{ rule.section }}</th></tr>{% endif %}
+<tr>
+<td><label for="{{ rule.field }}">{{ rule.label }}</label><br><code class="meta">{{ rule.key }}</code></td>
+<td>{% if rule.locked %}<span class="chip">{{ t('admin.groups.locked') }}</span>
+{% elseif rule.type == 'int' %}<input id="{{ rule.field }}" name="rule[{{ rule.key }}]" type="number" min="{{ rule.min }}" max="{{ rule.max }}" value="{{ rule.value }}" placeholder="{{ t('admin.groups.inherit') }}">
+{% else %}<select id="{{ rule.field }}" name="rule[{{ rule.key }}]">
+{% for choice in rule.choices %}<option value="{{ choice.value }}"{% if choice.value == rule.value %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+</select>{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+<p><button type="submit" name="action" value="{{ 'save_rules' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.groups.save_rules') }}</button></p>
+</form>
+{% endblock %}

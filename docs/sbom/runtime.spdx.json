@@ -1,0 +1,690 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Forum Engine runtime selected Composer reference",
+  "documentNamespace": "https://spdx.org/spdxdocs/forumengine-runtime-e1b45e7c-d297-4968-b76c-e37339494b59",
+  "creationInfo": {
+    "created": "2026-11-04T22:53:09Z",
+    "creators": [
+      "Tool: ForumEngine-M00.10-inventory-1.0"
+    ],
+    "comment": "Generated from exact Composer lock/installed versions and preserved license texts. Does not include OS, PHP extensions, Docker images, frontend assets, Python validator or unused research candidates."
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Selection",
+      "name": "forumengine/runtime-reference",
+      "versionInfo": "lock-e204d1a86a97e993",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "description": "Composer dependency reference, not a released forum binary; runtime"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c65973f05cc68f728f41",
+      "name": "composer/semver",
+      "versionInfo": "3.5.2",
+      "downloadLocation": "https://api.github.com/repos/composer/semver/zipball/9dfce66f1e97360ea5e6d3e38ab14277e4cc591e",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/composer/semver.git @ 9dfce66f1e97360ea5e6d3e38ab14277e4cc591e",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/composer/semver@3.5.2"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3b92750fa87a98629f9a",
+      "name": "doctrine/dbal",
+      "versionInfo": "4.5.0",
+      "downloadLocation": "https://api.github.com/repos/doctrine/dbal/zipball/c435cd7ea33e17d2a89288caf994cf3d4549b879",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/doctrine/dbal.git @ c435cd7ea33e17d2a89288caf994cf3d4549b879",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/doctrine/dbal@4.5.0"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7d8ac7550f37afa488f1",
+      "name": "doctrine/deprecations",
+      "versionInfo": "1.1.6",
+      "downloadLocation": "https://api.github.com/repos/doctrine/deprecations/zipball/d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/doctrine/deprecations.git @ d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/doctrine/deprecations@1.1.6"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-127b1490008a693eeb43",
+      "name": "doctrine/lexer",
+      "versionInfo": "3.0.3",
+      "downloadLocation": "https://api.github.com/repos/doctrine/lexer/zipball/71d305eaa6480d3d3460c7d053d1da7749fa9cca",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/doctrine/lexer.git @ 71d305eaa6480d3d3460c7d053d1da7749fa9cca",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/doctrine/lexer@3.0.3"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-aabdcc235857de698671",
+      "name": "egulias/email-validator",
+      "versionInfo": "4.0.4",
+      "downloadLocation": "https://api.github.com/repos/egulias/EmailValidator/zipball/d42c8731f0624ad6bdc8d3e5e9a4524f68801cfa",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/egulias/EmailValidator.git @ d42c8731f0624ad6bdc8d3e5e9a4524f68801cfa",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/egulias/email-validator@4.0.4"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9acf9ae503e38313c459",
+      "name": "psr/cache",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "https://api.github.com/repos/php-fig/cache/zipball/aa5030cfa5405eccfdcb1083ce040c2cb8d253bf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/php-fig/cache.git @ aa5030cfa5405eccfdcb1083ce040c2cb8d253bf",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/psr/cache@3.0.0"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e10fb07ffa262d4930ce",
+      "name": "psr/container",
+      "versionInfo": "2.0.2",
+      "downloadLocation": "https://api.github.com/repos/php-fig/container/zipball/c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/php-fig/container.git @ c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/psr/container@2.0.2"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-30dbc6cf27897144aea2",
+      "name": "psr/event-dispatcher",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "https://api.github.com/repos/php-fig/event-dispatcher/zipball/dbefd12671e8a14ec7f180cab83036ed26714bb0",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/php-fig/event-dispatcher.git @ dbefd12671e8a14ec7f180cab83036ed26714bb0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/psr/event-dispatcher@1.0.0"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-691b57a3251ca16be3d0",
+      "name": "psr/log",
+      "versionInfo": "3.0.2",
+      "downloadLocation": "https://api.github.com/repos/php-fig/log/zipball/f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/php-fig/log.git @ f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/psr/log@3.0.2"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-4f5fcad7d8dbd530092b",
+      "name": "symfony/deprecation-contracts",
+      "versionInfo": "v3.7.1",
+      "downloadLocation": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/f3202fa1b5097b0af062dc978b32ecf63404e31d",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/deprecation-contracts.git @ f3202fa1b5097b0af062dc978b32ecf63404e31d",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/deprecation-contracts@3.7.1"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-93bf61fa14fefb7bf7a6",
+      "name": "symfony/event-dispatcher",
+      "versionInfo": "v7.4.17",
+      "downloadLocation": "https://api.github.com/repos/symfony/event-dispatcher/zipball/d269974ee93c61d03620ffee358355bfdb471d66",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/event-dispatcher.git @ d269974ee93c61d03620ffee358355bfdb471d66",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/event-dispatcher@7.4.17"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-4c5fce08e40f46db46ef",
+      "name": "symfony/event-dispatcher-contracts",
+      "versionInfo": "v3.7.1",
+      "downloadLocation": "https://api.github.com/repos/symfony/event-dispatcher-contracts/zipball/c7de7a00ffb67842132da02ea92988a39ccd9f4e",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/event-dispatcher-contracts.git @ c7de7a00ffb67842132da02ea92988a39ccd9f4e",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/event-dispatcher-contracts@3.7.1"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d1e3737a82be52cd412c",
+      "name": "symfony/http-foundation",
+      "versionInfo": "v7.4.23",
+      "downloadLocation": "https://api.github.com/repos/symfony/http-foundation/zipball/7fb73cffa06e2bcc2cb523fcccb1e8174106b206",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/http-foundation.git @ 7fb73cffa06e2bcc2cb523fcccb1e8174106b206",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/http-foundation@7.4.23"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-82f4784045ccb2804419",
+      "name": "symfony/mailer",
+      "versionInfo": "v7.4.22",
+      "downloadLocation": "https://api.github.com/repos/symfony/mailer/zipball/1aa1e2ee7515826bb17b0ad0d2f16962fcaa7859",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/mailer.git @ 1aa1e2ee7515826bb17b0ad0d2f16962fcaa7859",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/mailer@7.4.22"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-00ce2713a0910c7f5d52",
+      "name": "symfony/mime",
+      "versionInfo": "v7.4.22",
+      "downloadLocation": "https://api.github.com/repos/symfony/mime/zipball/94a4c017435bc515f5ac80421a2c555fb9ca3676",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/mime.git @ 94a4c017435bc515f5ac80421a2c555fb9ca3676",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/mime@7.4.22"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c59633f190a6e2748ea7",
+      "name": "symfony/polyfill-ctype",
+      "versionInfo": "v1.37.0",
+      "downloadLocation": "https://api.github.com/repos/symfony/polyfill-ctype/zipball/141046a8f9477948ff284fa65be2095baafb94f2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/polyfill-ctype.git @ 141046a8f9477948ff284fa65be2095baafb94f2",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/polyfill-ctype@1.37.0"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-eab412ec1ed9cfd65fcf",
+      "name": "symfony/polyfill-mbstring",
+      "versionInfo": "v1.43.3",
+      "downloadLocation": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/122889ed24dc000165bcbfd77ec412f15cbdfc6a",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/polyfill-mbstring.git @ 122889ed24dc000165bcbfd77ec412f15cbdfc6a",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/polyfill-mbstring@1.43.3"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-2f7e7037b5c6be80634f",
+      "name": "symfony/routing",
+      "versionInfo": "v7.4.23",
+      "downloadLocation": "https://api.github.com/repos/symfony/routing/zipball/0000ade604b7bc798cb1e75edf6f17df48185f73",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/routing.git @ 0000ade604b7bc798cb1e75edf6f17df48185f73",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/routing@7.4.23"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c59785222e1be8f31cfc",
+      "name": "symfony/service-contracts",
+      "versionInfo": "v3.7.3",
+      "downloadLocation": "https://api.github.com/repos/symfony/service-contracts/zipball/15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/service-contracts.git @ 15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/service-contracts@3.7.3"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-07cf05ef1ebd42d42f2d",
+      "name": "symfony/translation",
+      "versionInfo": "v7.4.22",
+      "downloadLocation": "https://api.github.com/repos/symfony/translation/zipball/a892cd1807bfaf0a10690359c47fdf95b162ef22",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/translation.git @ a892cd1807bfaf0a10690359c47fdf95b162ef22",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/translation@7.4.22"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1ae5268a96652d190c26",
+      "name": "symfony/translation-contracts",
+      "versionInfo": "v3.7.1",
+      "downloadLocation": "https://api.github.com/repos/symfony/translation-contracts/zipball/ccb206b98faccc511ebae8e5fad50f2dc0b30621",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/symfony/translation-contracts.git @ ccb206b98faccc511ebae8e5fad50f2dc0b30621",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/symfony/translation-contracts@3.7.1"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-2ecd20fbc48ee7d59694",
+      "name": "twig/twig",
+      "versionInfo": "v3.30.0",
+      "downloadLocation": "https://api.github.com/repos/twigphp/Twig/zipball/8c737079b726af72ff8ef3c595be9f6a810ea1ef",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "https://github.com/twigphp/Twig.git @ 8c737079b726af72ff8ef3c595be9f6a810ea1ef",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:composer/twig/twig@3.30.0"
+        }
+      ],
+      "comment": "Declared Composer license; no file-level legal conclusion. Exact copied notices and SHA256 are in docs/licenses/runtime/INDEX.md and inventory.json."
+    },
+    {
+      "SPDXID": "SPDXRef-Composer-Autoloader",
+      "name": "Composer generated autoloader metadata",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "Composer version 2.11.0 2026-10-29 10:23:20",
+      "comment": "Generated vendor/composer code; not an additional Composer lock package. Upstream vendor/composer/LICENSE copied verbatim."
+    },
+    {
+      "SPDXID": "SPDXRef-Font-bricolage-grotesque",
+      "name": "font/bricolage-grotesque",
+      "versionInfo": "NOASSERTION",
+      "downloadLocation": "https://fonts.google.com/specimen/Bricolage+Grotesque",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)",
+      "sourceInfo": "https://github.com/ateliertriay/bricolage; WOFF2 subsets from the owner-supplied design file (Google Fonts build)",
+      "comment": "Self-hosted typeface (ADR-033) in public/fonts/; notice docs/licenses/runtime/fonts/bricolage-grotesque/OFL.txt (exact copy of google/fonts ofl/bricolagegrotesque/OFL.txt); file SHA256 in docs/licenses/runtime/INDEX.md. Added by hand: research/m00-10/export_spdx.py does not emit fonts."
+    },
+    {
+      "SPDXID": "SPDXRef-Font-figtree",
+      "name": "font/figtree",
+      "versionInfo": "NOASSERTION",
+      "downloadLocation": "https://fonts.google.com/specimen/Figtree",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)",
+      "sourceInfo": "https://github.com/erikdkennedy/figtree; WOFF2 subsets from the owner-supplied design file (Google Fonts build)",
+      "comment": "Self-hosted typeface (ADR-033) in public/fonts/; notice docs/licenses/runtime/fonts/figtree/OFL.txt (exact copy of google/fonts ofl/figtree/OFL.txt); file SHA256 in docs/licenses/runtime/INDEX.md. Added by hand: research/m00-10/export_spdx.py does not emit fonts."
+    },
+    {
+      "SPDXID": "SPDXRef-Font-jetbrains-mono",
+      "name": "font/jetbrains-mono",
+      "versionInfo": "NOASSERTION",
+      "downloadLocation": "https://fonts.google.com/specimen/JetBrains+Mono",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)",
+      "sourceInfo": "https://github.com/JetBrains/JetBrainsMono; WOFF2 subsets from the owner-supplied design file (Google Fonts build)",
+      "comment": "Self-hosted typeface (ADR-033) in public/fonts/; notice docs/licenses/runtime/fonts/jetbrains-mono/OFL.txt (exact copy of google/fonts ofl/jetbrainsmono/OFL.txt); file SHA256 in docs/licenses/runtime/INDEX.md. Added by hand: research/m00-10/export_spdx.py does not emit fonts."
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Selection"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Composer-Autoloader"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-3b92750fa87a98629f9a",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7d8ac7550f37afa488f1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-3b92750fa87a98629f9a",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9acf9ae503e38313c459"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-3b92750fa87a98629f9a",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-691b57a3251ca16be3d0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-aabdcc235857de698671",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-127b1490008a693eeb43"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-93bf61fa14fefb7bf7a6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4c5fce08e40f46db46ef"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-4c5fce08e40f46db46ef",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-30dbc6cf27897144aea2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d1e3737a82be52cd412c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4f5fcad7d8dbd530092b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d1e3737a82be52cd412c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-eab412ec1ed9cfd65fcf"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-82f4784045ccb2804419",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-aabdcc235857de698671"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-82f4784045ccb2804419",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-30dbc6cf27897144aea2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-82f4784045ccb2804419",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-691b57a3251ca16be3d0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-82f4784045ccb2804419",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-93bf61fa14fefb7bf7a6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-82f4784045ccb2804419",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-00ce2713a0910c7f5d52"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-82f4784045ccb2804419",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c59785222e1be8f31cfc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-00ce2713a0910c7f5d52",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4f5fcad7d8dbd530092b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-00ce2713a0910c7f5d52",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-eab412ec1ed9cfd65fcf"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-2f7e7037b5c6be80634f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4f5fcad7d8dbd530092b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c59785222e1be8f31cfc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-e10fb07ffa262d4930ce"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c59785222e1be8f31cfc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4f5fcad7d8dbd530092b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-07cf05ef1ebd42d42f2d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4f5fcad7d8dbd530092b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-07cf05ef1ebd42d42f2d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-eab412ec1ed9cfd65fcf"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-07cf05ef1ebd42d42f2d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1ae5268a96652d190c26"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-2ecd20fbc48ee7d59694",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4f5fcad7d8dbd530092b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-2ecd20fbc48ee7d59694",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c59633f190a6e2748ea7"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-2ecd20fbc48ee7d59694",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-eab412ec1ed9cfd65fcf"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3b92750fa87a98629f9a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-93bf61fa14fefb7bf7a6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d1e3737a82be52cd412c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-82f4784045ccb2804419"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-00ce2713a0910c7f5d52"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-2f7e7037b5c6be80634f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-07cf05ef1ebd42d42f2d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-2ecd20fbc48ee7d59694"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c65973f05cc68f728f41"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Font-bricolage-grotesque"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Font-figtree"
+    },
+    {
+      "spdxElementId": "SPDXRef-Selection",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Font-jetbrains-mono"
+    }
+  ],
+  "comment": "Package metadata only (filesAnalyzed=false); licenseConcluded/copyrightText NOASSERTION. Source commits are provenance, not package checksums. No release or full legal-compliance certification."
+}

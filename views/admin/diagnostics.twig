@@ -1,0 +1,24 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<p>{{ t('operations.support_policy') }}</p>
+<dl>
+<dt>{{ t('operations.php') }}</dt><dd>{{ report.php }}</dd>
+<dt>{{ t('operations.database') }}</dt><dd>{{ report.database.status == 'ready' ? t('operations.ready') : t('operations.unavailable') }}</dd>
+<dt>{{ t('operations.storage') }}</dt><dd>{{ report.storage_writable ? t('operations.ready') : t('operations.unavailable') }}</dd>
+<dt>{{ t('operations.images') }}</dt><dd>{{ report.gd_available ? t('operations.ready') : t('operations.disabled') }}</dd>
+</dl>
+<h2>{{ t('seo.status') }}</h2>
+<p>{{ report.seo.configured|default(false) ? t('seo.origin_ready') : t('seo.origin_missing') }}</p>
+{% if report.seo.state|default('unavailable') == 'completed' %}<p>{{ t('seo.complete') }}</p>
+{% elseif report.seo.state|default('unavailable') == 'running' %}<p>{{ t('seo.building') }}</p>
+{% elseif report.seo.state|default('unavailable') == 'capacity' %}<p>{{ t('seo.capacity') }}</p>
+{% else %}<p>{{ t('seo.idle') }}</p>{% endif %}
+<h2>{{ t('operations.task_summary') }}</h2>
+<ul>{% for state, label in {pending: t('tasks.status_pending'), running: t('tasks.status_running'), failed: t('tasks.status_failed')} %}
+<li>{{ label }}: {{ report.tasks[state].count|default(0)|format_number }}{% if report.tasks[state].capped|default(false) %} {{ t('operations.capped') }}{% endif %}</li>
+{% endfor %}</ul>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button name="action" value="{{ 'support' }}">{{ t('operations.support_download') }}</button></form>
+{% endblock %}

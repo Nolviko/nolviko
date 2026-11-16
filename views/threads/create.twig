@@ -1,0 +1,35 @@
+{# New thread (M03.04). Context: title, forum_title (null when the form is refused), action (null likewise),
+   csrf_field, csrf_token, thread_title, content, max_title, max_content, error (translated or null),
+   draft_intent (value of the "Save draft" button, null without drafts), notice (translated or null). #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+{% if notice %}
+<p role="status">{{ notice }}</p>
+{% endif %}
+<h1>{{ title }}</h1>
+{% if forum_title is not null %}
+<p class="lead">{{ t('threads.create.forum', {forum: forum_title}) }}</p>
+{% endif %}
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+{% if preview|default(null) %}
+<section class="card post-preview" aria-labelledby="post-preview-heading"><h2 id="post-preview-heading">{{ t('threads.preview.heading') }}</h2><div class="post-body" dir="auto">{{ preview }}</div></section>
+{% endif %}
+{% if action is not null %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="thread-title">{{ t('threads.create.subject') }}</label>
+<input id="thread-title" dir="auto" name="title" type="text" required maxlength="{{ max_title }}" value="{{ thread_title }}"></p>
+{% include 'components/thread_labels_fields.twig' %}
+<p><label for="thread-content">{{ t('threads.create.content') }}</label>
+{% include 'components/editor_toolbar.twig' with {target: 'thread-content', image_upload: csrf_token|default('') and site.post_images|default('off') == 'on' ? {url: path('gallery.attach'), token: csrf_token, max: site.images_per_post|default('5')} : null} only %}
+<textarea dir="auto" id="thread-content" data-mentions name="content" rows="12" required maxlength="{{ max_content }}">{{ content }}</textarea></p>
+<p><button type="submit">{{ t('threads.create.submit') }}</button>
+{% if preview_intent|default(null) %}<button class="btn-s" type="submit" name="intent" value="{{ preview_intent }}">{{ t('threads.preview.button') }}</button>{% endif %}
+{% if draft_intent %}<button class="btn-s" type="submit" name="intent" value="{{ draft_intent }}">{{ t('threads.draft.save') }}</button>{% endif %}</p>
+</form>
+{% endif %}
+{% endblock %}

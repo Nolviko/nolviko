@@ -1,0 +1,39 @@
+{# Media gallery home (2026-11-08). Context: title, images (newest visible images: id, album_id, username, title),
+   albums (id, user_id, username, title, visibility, items, cover), more (next page URL or null), mine_url,
+   new_url, pending_url (null when not allowed), filtered (one member's albums). #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<div class="head-row">
+<h1>{{ title }}</h1>
+<div class="actions">
+{% if pending_url %}<a class="btn btn-s" href="{{ pending_url|safe_url }}">{{ t('gallery.pending') }}</a>{% endif %}
+{% if mine_url %}<a class="btn btn-s" href="{{ mine_url|safe_url }}">{{ t('gallery.mine') }}</a>{% endif %}
+{% if new_url %}<a class="btn" href="{{ new_url|safe_url }}">{{ t('gallery.new_album') }}</a>{% endif %}
+</div>
+</div>
+{% if filtered %}<p><a href="{{ path('gallery')|safe_url }}">{{ t('gallery.all') }}</a></p>{% endif %}
+{% if images is not empty %}
+<h2>{{ t('gallery.latest') }}</h2>
+<ul class="gallery-grid">
+{% for image in images %}<li><a href="{{ path('gallery.item', {item: image.id})|safe_url }}" data-lightbox="{{ path('gallery.file', {item: image.id, variant: 'full'}) }}" data-lightbox-alt="{{ image.title }}"><img src="{{ path('gallery.file', {item: image.id, variant: 'thumb'})|safe_url }}" alt="{{ image.title }}" loading="lazy"></a></li>
+{% endfor %}
+</ul>
+{% endif %}
+<h2>{{ t('gallery.albums') }}</h2>
+{% if albums is empty %}
+<div class="panel empty"><p>{{ t('gallery.no_albums') }}</p></div>
+{% else %}
+<ul class="gallery-albums">
+{% for album in albums %}
+<li class="panel"><a href="{{ path('gallery.album', {album: album.id})|safe_url }}">
+{% if album.cover %}<img src="{{ path('gallery.file', {item: album.cover, variant: 'thumb'})|safe_url }}" alt="" loading="lazy">{% else %}<span class="gallery-empty-cover" aria-hidden="true"></span>{% endif %}
+<b dir="auto">{{ album.title }}</b></a>
+<span class="meta"><bdi>{{ album.username }}</bdi> · {{ t('gallery.count', {count: album.items}) }} · {{ t('gallery.visibility', {mode: album.visibility}) }}</span></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if more %}<p><a class="btn btn-s" href="{{ more|safe_url }}">{{ t('forums.feed.more') }}</a></p>{% endif %}
+<div id="lightbox-labels" hidden data-title="{{ t('core.lightbox.title') }}" data-close="{{ t('core.lightbox.close') }}"></div>
+<script src="{{ asset('lightbox.js') }}" defer></script>
+{% endblock %}

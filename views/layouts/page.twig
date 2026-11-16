@@ -1,0 +1,108 @@
+{# Core page layout (M05.04; Nolviko design pass 2026-11-06). Themes override it as themes/<id>/views/layouts/page.twig
+   or extend it with {% extends '@core/layouts/page.twig' %}. Context: title; pages fill the content block and may add
+   elements to the head block (M03.10). SEO (2026-11-08): optional meta_description, og_type, og_image (absolute
+   URL) and structured_data (list of schema.org arrays, JSON-LD) fill the description, Open Graph and data blocks. Language and direction come from the request locale
+   (globals html_lang, html_dir; M02.11). The header reads only the `viewer` flags (signed_in, admin, moderator). #}
+<!doctype html>
+<html lang="{{ html_lang }}" dir="{{ html_dir }}" data-appearance="{{ theme_mode }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+{# The title block is defined here but printed through seo_meta (2026-11-15): extensions may change the
+   search-engine title, description, keywords, image, canonical address and noindex of the page. #}
+{% if false %}{% block title %}{{ title }}{% endblock %}{% endif %}
+{% set page_description = meta_description|default('') ?: site.description|default('') %}
+{% set meta = seo_meta(block('title')|trim, page_description, og_image|default(null)) %}
+{% set page_description = meta.description %}
+{% set page_canonical = meta.canonical ?: seo.canonical|default(null) %}
+<title>{{ meta.title }}</title>
+{# Brand mark as the tab icon, inline: no extra request and no missing /favicon.ico (2026-11-14). #}
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230a6e5c'/%3E%3Cpath d='M10 23V12.5h3.2v1.6c.9-1.2 2.2-1.9 3.8-1.9 2.6 0 4 1.7 4 4.5V23h-3.2v-5.6c0-1.5-.7-2.3-2-2.3-1.5 0-2.6 1-2.6 2.7V23z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ asset('accessibility.css') }}">
+<link rel="stylesheet" href="{{ asset('fonts.css') }}">
+<link rel="stylesheet" href="{{ asset('theme.css') }}">
+{{ theme_styles }}
+<meta name="nolviko-theme-build" content="{{ theme_build }}">
+{% if page_canonical %}<link rel="canonical" href="{{ page_canonical|safe_url }}">{% endif %}
+{% if page_description %}<meta name="description" content="{{ page_description }}">{% endif %}
+{% if meta.keywords %}<meta name="keywords" content="{{ meta.keywords }}">{% endif %}
+{% if seo.noindex|default(false) or meta.noindex %}<meta name="robots" content="{{ 'noindex, nofollow' }}">
+{% else %}<meta name="robots" content="{{ 'index, follow, max-image-preview:large, max-snippet:-1' }}">
+{% endif %}
+{% if page_canonical %}
+<meta property="og:type" content="{{ og_type|default('website') }}">
+<meta property="og:title" content="{{ og_title|default(meta.title) }}">
+<meta property="og:url" content="{{ page_canonical }}">
+{% if site.name|default('') %}<meta property="og:site_name" content="{{ site.name }}">{% endif %}
+{% if page_description %}<meta property="og:description" content="{{ page_description }}">{% endif %}
+{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
+<meta name="twitter:card" content="{{ meta.image ? 'summary_large_image' : 'summary' }}">
+{% for data in structured_data|default([]) %}<script type="application/ld+json" nonce="{{ csp_nonce }}">{{ data|json_ld }}</script>
+{% endfor %}
+{% endif %}
+{% block head %}{% endblock %}
+</head>
+<body>
+{% block skip_link %}<a class="skip-link" href="#main-content">{{ t('core.accessibility.skip') }}</a>{% endblock %}
+{{ theme_slot('layout.header.before') }}
+{% block header %}
+<header class="top">
+<div class="top-in">
+<a class="wm site-brand" href="{{ forum_home_url|safe_url }}"><span class="mark" aria-hidden="true">{{ (site.name|default('') ?: 'nolviko')|first|lower }}</span><bdi>{{ site.name|default('') ?: 'nolviko' }}</bdi></a>
+<nav class="top-nav" aria-label="{{ t('core.nav.label') }}">
+<a href="{{ forum_home_url|safe_url }}">{{ t('core.nav.forums') }}</a>
+<a href="{{ path('community', {section: 'members'})|safe_url }}">{{ t('core.nav.members') }}</a>
+{% if site.gallery|default('off') == 'on' or viewer.admin|default(false) %}<a href="{{ path('gallery')|safe_url }}">{{ t('core.nav.gallery') }}</a>{% endif %}
+{% if viewer.moderator %}<a href="{{ path('moderation.queue')|safe_url }}">{{ t('core.nav.moderation') }}</a>{% endif %}
+{% if viewer.admin %}<a href="{{ path('admin.dashboard')|safe_url }}">{{ t('core.nav.admin') }}</a>{% endif %}
+</nav>
+<form class="top-search" method="get" action="{{ path('search.posts')|safe_url }}" role="search">
+<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+<input type="search" name="q" placeholder="{{ t('core.nav.search') }}" aria-label="{{ t('core.nav.search') }}">
+</form>
+<div class="top-act">
+{% if viewer.signed_in %}
+<a class="icon-btn" href="{{ path('community', {section: 'notifications'})|safe_url }}" aria-label="{{ viewer.notifications > 0 ? t('core.nav.notifications_unread', {count: viewer.notifications}) : t('core.nav.notifications') }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>{% if viewer.notifications > 0 %}<span class="badge" aria-hidden="true">{{ viewer.notifications >= 10 ? '9+' : viewer.notifications }}</span>{% endif %}</a>
+<a class="icon-btn" href="{{ path('conversations.index')|safe_url }}" aria-label="{{ viewer.messages > 0 ? t('core.nav.messages_unread', {count: viewer.messages}) : t('core.nav.messages') }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"></path></svg>{% if viewer.messages > 0 %}<span class="badge" aria-hidden="true">{{ viewer.messages >= 10 ? '9+' : viewer.messages }}</span>{% endif %}</a>
+<a class="icon-btn" href="{{ path('account.show')|safe_url }}" aria-label="{{ t('core.nav.account') }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></a>
+{% else %}
+<a class="top-wide" href="{{ path('auth.login')|safe_url }}">{{ t('core.nav.login') }}</a>
+<a class="btn btn-sm" href="{{ path('auth.register')|safe_url }}">{{ t('core.nav.register') }}</a>
+{% endif %}
+<details class="top-menu">
+<summary class="icon-btn" aria-label="{{ t('core.nav.menu') }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary>
+<nav class="top-menu-panel" aria-label="{{ t('core.nav.menu') }}">
+<a href="{{ forum_home_url|safe_url }}">{{ t('core.nav.forums') }}</a>
+<a href="{{ path('community', {section: 'members'})|safe_url }}">{{ t('core.nav.members') }}</a>
+{% if site.gallery|default('off') == 'on' or viewer.admin|default(false) %}<a href="{{ path('gallery')|safe_url }}">{{ t('core.nav.gallery') }}</a>{% endif %}
+<a href="{{ path('community', {section: 'online'})|safe_url }}">{{ t('core.nav.online') }}</a>
+{% if viewer.signed_in %}<a href="{{ path('community', {section: 'bookmarks'})|safe_url }}">{{ t('core.nav.bookmarks') }}</a>{% endif %}
+{% if viewer.moderator %}<a href="{{ path('moderation.queue')|safe_url }}">{{ t('core.nav.moderation') }}</a>{% endif %}
+{% if viewer.admin %}<a href="{{ path('admin.dashboard')|safe_url }}">{{ t('core.nav.admin') }}</a>{% endif %}
+{% if not viewer.signed_in %}<a href="{{ path('auth.login')|safe_url }}">{{ t('core.nav.login') }}</a>{% endif %}
+</nav>
+</details>
+</div>
+</div>
+</header>
+{% endblock %}
+{{ theme_slot('layout.header.after') }}
+{% if theme_preview %}<p class="theme-preview" role="status">{{ t('core.theme.preview') }}</p>{% endif %}
+{% if site.announcement|default('') %}<aside class="site-announcement" aria-label="{{ t('core.announcement.label') }}"><p dir="auto">{{ site.announcement }}</p></aside>{% endif %}
+<main id="main-content" tabindex="-1"{% if block('main_class') is defined %} class="{{ block('main_class') }}"{% endif %}>{% block content %}{% endblock %}</main>
+{% block footer %}
+<footer class="site-footer">
+<nav class="site-footer-in" aria-label="{{ t('core.footer.label') }}">
+<a class="wm" href="{{ forum_home_url|safe_url }}"><span class="mark" aria-hidden="true">{{ (site.name|default('') ?: 'nolviko')|first|lower }}</span><bdi>{{ site.name|default('') ?: 'nolviko' }}</bdi></a>
+<a href="{{ path('community', {section: 'members'})|safe_url }}">{{ t('community.members') }}</a>
+<a href="{{ path('community', {section: 'online'})|safe_url }}">{{ t('core.nav.online') }}</a>
+<a href="{{ path('search.posts')|safe_url }}">{{ t('search.title') }}</a>
+<a href="{{ appearance_url|safe_url }}">{{ t('core.theme.title') }}</a>
+<span class="row-end">{{ t('core.footer.powered') }}</span>
+</nav>
+</footer>
+{% endblock %}
+{{ theme_scripts }}
+{% if viewer.signed_in %}<div hidden data-suggest="{{ path('community.member_suggest') }}"></div><script src="{{ asset('autocomplete.js') }}" defer></script>{% endif %}
+</body>
+</html>

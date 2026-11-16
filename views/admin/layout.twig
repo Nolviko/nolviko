@@ -1,0 +1,37 @@
+{# Admin layout (M04.01). Context: title, nav (list of NavItemView); pages fill the admin block. Server-rendered
+   and complete without JavaScript: a skip link, a navigation landmark with plain links (`aria-current` on the
+   page shown) and a visible focus outline in a nonce-carrying style element (CSP). Design tokens are CSS custom
+   properties that themes may override. #}
+{% extends 'layouts/page.twig' %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ asset('admin.css') }}">
+<script src="{{ asset('admin-commands.js') }}" defer></script>
+<script src="{{ asset('admin-progress.js') }}" defer></script>
+{% endblock %}
+
+{% block skip_link %}<a class="skip-link" href="#admin-main">{{ t('admin.skip') }}</a>{% endblock %}
+
+{% block content %}
+<div class="admin">
+<nav class="admin-nav" aria-label="{{ t('admin.nav.label') }}">
+{% for item in nav %}
+{% if loop.first or item.group|default('') != nav[loop.index0 - 1].group|default('') %}
+{% if not loop.first %}</ul></div>{% endif %}
+<div class="admin-nav-group">{% if item.group|default('') %}<p class="label admin-nav-label" id="admin-nav-{{ loop.index }}">{{ item.group }}</p>{% endif %}
+<ul{% if item.group|default('') %} aria-labelledby="admin-nav-{{ loop.index }}"{% endif %}>
+{% endif %}
+<li><a href="{{ item.url|safe_url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a></li>
+{% if loop.last %}</ul></div>{% endif %}
+{% endfor %}
+</nav>
+<div class="admin-main" id="admin-main" tabindex="-1">
+<div class="head-row">
+<h1>{{ title }}</h1>
+</div>
+{% include 'admin/commands.twig' %}
+<p role="status" aria-live="polite" data-admin-announcement></p>
+{% block admin %}{% endblock %}
+</div>
+</div>
+{% endblock %}

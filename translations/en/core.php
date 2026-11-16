@@ -1,0 +1,83 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * Canonical English messages for the `core` domain (ICU MessageFormat, no HTML).
+ * IDs are stable contracts: add new IDs instead of changing the meaning of existing ones.
+ */
+
+return [
+    'core.theme.title' => 'Appearance',
+    'core.theme.intro' => 'Choose light, dark or your system palette. Signed-in preferences follow your '
+        . 'account; guest preferences stay in this browser.',
+    'core.theme.mode' => 'Color palette',
+    'core.theme.mode_value' => '{mode, select, system {System setting} light {Light} dark {Dark} other '
+        . '{System setting}}',
+    'core.theme.save' => 'Save appearance',
+    'core.theme.invalid' => 'Reload this page and choose a valid appearance option.',
+    'core.theme.preview' => 'Private theme preview. Other visitors still see the published theme. Preview '
+        . 'expires after 15 minutes.',
+    'core.maintenance.title' => 'Maintenance in progress',
+    'core.maintenance.body' => 'The forum is temporarily unavailable. Please try again later.',
+    'core.installer.title' => 'Install Nolviko',
+    'core.post.spoiler' => 'Spoiler',
+    'core.error.bad_request.title' => 'Bad request',
+    'core.error.bad_request.body' => 'The address of this request is not valid.',
+    'core.error.forbidden.title' => 'Request refused',
+    'core.error.forbidden.body' => 'The form expired or came from another site. Reload the page and try again.',
+    'core.error.denied.title' => 'Access denied',
+    'core.error.denied.body' => 'Your account is not allowed to open this page.',
+    'core.error.not_found.title' => 'Page not found',
+    'core.error.not_found.body' => 'The page you requested does not exist, or you are not allowed to view it.',
+    'core.error.method_not_allowed.title' => 'Method not allowed',
+    'core.error.method_not_allowed.body' => 'This address does not accept that kind of request.',
+    'core.error.server.title' => 'Something went wrong',
+    'core.error.server.body' => 'An unexpected error occurred. Please try again later. Reference: {incident}',
+    'core.error.unavailable.title' => 'Service unavailable',
+    'core.error.unavailable.body' => 'This site cannot start because the server does not meet its requirements.',
+    'core.error.unavailable.count' => '{count, plural, one {# problem was found.} other {# problems were found.}}',
+    'core.accessibility.skip' => 'Skip to the main content',
+    'core.editor.label' => 'Formatting',
+    'core.editor.bold' => 'Bold',
+    'core.editor.italic' => 'Italic',
+    'core.editor.underline' => 'Underline',
+    'core.editor.strike' => 'Strikethrough',
+    'core.editor.link' => 'Link',
+    'core.editor.quote' => 'Quote',
+    'core.editor.code' => 'Code',
+    'core.editor.list' => 'List',
+    'core.editor.spoiler' => 'Spoiler',
+    'core.nav.label' => 'Main menu',
+    'core.nav.forums' => 'Forums',
+    'core.nav.members' => 'Members',
+    'core.nav.online' => 'Who is online',
+    'core.nav.search' => 'Search the forum',
+    'core.nav.messages' => 'Messages',
+    'core.nav.messages_unread' => '{count, plural, =10 {Messages, 10 or more unread conversations} '
+        . 'one {Messages, # unread conversation} other {Messages, # unread conversations}}',
+    'core.nav.notifications' => 'Notifications',
+    'core.nav.notifications_unread' => '{count, plural, =10 {Notifications, 10 or more unread} '
+        . 'other {Notifications, # unread}}',
+    'core.nav.menu' => 'Menu',
+    'core.nav.bookmarks' => 'Bookmarks',
+    'core.nav.account' => 'Your account',
+    'core.nav.profile' => 'Profile and preferences',
+    'core.nav.login' => 'Log in',
+    'core.nav.register' => 'Sign up',
+    'core.nav.admin' => 'Administration',
+    'core.nav.moderation' => 'Moderation',
+    'core.nav.breadcrumb' => 'You are here',
+    'core.footer.label' => 'Site links',
+    'core.footer.powered' => 'Powered by Nolviko',
+    'core.nav.gallery' => 'Gallery',
+    'core.lightbox.title' => 'Image',
+    'core.lightbox.close' => 'Close',
+    'core.announcement.label' => 'Announcement',
+    'core.editor.emoji' => 'Emoji',
+    'core.editor.format' => 'Format',
+    'core.editor.image' => 'Add image',
+    'core.editor.image_busy' => 'Uploading the image…',
+    'core.editor.image_full' => 'This post already has the most images allowed ({max}).',
+    'core.error.home' => 'Back to the home page',
+];

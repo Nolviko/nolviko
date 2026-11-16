@@ -1,0 +1,42 @@
+{# User groups (M04.14). Context: title, nav, action, rows (id, slug, name, built_in, members, url), name, slug,
+   error, notice, fresh, reauth_url, csrf_field, csrf_token. Built-in groups cannot be deleted. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('admin.groups.intro') }}</p>
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.groups.reauth') }}</a></p>{% endif %}
+<table>
+<thead><tr>
+<th scope="col">{{ t('admin.groups.name') }}</th>
+<th scope="col">{{ t('admin.groups.slug') }}</th>
+<th scope="col">{{ t('admin.groups.members') }}</th>
+<th scope="col">{{ t('admin.groups.kind') }}</th>
+<th scope="col"><span class="visually-hidden">{{ t('admin.groups.actions') }}</span></th>
+</tr></thead>
+<tbody>
+{% for row in rows %}
+<tr>
+<td><a href="{{ row.url|safe_url }}"><bdi>{{ row.name }}</bdi></a></td>
+<td><code>{{ row.slug }}</code></td>
+<td>{{ row.members|format_number }}</td>
+<td>{{ row.built_in ? t('admin.groups.built_in') : t('admin.groups.custom') }}</td>
+<td>{% if not row.built_in and fresh %}<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="group" value="{{ row.id }}">
+<button class="btn-d" type="submit" name="action" value="{{ 'delete' }}" aria-label="{{ t('admin.groups.delete_label', {name: row.name}) }}">{{ t('admin.groups.delete') }}</button>
+</form>{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+<h2>{{ t('admin.groups.create') }}</h2>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="group-name">{{ t('admin.groups.name') }}</label>
+<input id="group-name" name="name" required maxlength="100" value="{{ name }}" dir="auto"></p>
+<p><label for="group-slug">{{ t('admin.groups.slug') }}</label>
+<input id="group-slug" name="slug" required maxlength="64" pattern="[a-z][a-z0-9\-]{1,63}" value="{{ slug }}" aria-describedby="group-slug-hint">
+<span class="hint" id="group-slug-hint">{{ t('admin.groups.slug_hint') }}</span></p>
+<p><button type="submit" name="action" value="{{ 'create' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.groups.create') }}</button></p>
+</form>
+{% endblock %}

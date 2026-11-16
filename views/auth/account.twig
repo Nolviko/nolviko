@@ -1,0 +1,85 @@
+{# The member's own account (M02.16). Context: title, username, email, notice (translated or null), errors
+   (translated), form (password, email or null: which form the errors belong to), password_action, email_action,
+   csrf_field, csrf_token, password_min. Password fields are never filled in. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if notice %}
+<p role="status">{{ notice }}</p>
+{% endif %}
+{% if errors is not empty %}
+<div role="alert">
+<ul>
+{% for error in errors %}
+<li>{{ error }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
+<p>{{ t('auth.account.signed_in_as', {name: username, email: email}) }}</p>
+
+<h2>{{ t('auth.account.password_heading') }}</h2>
+<form method="post" action="{{ password_action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="password-current">{{ t('auth.account.current_password') }}</label>
+<input id="password-current" name="current_password" type="password" required autocomplete="current-password"></p>
+<p><label for="password-new">{{ t('auth.register.password', {min: password_min}) }}</label>
+<input id="password-new" name="password" type="password" required autocomplete="new-password" minlength="{{ password_min }}"></p>
+<p><label for="password-confirmation">{{ t('auth.register.confirmation') }}</label>
+<input id="password-confirmation" name="password_confirmation" type="password" required autocomplete="new-password"></p>
+<p><button type="submit">{{ t('auth.account.password_submit') }}</button></p>
+</form>
+
+<h2>{{ t('auth.account.email_heading') }}</h2>
+<form method="post" action="{{ email_action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="email-current">{{ t('auth.account.current_password') }}</label>
+<input id="email-current" name="current_password" type="password" required autocomplete="current-password"></p>
+<p><label for="email-new">{{ t('auth.account.new_email') }}</label>
+<input id="email-new" name="email" type="email" required autocomplete="email" maxlength="254"></p>
+<p><button type="submit">{{ t('auth.account.email_submit') }}</button></p>
+</form>
+<div class="actions"><a class="btn btn-s" href="{{ privacy_url|safe_url }}">{{ t('auth.privacy.title') }}</a>
+<a class="btn btn-s" href="{{ conversations_url|safe_url }}">{{ t('conversations.title') }}</a></div>
+{% if external|default(null) and external.accounts is not empty %}
+<h2>{{ t('auth.external.accounts_heading') }}</h2>
+<ul class="stack">
+{% for account in external.accounts %}
+<li>
+{% if account.linked %}
+<p><span class="chip chip-new">{{ t('auth.external.linked') }}</span> {{ account.name }}{% if account.email %} · {{ account.email }}{% endif %}</p>
+<form method="post" action="{{ external.unlink_action|safe_url }}" class="row">
+<input type="hidden" name="{{ csrf_field }}" value="{{ external.csrf_token }}">
+<input type="hidden" name="provider" value="{{ account.slug }}">
+<p><label for="unlink-{{ account.slug }}">{{ t('auth.account.current_password') }}</label>
+<input id="unlink-{{ account.slug }}" name="current_password" type="password" required autocomplete="current-password"></p>
+<p><button class="btn-s" type="submit">{{ t('auth.external.unlink') }}</button></p>
+</form>
+{% else %}
+<form method="post" action="{{ account.link_url|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ external.csrf_token }}">
+<button class="btn-s" type="submit">{{ t('auth.external.link', {provider: account.name}) }}</button>
+</form>
+{% endif %}
+</li>
+{% endfor %}
+</ul>
+<p class="muted">{{ t('auth.external.unlink_help') }}</p>
+{% endif %}
+{% if second_factors|default([]) is not empty %}
+<h2>{{ t('auth.account.second_factor_heading') }}</h2>
+<ul class="stack">
+{% for method in second_factors %}
+<li><a href="{{ method.url|safe_url }}">{{ method.label }}</a> <span class="chip {{ method.active ? 'chip-new' : 'chip-tag' }}">{{ method.active ? t('auth.account.second_factor_on') : t('auth.account.second_factor_off') }}</span></li>
+{% endfor %}
+</ul>
+{% endif %}
+<h2>{{ t('auth.account.session_heading') }}</h2>
+<form method="post" action="{{ path('auth.logout')|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><button type="submit">{{ t('auth.account.logout') }}</button>
+<button class="btn-s" type="submit" name="everywhere" value="1">{{ t('auth.account.logout_everywhere') }}</button></p> {# i18n-ignore: protocol value; visible label is translated. #}
+</form>
+{% endblock %}

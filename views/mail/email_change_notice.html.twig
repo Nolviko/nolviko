@@ -1,0 +1,7 @@
+{# Notice to the old address about an email change, HTML (M02.16). Context: name, url, subject, language. Extends mail/layout.html.twig (design pass 2026-11-07). #}
+{% extends 'mail/layout.html.twig' %}
+{% block body %}
+<p style="margin:0 0 14px;">{{ t('mail.email_change_notice.greeting', {name: name}) }}</p>
+<p style="margin:0 0 14px;">{{ t('mail.email_change_notice.body') }}</p>
+<p style="margin:0 0 14px;color:#414f48;font-size:14px;">{{ t('mail.email_change_notice.not_you') }} <a href="{{ url|safe_url }}" style="color:#0a6e5c;word-break:break-all;">{{ url }}</a></p>
+{% endblock %}

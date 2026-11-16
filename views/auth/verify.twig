@@ -1,0 +1,28 @@
+{# Email verification (M02.03). Context: title, state (confirm, done or invalid), approval (an administrator
+   still has to approve, M02.03a), token, action, csrf_field,
+   csrf_token, resend_url, login_url. #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if state == 'confirm' %}
+<p>{{ t('auth.verify.confirm_intro') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="token" value="{{ token }}">
+<p><button type="submit">{{ t('auth.verify.confirm') }}</button></p>
+</form>
+{% elseif state == 'done' %}
+{% if approval %}
+<p role="status">{{ t('auth.verify.done_approval') }}</p>
+{% else %}
+<p role="status">{{ t('auth.verify.done') }}</p>
+<p><a href="{{ login_url|safe_url }}">{{ t('auth.register.to_login') }}</a></p>
+{% endif %}
+{% else %}
+<p role="alert">{{ t('auth.verify.invalid') }}</p>
+<p><a href="{{ resend_url|safe_url }}">{{ t('auth.verify.request_new') }}</a></p>
+{% endif %}
+{% endblock %}

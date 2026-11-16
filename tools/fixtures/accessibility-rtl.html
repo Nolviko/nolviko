@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RTL accessibility development fixture</title>
+<link rel="stylesheet" href="../../public/assets/accessibility.css">
+<link rel="stylesheet" href="../../public/assets/admin.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">انتقل إلى المحتوى</a>
+<main id="main-content" tabindex="-1">
+<h1>اختبار اتجاه النص</h1>
+<p>اسم العضو <bdi>Caner123</bdi> وتاريخ <bdi>2026-11-03</bdi>.</p>
+<article><h2 dir="auto">Türkçe konu başlığı</h2><p dir="auto">مرحبا بالعالم — Hello — Merhaba</p></article>
+<form>
+<p><label for="subject">العنوان</label><input id="subject" dir="auto" value="Nolviko Türkçe 123"></p>
+<p><label for="message">الرسالة</label><textarea id="message" dir="auto">مرحبا بالعالم</textarea></p>
+<button type="button">متابعة</button>
+</form>
+<div class="admin"><nav class="admin-nav" aria-label="التنقل"><ul><li><a href="#subject">العنوان</a></li>
+<li><a href="#message">الرسالة</a></li></ul></nav><div class="admin-main"><h2>المحتوى</h2>
+<pre dir="ltr">https://example.invalid/a/very/long/path/for/overflow/inspection/1234567890</pre></div></div>
+</main>
+</body>
+</html>

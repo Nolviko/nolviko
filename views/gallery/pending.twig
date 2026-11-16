@@ -1,0 +1,22 @@
+{# Gallery approval queue (2026-11-08). Context: title, action, back_url, images (id, username, title),
+   csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ back_url|safe_url }}">{{ t('gallery.title') }}</a></nav>
+<h1>{{ title }}</h1>
+{% if images is empty %}
+<div class="panel empty"><p>{{ t('gallery.no_pending') }}</p></div>
+{% else %}
+<ul class="gallery-grid">
+{% for image in images %}<li><a href="{{ path('gallery.item', {item: image.id})|safe_url }}"><img src="{{ path('gallery.file', {item: image.id, variant: 'thumb'})|safe_url }}" alt="{{ image.title }}" loading="lazy"></a>
+<span class="meta"><bdi>{{ image.username }}</bdi></span>
+<form method="post" action="{{ action|safe_url }}" class="row">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="item" value="{{ image.id }}">
+<button class="btn-s" type="submit" name="action" value="{{ 'approve' }}">{{ t('gallery.approve') }}</button>
+<button class="btn-s" type="submit" name="action" value="{{ 'reject' }}">{{ t('gallery.reject') }}</button>
+</form></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

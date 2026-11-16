@@ -1,0 +1,51 @@
+{# Registration (M02.03). Context: title, action, login_url, resend_url, csrf_field, csrf_token, username,
+   email, errors (translated), password_min, honeypot (field name), challenge (translated question or null),
+   challenge_field. Passwords are never filled in again. The honeypot is hidden from people (off-screen, out of
+   the tab order, aria-hidden) and only bots fill it in (M02.03a). #}
+{% extends 'layouts/page.twig' %}
+
+{% block main_class %}{{ 'main-auth' }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if errors is not empty %}
+<div role="alert">
+<ul>
+{% for error in errors %}
+<li>{{ error }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}"{% if challenge_work|default(null) %} data-work-salt="{{ challenge_work.salt }}" data-work-bits="{{ challenge_work.bits }}" data-work-field="{{ challenge_work.field }}"{% endif %}>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="register-username">{{ t('auth.register.username') }}</label>
+<input id="register-username" name="username" type="text" required autocomplete="username" maxlength="32" value="{{ username }}"></p>
+<p><label for="register-email">{{ t('auth.register.email') }}</label>
+<input id="register-email" name="email" type="email" required autocomplete="email" maxlength="254" value="{{ email }}"></p>
+<p><label for="register-password">{{ t('auth.register.password', {min: password_min}) }}</label>
+<input id="register-password" name="password" type="password" required autocomplete="new-password" minlength="{{ password_min }}"></p>
+<p><label for="register-confirmation">{{ t('auth.register.confirmation') }}</label>
+<input id="register-confirmation" name="password_confirmation" type="password" required autocomplete="new-password"></p>
+{% if challenge %}
+<p{% if challenge_work|default(null) %} data-work-fallback{% endif %}><label for="register-challenge">{{ challenge }}</label>
+<input id="register-challenge" name="{{ challenge_field }}" type="text" inputmode="numeric" required autocomplete="off" maxlength="3"></p>
+{% endif %}
+{% if challenge_work|default(null) %}
+<input type="hidden" name="{{ challenge_work.field }}" value="">
+<p class="hint" role="status" data-work-status hidden>{{ t('auth.register.work_status') }}</p>
+{% endif %}
+<p class="register-extra" aria-hidden="true"><label for="register-website">{{ t('auth.register.website') }}</label>
+<input id="register-website" name="{{ honeypot }}" type="text" tabindex="-1" autocomplete="off"></p>
+<p><button type="submit">{{ t('auth.register.submit') }}</button></p>
+</form>
+<p><a href="{{ login_url|safe_url }}">{{ t('auth.register.have_account') }}</a></p>
+{% if challenge_work|default(null) %}<script src="{{ asset('challenge.js') }}" defer></script>{% endif %}
+{% if external|default([]) is not empty %}
+<div class="stack external-logins">
+<p class="muted">{{ t('auth.external.or') }}</p>
+{% for button in external %}<a class="btn btn-s" href="{{ button.url|safe_url }}">{{ button.label }}</a>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,29 @@
+{# Community additions under one post (M07; inline tools 2026-11-07): reactions (buttons for members, totals for
+   everyone else), accepted-answer control, attachments and signature. Context: extra, tools (thread tools or null),
+   thread_id, csrf_field/csrf_token (members only). Forms post to the community endpoint and come back here. #}
+{% set reaction_labels = {like: t('community.reaction_like'), thanks: t('community.reaction_thanks'), insightful: t('community.reaction_insightful')} %}
+<div class="post-extras">
+<div class="row">
+{% set act = path('community', {section: 'thread'}) ~ '?thread=' ~ thread_id|default(0) %}
+{% if csrf_token|default(null) and not extra.own|default(false) %}
+{% set counts = {} %}{% for reaction in extra.reactions %}{% set counts = counts|merge({(reaction.type_id): reaction.total}) %}{% endfor %}
+<form method="post" action="{{ act|safe_url }}" class="reactions"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'react' }}"><input type="hidden" name="target" value="{{ extra.post_id }}"><input type="hidden" name="return_post" value="{{ extra.post_id }}">
+{% for type in ['like', 'thanks', 'insightful'] %}<button class="chip-btn" name="reaction" value="{{ type }}">{{ reaction_labels[type] }}{% if counts[type] is defined %} <span class="meta">{{ counts[type]|format_number }}</span>{% endif %}</button>{% endfor %}
+<button class="chip-btn chip-btn-g" name="reaction" value="">{{ t('community.remove_reaction') }}</button></form>
+{% else %}
+{% for reaction in extra.reactions %}<span class="chip chip-new">{{ reaction_labels[reaction.type_id] }} {{ reaction.total|format_number }}</span>{% endfor %}
+{% endif %}
+{% if tools|default(null) and tools.questions|default(false) and tools.can_manage and csrf_token|default(null) and extra.post_id != tools.thread.first_post_id %}
+<form method="post" action="{{ act|safe_url }}" class="inline-form row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'solution' }}"><input type="hidden" name="target" value="{{ thread_id }}"><input type="hidden" name="return_post" value="{{ extra.post_id }}">
+{% if tools.solution == extra.post_id %}<button class="btn-g btn-sm" name="post" value="0">{{ t('community.remove_solution') }}</button>{% else %}<button class="btn-s btn-sm" name="post" value="{{ extra.post_id }}">{{ t('community.accept_solution') }}</button>{% endif %}</form>
+{% endif %}
+{% if tools|default(null) and tools.solution == extra.post_id %}<span class="chip chip-new">{{ t('community.solution') }}</span>{% endif %}
+</div>
+{% if extra.attachments is not empty %}
+<ul class="row list-plain">{% for file in extra.attachments %}<li><a class="chip" href="{{ path('community.media', {media: file.id})|safe_url }}"><bdi>{{ file.original_name }}</bdi></a></li>{% endfor %}
+{% if extra.attachments_more|default(false) %}<li><a class="meta" href="{{ (path('community', {section: 'attachments'}) ~ '?post=' ~ extra.post_id)|safe_url }}">{{ t('operations.all_files') }}</a></li>{% endif %}</ul>
+{% endif %}
+{% if extra.signature %}<hr><p class="meta" dir="auto">{{ extra.signature }}</p>{% endif %}
+</div>

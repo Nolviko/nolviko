@@ -1,0 +1,47 @@
+{# Profile fields and ranks (2026-11-08). Context: title, nav, action, fields (id, label, kind), ranks (id, title,
+   min_posts, color, class), kinds, colors, error, notice, fresh, reauth_url, csrf_field, csrf_token. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('admin.extras.intro') }}</p>
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.site.reauth') }}</a></p>{% endif %}
+
+<h2>{{ t('admin.extras.fields') }}</h2>
+{% if fields is empty %}<p class="hint">{{ t('admin.extras.no_fields') }}</p>{% else %}
+<ul class="panel list">
+{% for field in fields %}<li><b dir="auto">{{ field.label }}</b> <span class="meta">{{ t('admin.extras.kind', {kind: field.kind}) }}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ field.id }}">
+<button class="btn-s" type="submit" name="action" value="{{ 'delete_field' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="field-label">{{ t('admin.extras.label') }}</label>
+<input id="field-label" name="label" type="text" maxlength="60" required dir="auto"></p>
+<p><label for="field-kind">{{ t('admin.extras.type') }}</label>
+<select id="field-kind" name="kind">{% for kind in kinds %}<option value="{{ kind }}">{{ t('admin.extras.kind', {kind: kind}) }}</option>{% endfor %}</select></p>
+<p><button type="submit" name="action" value="{{ 'add_field' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.extras.add_field') }}</button></p>
+</form>
+
+<h2>{{ t('admin.extras.ranks') }}</h2>
+{% if ranks is empty %}<p class="hint">{{ t('admin.extras.no_ranks') }}</p>{% else %}
+<ul class="panel list">
+{% for rank in ranks %}<li><span class="{{ rank.class }}"><bdi>{{ rank.title }}</bdi></span> <span class="meta">{{ t('admin.extras.from_posts', {count: rank.min_posts}) }}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ rank.id }}">
+<button class="btn-s" type="submit" name="action" value="{{ 'delete_rank' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="rank-title">{{ t('admin.extras.rank_title') }}</label>
+<input id="rank-title" name="title" type="text" maxlength="60" required dir="auto"></p>
+<p><label for="rank-posts">{{ t('admin.extras.min_posts') }}</label>
+<input id="rank-posts" name="min_posts" type="number" min="0" max="10000000" required value="0"></p>
+<p><label for="rank-color">{{ t('admin.taxonomy.color') }}</label>
+<select id="rank-color" name="color">{% for color in colors %}<option value="{{ color }}">{{ t('admin.taxonomy.color_name', {color: color}) }}</option>{% endfor %}</select></p>
+<p><button type="submit" name="action" value="{{ 'add_rank' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.extras.add_rank') }}</button></p>
+</form>
+{% endblock %}

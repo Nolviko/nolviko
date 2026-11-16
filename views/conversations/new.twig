@@ -1,0 +1,21 @@
+{% extends 'layouts/page.twig' %}
+{% block main_class %}{{ 'main-medium' }}{% endblock %}
+{% block content %}
+<h1>{{ t('conversations.new') }}</h1>
+<nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ index_url|safe_url }}">{{ t('conversations.back') }}</a></nav>
+<p class="lead">{{ t('conversations.policy') }}</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if preview|default(null) %}<section class="card post-preview" aria-labelledby="post-preview-heading"><h2 id="post-preview-heading">{{ t('threads.preview.heading') }}</h2><div class="post-body" dir="auto">{{ preview }}</div></section>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="recipient">{{ t('conversations.recipient') }}</label>
+<input id="recipient" name="recipient" value="{{ recipient }}" required maxlength="32" autocomplete="off" dir="auto" data-autocomplete="members"></p>
+<p><label for="subject">{{ t('conversations.subject') }}</label>
+<input id="subject" name="subject" value="{{ subject }}" required maxlength="160" dir="auto"></p>
+<p><label for="message">{{ t('conversations.message') }}</label>
+{% include 'components/editor_toolbar.twig' with {target: 'message'} only %}
+<textarea id="message" data-mentions name="content" required maxlength="8000" rows="8" dir="auto">{{ content }}</textarea></p>
+<p><button>{{ t('conversations.send') }}</button>
+<button class="btn-s" type="submit" name="intent" value="{{ preview_intent }}" formnovalidate>{{ t('threads.preview.button') }}</button></p>
+</form>
+{% endblock %}

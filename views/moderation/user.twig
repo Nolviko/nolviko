@@ -1,0 +1,45 @@
+{# Bans and warnings of one user (M04.09). Context: title, ban_state, banned, points (translated), error (translated
+   or null), action, csrf_field, csrf_token, choices (ban, lift, warn action values), max_reason, max_days,
+   max_points. #}
+{% extends 'layouts/page.twig' %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% endif %}
+<div class="row"><p class="chip chip-amber">{{ ban_state }}</p>
+<p class="chip">{{ points }}</p></div>
+
+{% if banned %}
+<h2>{{ t('moderation.user.lift') }}</h2>
+<form class="card" method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="lift-reason">{{ t('moderation.user.reason') }}</label>
+<input id="lift-reason" name="reason" required maxlength="{{ max_reason }}"></p>
+<p><button type="submit" name="action" value="{{ choices.lift }}">{{ t('moderation.user.lift') }}</button></p>
+</form>
+{% else %}
+<h2>{{ t('moderation.user.ban') }}</h2>
+<form class="card" method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="ban-reason">{{ t('moderation.user.reason') }}</label>
+<input id="ban-reason" name="reason" required maxlength="{{ max_reason }}"></p>
+<p><label for="ban-days">{{ t('moderation.user.days') }}</label>
+<input id="ban-days" name="days" type="number" min="0" max="{{ max_days }}"></p>
+<p><button type="submit" name="action" class="btn-d" value="{{ choices.ban }}">{{ t('moderation.user.ban') }}</button></p>
+</form>
+{% endif %}
+
+<h2>{{ t('moderation.user.warn') }}</h2>
+<form class="card" method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="warn-reason">{{ t('moderation.user.reason') }}</label>
+<input id="warn-reason" name="reason" required maxlength="{{ max_reason }}"></p>
+<p><label for="warn-points">{{ t('moderation.user.warn_points') }}</label>
+<input id="warn-points" name="points" type="number" min="1" max="{{ max_points }}" required></p>
+<p><label for="warn-days">{{ t('moderation.user.days') }}</label>
+<input id="warn-days" name="days" type="number" min="0" max="{{ max_days }}"></p>
+<p><button type="submit" name="action" value="{{ choices.warn }}">{{ t('moderation.user.warn') }}</button></p>
+</form>
+{% endblock %}

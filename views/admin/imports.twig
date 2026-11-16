@@ -1,0 +1,35 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<p>{{ t('operations.import_policy') }}</p>
+{% if sources is empty %}<p>{{ t('operations.import_setup') }}</p>{% else %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<label for="import-source">{{ t('operations.source') }}</label>
+<select id="import-source" name="source" required>{% for source in sources %}
+<option value="{{ source.id }}">{{ source.id }} ({{ source.engine }})</option>{% endfor %}</select>
+<p><label><input type="checkbox" name="acknowledged" value="1" required> {{ t('operations.acknowledge') }}</label></p>
+<button name="action" value="{{ 'begin' }}">{{ t('operations.begin') }}</button></form>
+{% endif %}
+{% if selected %}
+<h2>{{ t('operations.progress') }}</h2>
+<dl><dt>{{ t('operations.processed') }}</dt><dd>{{ selected.processed|format_number }}</dd>
+<dt>{{ t('operations.verified') }}</dt><dd>{{ selected.verified|format_number }}</dd></dl>
+{% if selected.state == 'completed' %}<p role="status">{{ t('operations.completed') }}</p>{% else %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="job" value="{{ selected.id }}">
+<input type="hidden" name="revision" value="{{ selected.revision }}">
+<button name="action" value="{{ 'step' }}">{{ t('operations.continue') }}</button></form>
+{% endif %}
+{% endif %}
+{% if report %}
+<h2>{{ t('operations.coverage') }}</h2>
+<ul>{% for table in report.coverage %}<li>{{ table.table }}:
+{{ table.mapping == 'mapped' or table.mapping == 'core' ? t('operations.mapped') : t('operations.excluded') }}</li>{% endfor %}</ul>
+{% if report.notes is not empty %}<h2>{{ t('operations.reasons') }}</h2>
+<ul>{% for note in report.notes %}<li>{{ note.entity }} / {{ note.source_id }}: {{ note.label }}</li>{% endfor %}</ul>{% endif %}
+{% endif %}
+<h2>{{ t('operations.recent') }}</h2>
+<ul>{% for job in recent %}<li><a href="{{ job.url|safe_url }}">{{ t('operations.open') }} — {{ job.engine }} {{ job.source_version }}</a></li>{% endfor %}</ul>
+{% endblock %}

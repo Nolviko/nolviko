@@ -1,0 +1,60 @@
+{# Members (M04.06). Context: title, nav, action (GET filter), bulk_action, csrf_field, csrf_token, name,
+   statuses (value, label, selected), rows (id, username, email, status, joined; text), choices (suspend,
+   reactivate action values), older_url, error, notice (translated or null), fresh, reauth_url. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}
+<p role="alert">{{ error }}</p>
+{% elseif notice %}
+<p role="status">{{ notice }}</p>
+{% endif %}
+<form data-admin-progress method="get" action="{{ action|safe_url }}">
+<p><label for="members-name">{{ t('admin.members.name') }}</label>
+<input id="members-name" name="name" maxlength="64" value="{{ name }}">
+<label for="members-status">{{ t('admin.members.status_filter') }}</label>
+<select id="members-status" name="status">
+{% for status in statuses %}
+<option value="{{ status.value }}"{% if status.selected %} selected{% endif %}>{{ status.label }}</option>
+{% endfor %}
+</select>
+<button type="submit">{{ t('admin.audit.filter') }}</button></p>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>
+{% if save_filter_url is defined %}<p><a href="{{ save_filter_url|safe_url }}">{{ t('admin.saved.current') }}</a></p>{% endif %}
+{% if rows is empty %}
+<p class="admin-empty">{{ t('admin.audit.empty') }}</p>
+{% else %}
+{% if not fresh %}
+<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.members.reauth') }}</a></p>
+{% endif %}
+<form method="post" action="{{ bulk_action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<table>
+<thead><tr>
+<th scope="col">{{ t('admin.members.select') }}</th>
+<th scope="col">{{ t('admin.members.name') }}</th>
+<th scope="col">{{ t('admin.members.email') }}</th>
+<th scope="col">{{ t('admin.members.status_filter') }}</th>
+<th scope="col">{{ t('admin.members.joined') }}</th>
+</tr></thead>
+<tbody>
+{% for row in rows %}
+<tr>
+<td><input type="checkbox" name="members[]" value="{{ row.id }}" id="member-{{ row.id }}" aria-label="{{ t('admin.members.pick', {name: row.username}) }}"></td>
+<td>{% if row.url|default(null) %}<a href="{{ row.url|safe_url }}"><bdi>{{ row.username }}</bdi></a>{% else %}{{ row.username }}{% endif %}</td>
+<td>{{ row.email }}</td>
+<td>{{ row.status }}</td>
+<td>{{ row.joined }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+<p><button type="submit" name="action" value="{{ choices.suspend }}">{{ t('admin.members.suspend') }}</button>
+<button type="submit" name="action" value="{{ choices.reactivate }}">{{ t('admin.members.reactivate') }}</button></p>
+</form>
+{% endif %}
+{% if older_url %}
+<p><a href="{{ older_url|safe_url }}" rel="next">{{ t('admin.audit.older') }}</a></p>
+{% endif %}
+{% endblock %}
