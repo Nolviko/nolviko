@@ -35,7 +35,8 @@ final class PackageAssetDownloader
     ): string {
         if (
             preg_match('/^[A-Za-z0-9._-]{1,64}$/D', $tag) !== 1
-            || preg_match('/^[A-Za-z0-9._-]{1,128}\.zip$/D', $asset) !== 1
+            // A package, or a core release's signed manifest / signature next to it (ADR-037).
+            || preg_match('/^[A-Za-z0-9._-]{1,128}\.zip(?:\.manifest\.json|\.sig)?$/D', $asset) !== 1
             || $expectedBytes < 1 || $expectedBytes > $maxBytes
             || !filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOL)
         ) {
