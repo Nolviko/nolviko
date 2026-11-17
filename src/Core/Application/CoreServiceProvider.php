@@ -3409,7 +3409,8 @@ final class CoreServiceProvider implements ServiceProvider
                     new DbalAdminAudit($db),
                     $views,
                     $translator,
-                    $urls
+                    $urls,
+                    $storage,
                 ),
             [Connection::class, TaskRuntime::class, CompositionRoot::STORAGE, RequestSubject::class,
                 AdminSession::class, CsrfTokens::class, TemplateRenderer::class, MessageTranslator::class,

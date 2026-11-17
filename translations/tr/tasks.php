@@ -5,9 +5,13 @@ declare(strict_types=1);
 return [
     'tasks.title' => 'Arka plan görevleri',
     'tasks.cache' => 'İsteğe bağlı önbellek',
-    'tasks.policy' => 'Forum cron veya sürekli çalışan bir görev programı olmadan çalışır. '
-        . 'Ziyaretler küçük partiler çalıştırır; bu düğme en fazla 3 görev '
-        . 'çalıştırır. Teslim zamanı ziyaretlere bağlıdır.',
+    'tasks.policy' => 'Forum cron veya sürekli çalışan bir görev programı olmadan çalışır. Sayfalar '
+        . 'ziyaretçilere gönderildikten sonra forum kısa bir görev partisi çalıştırır (en sık 15 saniyede bir); bu '
+        . 'düğme şimdi en fazla 10 görev çalıştırır. Sessiz bir sitede görevler bir sonraki ziyareti bekler.',
+    'tasks.automatic_last' => 'Son otomatik çalışma: {minutes, plural, =0 {bir dakikadan az önce} one {# dakika '
+        . 'önce} other {# dakika önce}}.',
+    'tasks.automatic_never' => 'Ziyaretler henüz görev çalıştırmadı.',
+    'tasks.job_sitemap' => 'Site haritası',
     'tasks.cache_policy' => 'Redis isteğe bağlıdır ve başlangıçta kapalıdır. Seçilen önbellek '
         . 'özelliklerini açmadan IP bağlantısını deneyin. Yerel olmayan sunucularda '
         . 'doğrulanmış TLS gerekir. Şifreler gösterilmez.',

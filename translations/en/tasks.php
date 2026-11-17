@@ -5,8 +5,13 @@ declare(strict_types=1);
 return [
     'tasks.title' => 'Background tasks',
     'tasks.cache' => 'Optional cache',
-    'tasks.policy' => 'The forum works without cron or a worker. A visit runs a small batch; this '
-        . 'button runs up to 3 tasks. Delivery time depends on traffic.',
+    'tasks.policy' => 'The forum works without cron or a worker. After pages are sent to visitors, the forum '
+        . 'runs a short batch of tasks (at most every 15 seconds); this button runs up to 10 tasks now. On a quiet '
+        . 'site, tasks wait for the next visit.',
+    'tasks.automatic_last' => 'Last automatic run: {minutes, plural, =0 {less than a minute ago} one {# minute ago} '
+        . 'other {# minutes ago}}.',
+    'tasks.automatic_never' => 'Visits have not run any tasks yet.',
+    'tasks.job_sitemap' => 'Sitemap',
     'tasks.cache_policy' => 'Redis is optional and off by default. Test the IP connection before '
         . 'enabling selected cache features. Non-local servers require verified TLS. '
         . 'Passwords are never shown.',

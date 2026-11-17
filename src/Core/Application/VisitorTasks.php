@@ -8,9 +8,26 @@ use Nolviko\Core\Config\ConfigLoader;
 use Nolviko\Core\Database\ConnectionFactory;
 use Throwable;
 
-/** Post-response composition root. No session, shell, network loopback, cron or privileged browser endpoint. */
+/**
+ * Post-response composition root. No session, shell, network loopback, cron or privileged browser endpoint.
+ *
+ * 2026-11-17 (owner: sites without cron must still build sitemaps and send mail): at most one tick every
+ * INTERVAL_SECONDS across all visitors; a tick runs a time-boxed batch. When PHP has already handed the page to the
+ * visitor (PHP-FPM, LiteSpeed) the batch is larger; otherwise it stays small so nobody waits for it.
+ */
 final class VisitorTasks
 {
+    public const INTERVAL_SECONDS = 15;
+
+    /** Time of the last automatic tick, or null when visits have not run tasks yet. */
+    public static function lastRun(string $storage): ?int
+    {
+        $file = $storage . '/tasks/tick';
+        $last = is_file($file) && !is_link($file) ? @file_get_contents($file, false, null, 0, 32) : false;
+
+        return is_string($last) && ctype_digit(trim($last)) ? (int) trim($last) : null;
+    }
+
     public static function tick(string $root): void
     {
         $lock = null;
@@ -56,7 +73,7 @@ final class VisitorTasks
             chmod($directory . '/tick', 0600);
             $last = stream_get_contents($lock, 32);
 
-            if (is_string($last) && ctype_digit(trim($last)) && (int) $last > time() - 60) {
+            if (is_string($last) && ctype_digit(trim($last)) && (int) $last > time() - self::INTERVAL_SECONDS) {
                 return;
             }
 
@@ -90,7 +107,8 @@ final class VisitorTasks
                     return;
                 }
 
-                (new TaskRuntime($db, $config, $root, $storage))->run(1, 5000);
+                $released = function_exists('fastcgi_finish_request') || function_exists('litespeed_finish_request');
+                (new TaskRuntime($db, $config, $root, $storage))->run($released ? 10 : 3, $released ? 3000 : 1000);
             } finally {
                 $db->close();
             }

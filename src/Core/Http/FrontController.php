@@ -71,7 +71,9 @@ final class FrontController
 
         $response->send();
 
-        if ($response->getStatusCode() < 400) {
+        // Not after a server error. 4xx and 503 still tick: a crawler asking for a sitemap that is being built
+        // (503) is often the only visitor of a quiet site.
+        if ($response->getStatusCode() < 500 || $response->getStatusCode() === 503) {
             VisitorTasks::tick($projectDirectory);
         }
     }

@@ -1,7 +1,7 @@
 {% extends 'admin/layout.twig' %}
 {% block admin %}
 {% set statuses = {pending: t('tasks.status_pending'), running: t('tasks.status_running'), failed: t('tasks.status_failed'), completed: t('tasks.status_completed')} %}
-{% set jobs = {'post.created': t('tasks.job_post'), 'thread.created': t('tasks.job_post'), 'post.approved': t('tasks.job_post'), 'thread.approved': t('tasks.job_post'), 'user.export_requested': t('tasks.job_export'), 'user.deletion_requested': t('tasks.job_delete'), 'community.mail': t('tasks.job_mail')} %}
+{% set jobs = {'post.created': t('tasks.job_post'), 'thread.created': t('tasks.job_post'), 'post.approved': t('tasks.job_post'), 'thread.approved': t('tasks.job_post'), 'user.export_requested': t('tasks.job_export'), 'user.deletion_requested': t('tasks.job_delete'), 'community.mail': t('tasks.job_mail'), 'seo.sitemap_requested': t('tasks.job_sitemap')} %}
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 {% if notice %}<p role="status">{{ notice }}</p>{% endif %}
 {% if cache_mode %}
@@ -29,6 +29,7 @@
 <button name="action" value="{{ 'disable' }}">{{ t('tasks.disable') }}</button></form>
 {% else %}
 <p>{{ t('tasks.policy') }}</p>
+<p role="status">{% if automatic_minutes|default(null) is null %}{{ t('tasks.automatic_never') }}{% else %}{{ t('tasks.automatic_last', {minutes: automatic_minutes}) }}{% endif %}</p>
 {% if summary.capped|default(false) %}<p>{{ t('tasks.count_capped') }}</p>{% endif %}
 {% if summary.overdue or summary.expired or summary.failed %}
 <p role="status">{{ t('tasks.warning', {overdue: summary.overdue, expired: summary.expired, failed: summary.failed}) }}</p>

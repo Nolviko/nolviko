@@ -7,6 +7,7 @@ namespace Nolviko\Modules\Tasks\Http;
 use InvalidArgumentException;
 use Nolviko\Core\Application\TaskConsent;
 use Nolviko\Core\Application\TaskRuntime;
+use Nolviko\Core\Application\VisitorTasks;
 use Nolviko\Core\Cache\RedisOptions;
 use Nolviko\Core\Cache\RedisSettingsStore;
 use Nolviko\Core\Http\RouteHandler;
@@ -39,6 +40,7 @@ final class TaskAdminHandler implements RouteHandler
         private readonly TemplateRenderer $views,
         private readonly MessageTranslator $translator,
         private readonly UrlGenerator $urls,
+        private readonly string $storage = '',
     ) {
     }
 
@@ -79,7 +81,7 @@ final class TaskAdminHandler implements RouteHandler
                 $this->audit->record($subject->userId, 'admin.tasks_' . $action . '_requested');
 
                 if ($action === 'run') {
-                    $result = $this->runtime->run(3, 2000);
+                    $result = $this->runtime->run(10, 5000);
                     $notice = $this->translator->translate('tasks.run_result', $result);
                 } elseif ($action === 'retry') {
                     $this->tasks->retry(self::id($text('id')));
@@ -137,6 +139,9 @@ final class TaskAdminHandler implements RouteHandler
             'items' => $items, 'summary' => $summary, 'filter' => $filter,
             'redis' => $status === 403 ? ['enabled' => false, 'reason' => null] : $this->redis->status(),
             'cli_enabled' => $status !== 403 && $this->consent->enabled(),
+            'automatic_minutes' => self::minutesSince(
+                $this->storage === '' ? null : VisitorTasks::lastRun($this->storage)
+            ),
             'error' => $error, 'notice' => $notice,
             'action' => $this->urls->generate($route),
             'older' => !$more ? null : $this->urls->generate($route) . '?'
@@ -144,6 +149,11 @@ final class TaskAdminHandler implements RouteHandler
             'csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token(),
         ]), $status, ['Content-Type' => 'text/html; charset=UTF-8', 'Cache-Control' => 'private, no-store',
             'Referrer-Policy' => 'no-referrer', 'X-Robots-Tag' => 'noindex, nofollow']);
+    }
+
+    private static function minutesSince(?int $at): ?int
+    {
+        return $at === null ? null : max(0, intdiv(time() - $at, 60));
     }
 
     private static function id(string $value): int
