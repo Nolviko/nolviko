@@ -65,7 +65,7 @@ final readonly class ExtensionsHandler implements RouteHandler
     /** @return array{repository: string, version: string, tag: string, asset: string, bytes: int}|null */
     private function updateFor(ExtensionManifest $manifest): ?array
     {
-        $repository = $manifest->data['repository'] ?? null;
+        $repository = PackageUpdates::extensionRepository($manifest->id, $manifest->data['repository'] ?? null);
 
         return $this->updates === null || !is_string($repository) ? null : $this->updates->available(
             $repository,

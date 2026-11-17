@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Nolviko\Core\Extensions;
 
 use Closure;
+use Doctrine\DBAL\Connection;
 use Nolviko\Core\Container\ContainerBuilder;
+use Nolviko\Core\Container\Lazy;
+use Nolviko\Core\Database\ExtensionSqlGuard;
 use Nolviko\Core\Routing\RouteDefinition;
 use Nolviko\Core\View\ThemeSlots;
 use Nolviko\Modules\Permissions\Domain\PermissionDefinition;
@@ -30,7 +33,39 @@ final readonly class ExtensionContext
     public function service(string $id, Closure $factory, array $dependencies = []): void
     {
         $this->owned($id);
-        $this->services->factory($id, $factory, $dependencies);
+        $this->services->factory($id, $factory, $this->guarded($dependencies));
+    }
+
+    /**
+     * An extension that asks for the database gets its own guarded connection (2026-11-17, ExtensionSqlGuard):
+     * free reads, writes only into its own tables (and append-only audit_logs), no schema changes.
+     *
+     * @param list<mixed> $dependencies
+     * @return list<mixed>
+     */
+    private function guarded(array $dependencies): array
+    {
+        $id = 'extension.database.' . $this->manifest->id;
+        $uses = false;
+        foreach ($dependencies as $index => $dependency) {
+            if ($dependency === Connection::class) {
+                $dependencies[$index] = $id;
+                $uses = true;
+            } elseif ($dependency instanceof Lazy && $dependency->id === Connection::class) {
+                $dependencies[$index] = new Lazy($id);
+                $uses = true;
+            }
+        }
+        if ($uses && !$this->services->has($id)) {
+            $prefix = $this->manifest->tablePrefix();
+            $this->services->factory(
+                $id,
+                static fn(Connection $base): Connection => ExtensionSqlGuard::connection($base, $prefix),
+                [Connection::class],
+            );
+        }
+
+        return $dependencies;
     }
 
     /** @param list<string> $dependencies */
@@ -54,7 +89,7 @@ final readonly class ExtensionContext
             throw new ExtensionFailure('extension_namespace_invalid');
         }
 
-        $this->services->factory($route->name . '.handler', $factory, $dependencies);
+        $this->services->factory($route->name . '.handler', $factory, $this->guarded($dependencies));
         $this->registry->routes[$route->name] = [
             'definition' => $route, 'permission' => $permission,
         ];

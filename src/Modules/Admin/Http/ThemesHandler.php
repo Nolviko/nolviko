@@ -55,7 +55,8 @@ final readonly class ThemesHandler implements RouteHandler
         } catch (Throwable) {
             return null;
         }
-        $repository = $manifest?->data['repository'] ?? null;
+        $repository = $manifest === null ? null
+            : PackageUpdates::themeRepository($theme, $manifest->data['repository'] ?? null);
 
         return $this->updates === null || !is_string($repository) ? null : $this->updates->available(
             $repository,

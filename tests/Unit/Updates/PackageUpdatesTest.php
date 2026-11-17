@@ -50,6 +50,15 @@ final class PackageUpdatesTest extends TestCase
         );
     }
 
+    public function testOfficialPackagesWithoutADeclaredRepositoryStillFindTheirUpdates(): void
+    {
+        self::assertSame('Nolviko/extension-google-auth', PackageUpdates::extensionRepository('nolviko/google', null));
+        self::assertSame('Owner/fork', PackageUpdates::extensionRepository('nolviko/google', 'Owner/fork'));
+        self::assertNull(PackageUpdates::extensionRepository('acme/hello', null), 'unknown packages need a manifest');
+        self::assertSame('Nolviko/theme-kolaj', PackageUpdates::themeRepository('kolaj', null));
+        self::assertNull(PackageUpdates::themeRepository('vendor.custom', null));
+    }
+
     public function testInvalidRepositoriesAndNetworkFailuresShowNoUpdate(): void
     {
         $updates = $this->updates([self::release(1, 'v2.0.0', ['nolviko-theme-lumen-2.0.0.zip'])]);

@@ -114,3 +114,6 @@
     padding: 14px 16px; background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r); }
 .admin-main li > details.forum-edit > form label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .admin-main li > details.forum-edit textarea { min-block-size: 80px; font-family: var(--body); }
+
+/* Installed version under every admin page (2026-11-17). */
+.admin-version { margin-block-start: 40px; color: var(--ink-3); font-size: 12px; }

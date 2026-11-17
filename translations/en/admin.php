@@ -447,6 +447,7 @@ return [
     'admin.extensions.installed_notice' => '{name} {version} is installed and enabled.',
     'admin.extensions.reauth' => 'Confirm your password to manage extensions',
     'admin.extensions.restore' => 'Go back to version {version}',
+    'admin.footer.version' => 'Nolviko {version}',
     'admin.updates.package_available' => 'Version {version} is available.',
     'admin.updates.release_notes' => 'Release notes',
     'admin.updates.package_install' => 'Update to {version}',

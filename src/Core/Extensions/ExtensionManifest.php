@@ -154,6 +154,12 @@ final readonly class ExtensionManifest
         }
     }
 
+    /** The prefix of every table this extension owns (its guarded connection may write only there). */
+    public function tablePrefix(): string
+    {
+        return 'ext_' . substr(hash('sha256', $this->id), 0, 32) . '_';
+    }
+
     public function table(string $local): string
     {
         if (preg_match('/^[a-z][a-z0-9_]{0,25}$/D', $local) !== 1) {

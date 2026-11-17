@@ -442,6 +442,7 @@ return [
     'admin.extensions.installed_notice' => '{name} {version} kuruldu ve etkinleştirildi.',
     'admin.extensions.reauth' => 'Eklentileri yönetmek için parolanızı doğrulayın',
     'admin.extensions.restore' => '{version} sürümüne geri dön',
+    'admin.footer.version' => 'Nolviko {version}',
     'admin.updates.package_available' => '{version} sürümü yayımlandı.',
     'admin.updates.release_notes' => 'Sürüm notları',
     'admin.updates.package_install' => '{version} sürümüne güncelle',

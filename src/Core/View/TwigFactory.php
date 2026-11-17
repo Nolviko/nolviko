@@ -91,6 +91,20 @@ final class TwigFactory
             },
         ));
 
+        // The installed Nolviko version for the admin footer (2026-11-17), from the release's own
+        // config/release-compatibility.json; null in a development checkout.
+        $twig->addFunction(new TwigFunction('nolviko_version', static function () use ($root): ?string {
+            static $version = false;
+            if ($version === false) {
+                $file = $root . '/config/release-compatibility.json';
+                $data = is_file($file) && !is_link($file)
+                    ? json_decode((string) file_get_contents($file), true, 4) : null;
+                $version = is_array($data) && is_string($data['version'] ?? null) ? $data['version'] : null;
+            }
+
+            return $version;
+        }));
+
         $slots ??= new ThemeSlots();
         $renderer = new TwigRenderer($twig, $renderCache, $renderIdentity, $nonce, $slots, $seo);
         $twig->addExtension(new ThemeViewExtension($slots, $themeSelection ?? [

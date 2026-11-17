@@ -32,6 +32,7 @@
 {% include 'admin/commands.twig' %}
 <p role="status" aria-live="polite" data-admin-announcement></p>
 {% block admin %}{% endblock %}
+{% if nolviko_version() %}<p class="admin-version">{{ t('admin.footer.version', {version: nolviko_version()}) }}</p>{% endif %}
 </div>
 </div>
 {% endblock %}

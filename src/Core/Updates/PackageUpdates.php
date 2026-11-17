@@ -18,6 +18,29 @@ final class PackageUpdates
 {
     public const REPOSITORY_PATTERN = '~^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_.-]{1,100}$~D';
 
+    /**
+     * Repositories of the official packages (2026-11-17), so versions published before manifests named their
+     * repository (TOTP 1.0.3, Google 1.1.1, SEO 1.0.3, Lumen/Kolaj 1.0.1 and older) still see their updates.
+     */
+    public const OFFICIAL_EXTENSIONS = [
+        'nolviko/totp' => 'Nolviko/extension-totp',
+        'nolviko/google' => 'Nolviko/extension-google-auth',
+        'nolviko/seo' => 'Nolviko/extension-seo',
+    ];
+
+    public const OFFICIAL_THEMES = ['lumen' => 'Nolviko/theme-lumen', 'kolaj' => 'Nolviko/theme-kolaj'];
+
+    /** The repository a package declares, else the known one of an official package. */
+    public static function extensionRepository(string $id, mixed $declared): ?string
+    {
+        return is_string($declared) ? $declared : (self::OFFICIAL_EXTENSIONS[$id] ?? null);
+    }
+
+    public static function themeRepository(string $id, mixed $declared): ?string
+    {
+        return is_string($declared) ? $declared : (self::OFFICIAL_THEMES[$id] ?? null);
+    }
+
     public function __construct(private readonly GitHubReleaseDiscovery $discovery)
     {
     }
