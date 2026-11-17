@@ -25,12 +25,21 @@ final class RecoveryPreparation
         $application = realpath($this->applicationRoot);
         $public = realpath($this->applicationRoot . '/public');
 
+        // Owner decision 2026-11-17 (as UpdatePreflight): storage/ inside the application folder is accepted while
+        // its deny-all .htaccess stands; the file switch replaces files one by one and never touches storage/.
+        $denyFile = $this->storageRoot . '/.htaccess';
+        $denied = $storage !== false && $application !== false
+            && strtolower(str_replace(DIRECTORY_SEPARATOR, '/', $storage))
+                === rtrim(strtolower(str_replace(DIRECTORY_SEPARATOR, '/', $application)), '/') . '/storage'
+            && is_file($denyFile) && !is_link($denyFile)
+            && preg_match('~Require\s+all\s+denied~i', (string) file_get_contents($denyFile)) === 1;
+
         if (
             $storage === false || $public === false || $application === false || is_link($this->storageRoot)
-            || str_starts_with(
+            || (!$denied && str_starts_with(
                 strtolower(str_replace(DIRECTORY_SEPARATOR, '/', $storage)) . '/',
                 rtrim(strtolower(str_replace(DIRECTORY_SEPARATOR, '/', $application)), '/') . '/',
-            )
+            ))
             || str_starts_with(
                 strtolower(str_replace(DIRECTORY_SEPARATOR, '/', $storage)) . '/',
                 rtrim(strtolower(str_replace(DIRECTORY_SEPARATOR, '/', $public)), '/') . '/',

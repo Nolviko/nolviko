@@ -51,7 +51,8 @@ final class UpdatePolicyTest extends TestCase
         $this->private = new TemporaryDirectory();
         $this->private->write('storage/.keep', '');
         $this->files->write('storage/.keep', '');
-        chmod($this->private->path . '/storage', 0700);
+        // Owner decision 2026-11-17: updates work with storage/ at 755 as well as 700.
+        chmod($this->private->path . '/storage', 0755);
         $this->files->write('public/.keep', '');
         $this->files->write('themes/.keep', '');
         $this->files->write('extensions/.keep', '');

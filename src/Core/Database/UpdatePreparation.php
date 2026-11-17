@@ -103,8 +103,11 @@ final readonly class UpdatePreparation
     public function check(): ?string
     {
         $trust = $this->trust();
+        // The administrator pressed "Check": ask GitHub now instead of answering from the hourly cache (owner
+        // report 2026-11-17: a release published minutes after the last check stayed invisible). Failure backoff
+        // still applies inside the discovery.
         $result = ($this->discovery ?? throw new RuntimeException('update_discovery_unavailable'))
-            ->check($trust->repository, $trust->channel, $this->now());
+            ->check($trust->repository, $trust->channel, $this->now(), true);
         $installed = (new UpdatePreflight($this->db, $this->site, $this->storage, $this->driver))->current($trust);
         return ReleaseVersion::select($result->releases, $installed, $trust->channel)?->tag;
     }
@@ -119,6 +122,9 @@ final readonly class UpdatePreparation
         $compatibility = ReleaseCompatibility::fromArchive($archive, $manifest);
         $this->approve($compatibility, $manifest);
         $journal = new UpdateJournal($this->db);
+        // Check the private folder before opening a job, so a refusal never leaves a half-open update behind
+        // (2026-11-17: community kept a "discovered" job after update_storage_invalid).
+        $this->privateDirectory($this->storage . '/update-preparation');
         $job = $journal->begin($manifest->releaseId, $manifest->manifestHash, $this->now());
         $directory = $this->directory($job);
         $target = $directory . '/release.zip';
@@ -328,16 +334,21 @@ final readonly class UpdatePreparation
     {
         $storage = realpath($this->storage);
         $public = realpath($this->site . '/public');
+        // Owner decision 2026-11-17: storage/ itself may be 700 or 755 (both are normal after an upload). The
+        // update's own folders below it are private: created 700, and tightened to 700 when PHP owns them.
         $normalize = static fn(string $value): string => strtolower(str_replace('\\', '/', $value));
         if (
             $storage === false || $public === false || is_link($this->storage)
             || str_starts_with($normalize($storage) . '/', $normalize($public) . '/')
-            || (DIRECTORY_SEPARATOR === '/' && (fileperms($storage) & 0077) !== 0)
         ) {
             throw new RuntimeException('update_storage_invalid');
         }
         if (is_link($path) || (!is_dir($path) && !mkdir($path, 0700)) || !is_dir($path)) {
             throw new RuntimeException('update_storage_invalid');
+        }
+        if (DIRECTORY_SEPARATOR === '/' && (fileperms($path) & 0077) !== 0 && fileowner($path) === getmyuid()) {
+            @chmod($path, 0700);
+            clearstatcache(true, $path);
         }
         return $path;
     }

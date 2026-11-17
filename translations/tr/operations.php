@@ -48,6 +48,13 @@ return [
         . 'kullanıcısına yazma izni verin (barındırma firmanız yapabilir) ve tekrar deneyin.',
     'operations.private_storage' => 'storage/ web\'den erişilememeli: public/ içinde olmamalı, bir bağlantı (link) '
         . 'olmamalı ve .htaccess dosyası (Require all denied) yerinde durmalı.',
+    'operations.storage_permissions' => 'storage/ güncellemeler için kullanılamıyor: bir bağlantı (link) olmamalı, '
+        . 'public/ içinde olmamalı ve PHP içinde klasör oluşturabilmeli. Barındırma firmanızdan bunu kontrol etmesini '
+        . 'isteyin ve tekrar deneyin.',
+    'operations.replayed' => 'Bu sürüm, kurulu olarak kayıtlı sürümden daha yeni değil.',
+    'operations.clock' => 'Sunucu saati sürüm imzasının geçerlilik aralığının dışında. Barındırma firmanızdan '
+        . 'sunucu saatini düzeltmesini isteyin ve tekrar deneyin.',
+    'operations.problem_codes' => 'Teknik kod: {codes}',
     'operations.backup_unavailable' => 'Bu veritabanı için otomatik yedek alınamıyor, bu yüzden güncelleme '
         . 'başlatılmadı.',
     'operations.channel' => 'Bu sürüm başka bir güncelleme kanalına ait (beta ya da kararlı).',

@@ -134,8 +134,24 @@ final class UpdatesHandler implements RouteHandler
             $issues = $failure instanceof UpdatePreflightFailed ? $failure->issues : [$failure->getMessage()];
             $details = array_values(array_unique(array_map(self::message(...), $issues)));
             $error = $details[0];
+            // Issues without their own explanation still show their code, so the owner can report or look it up.
+            $codes = array_values(array_filter(
+                array_map(strval(...), $issues),
+                static fn(string $issue): bool => self::message($issue) === 'operations.refused'
+                    && preg_match('/^[a-z0-9_]{1,64}$/D', $issue) === 1,
+            ));
         }
-        return $this->render($request, $job, $prepared, $error, $notice, $configured, $status, $details ?? []);
+        return $this->render(
+            $request,
+            $job,
+            $prepared,
+            $error,
+            $notice,
+            $configured,
+            $status,
+            $details ?? [],
+            $codes ?? [],
+        );
     }
 
     /** The translation key that explains one update issue and what to do about it. */
@@ -154,9 +170,12 @@ final class UpdatesHandler implements RouteHandler
             'update_integrity_required' => 'operations.integrity',
             'update_writable_required' => 'operations.writable',
             'update_private_storage_required' => 'operations.private_storage',
+            'update_storage_invalid' => 'operations.storage_permissions',
             'update_backup_required' => 'operations.backup_unavailable',
             'update_channel_mismatch' => 'operations.channel',
-            'update_quiescent_required', 'update_already_active' => 'operations.busy',
+            'update_quiescent_required', 'update_already_active', 'update_begin_busy' => 'operations.busy',
+            'update_manifest_replayed' => 'operations.replayed',
+            'update_manifest_time_invalid' => 'operations.clock',
             'update_schema_required' => 'operations.schema',
             'update_upload_failed' => 'operations.upload_failed',
             'update_signed_assets_missing', 'update_discovery_unavailable', 'package_download_invalid',
@@ -175,6 +194,7 @@ final class UpdatesHandler implements RouteHandler
         bool $configured,
         int $status,
         array $details = [],
+        array $codes = [],
     ): Response {
         $runs = $this->overview->read();
         $html = $this->views->render('admin/updates.twig', [
@@ -182,7 +202,7 @@ final class UpdatesHandler implements RouteHandler
             'nav' => AdminNavigation::items($this->urls, $this->translator, CoreRoutes::ADMIN_UPDATES),
             'runs' => $runs, 'prepare_available' => $job !== null && $this->admin->isFresh(),
             'prepared' => $prepared, 'prepare_error' => $error, 'notice' => $notice, 'configured' => $configured,
-            'has_job' => $job !== null, 'problems' => $details,
+            'has_job' => $job !== null, 'problems' => $details, 'problem_codes' => $codes,
             'recovery_url' => $this->urls->generate(CoreRoutes::ADMIN_RECOVERY_ENTRY),
             'post_url' => $this->urls->generate(CoreRoutes::ADMIN_UPDATES),
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),

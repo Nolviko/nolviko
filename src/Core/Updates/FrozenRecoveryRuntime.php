@@ -25,7 +25,10 @@ final class FrozenRecoveryRuntime
         if (
             $source === false || $private === false || is_link($this->source) || is_link($this->private)
             || preg_match('/^[a-f0-9]{32}$/D', $job) !== 1 || $budget < 1 || $budget > 128
-            || str_starts_with(self::key($private) . '/', self::key($source) . '/')
+            // Inside the application only under storage/ (2026-11-17): the snapshot copies src, vendor, views and
+            // translations, and the file switch never touches storage/.
+            || (str_starts_with(self::key($private) . '/', self::key($source) . '/')
+                && !str_starts_with(self::key($private) . '/', self::key($source) . '/storage/'))
             || (DIRECTORY_SEPARATOR === '/' && (fileperms($private) & 0077) !== 0)
         ) {
             throw new RuntimeException('recovery_snapshot_configuration_invalid');

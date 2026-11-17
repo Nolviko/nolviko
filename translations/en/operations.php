@@ -47,6 +47,12 @@ return [
         . 'write permission to them (your host can do this), then retry.',
     'operations.private_storage' => 'storage/ must not be reachable from the web: it must not be inside public/, must '
         . 'not be a link, and must keep its .htaccess file (Require all denied).',
+    'operations.storage_permissions' => 'storage/ cannot be used for updates: it must not be a link or inside public/, '
+        . 'and PHP must be able to create folders in it. Ask your host to check this, then retry.',
+    'operations.replayed' => 'This release is not newer than the one recorded as installed.',
+    'operations.clock' => 'The server clock is outside the release signature validity. Ask your host to correct '
+        . 'the server time, then retry.',
+    'operations.problem_codes' => 'Technical code: {codes}',
     'operations.backup_unavailable' => 'Automatic backups are not available for this database, so the update is not '
         . 'started.',
     'operations.channel' => 'This release is for another update channel (beta versus stable).',

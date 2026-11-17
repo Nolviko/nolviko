@@ -3,7 +3,8 @@
 {% block admin %}
 {% if notice|default(null) %}<p role="status">{{ notice }}</p>{% endif %}
 {% if problems|default([]) is not empty %}<div class="panel" role="alert"><p><strong>{{ t('operations.problems_heading') }}</strong></p>
-<ul>{% for problem in problems %}<li>{{ t(problem) }}</li>{% endfor %}</ul></div>{% endif %}
+<ul>{% for problem in problems %}<li>{{ t(problem) }}</li>{% endfor %}</ul>
+{% if problem_codes|default([]) is not empty %}<p class="hint">{{ t('operations.problem_codes', {codes: problem_codes|join(', ')}) }}</p>{% endif %}</div>{% endif %}
 {% if configured|default(false) %}
 <p>{{ t('operations.notify_policy') }}</p>
 <p>{{ t('operations.update_storage') }}</p>
