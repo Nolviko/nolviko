@@ -8,12 +8,15 @@ use Nolviko\Core\Database\ExtensionMigrations;
 use Nolviko\Core\Extensions\ExtensionArchive;
 use Nolviko\Core\Extensions\ExtensionFailure;
 use Nolviko\Core\Extensions\ExtensionManager;
+use Nolviko\Core\Extensions\ExtensionManifest;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
+use Nolviko\Core\Updates\PackageAssetDownloader;
+use Nolviko\Core\Updates\PackageUpdates;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Admin\Infrastructure\DbalAdminAudit;
 use Nolviko\Modules\Users\Http\RequestSubject;
@@ -36,7 +39,39 @@ final readonly class ExtensionsHandler implements RouteHandler
         private UrlGenerator $urls,
         private DbalAdminAudit $audit,
         private array $settingsPages = [],
+        private ?PackageUpdates $updates = null,
+        private ?PackageAssetDownloader $downloader = null,
     ) {
+    }
+
+    /**
+     * One-step install of a package file (upload or panel update): stage, switch an enabled older version off,
+     * install, enable with its migrations. Returns the extension ID.
+     */
+    private function installPackage(ExtensionArchive $archive, string $path): string
+    {
+        $token = $archive->stage($path);
+        $id = $archive->stagedId($token);
+        if (isset($this->manager->state->enabled()[$id])) {
+            $this->manager->disable($id);
+        }
+
+        $archive->install($token);
+        $this->manager->enable($id, $this->migrations->apply(...));
+
+        return $id;
+    }
+
+    /** @return array{repository: string, version: string, tag: string, asset: string, bytes: int}|null */
+    private function updateFor(ExtensionManifest $manifest): ?array
+    {
+        $repository = $manifest->data['repository'] ?? null;
+
+        return $this->updates === null || !is_string($repository) ? null : $this->updates->available(
+            $repository,
+            $manifest->version,
+            PackageUpdates::extensionAsset($manifest->id),
+        );
     }
 
     public function handle(Request $request, array $parameters): Response
@@ -61,7 +96,7 @@ final readonly class ExtensionsHandler implements RouteHandler
 
                 $action = $text('action');
                 if (
-                    !in_array($action, ['enable', 'disable', 'safe', 'resume', 'upload', 'rollback',
+                    !in_array($action, ['enable', 'disable', 'safe', 'resume', 'upload', 'update', 'rollback',
                         'disable_all'], true)
                 ) {
                     throw new ExtensionFailure('extension_action_invalid');
@@ -97,20 +132,56 @@ final readonly class ExtensionsHandler implements RouteHandler
                             throw new ExtensionFailure('extension_package_invalid');
                         }
 
-                        $token = $archive->stage($upload->getPathname());
-                        $id = $archive->stagedId($token);
-                        if (isset($this->manager->state->enabled()[$id])) {
-                            $this->manager->disable($id);
-                        }
+                        $id = $this->installPackage($archive, $upload->getPathname());
 
-                        $archive->install($token);
-                        $this->manager->enable($id, $this->migrations->apply(...));
+                        return InstallerPage::redirect(
+                            $this->urls->generate(CoreRoutes::ADMIN_EXTENSIONS) . '?installed=' . rawurlencode($id),
+                        );
+                    case 'update':
+                        // Panel update (2026-11-17): the newer release of the package's own repository, downloaded
+                        // from GitHub only after the administrator confirmed it.
+                        $manifest = $this->manager->catalog->discover()['manifests'][$text('id')] ?? null;
+                        $update = $manifest === null ? null : $this->updateFor($manifest);
+                        $repository = $update === null ? null : PackageUpdates::repository($update['repository']);
+                        if ($update === null || $repository === null || $this->downloader === null) {
+                            throw new ExtensionFailure('extension_update_unavailable');
+                        }
+                        try {
+                            $file = $this->downloader->download(
+                                $repository,
+                                $update['tag'],
+                                $update['asset'],
+                                $update['bytes'],
+                                4194304,
+                            );
+                        } catch (Throwable) {
+                            throw new ExtensionFailure('extension_update_download_failed');
+                        }
+                        try {
+                            $id = $this->installPackage($archive, $file);
+                        } finally {
+                            @unlink($file);
+                        }
 
                         return InstallerPage::redirect(
                             $this->urls->generate(CoreRoutes::ADMIN_EXTENSIONS) . '?installed=' . rawurlencode($id),
                         );
                     case 'rollback':
+                        // Restore the kept older copy (2026-11-17): off, swap back, on again with its migrations
+                        // (expand-only, so the older code runs on the newer schema).
+                        $id = null;
+                        foreach ($archive->previousVersions() as $owner => $copy) {
+                            $id = $copy['token'] === $text('token') ? $owner : $id;
+                        }
+                        if ($id === null) {
+                            throw new ExtensionFailure('extension_package_invalid');
+                        }
+                        if (isset($this->manager->state->enabled()[$id])) {
+                            $this->manager->disable($id);
+                        }
+
                         $archive->rollback($text('token'));
+                        $this->manager->enable($id, $this->migrations->apply(...));
                         break;
                 }
 
@@ -119,6 +190,7 @@ final readonly class ExtensionsHandler implements RouteHandler
 
             $enabled = $this->manager->state->enabled();
             $catalog = $this->manager->catalog->discover();
+            $kept = (new ExtensionArchive($this->manager))->previousVersions();
             $just = $request->query->get('installed');
             foreach ($catalog['manifests'] as $manifest) {
                 // An enabled extension's own settings page, when it registered one (2026-11-15).
@@ -129,13 +201,21 @@ final readonly class ExtensionsHandler implements RouteHandler
                         'settings_url' => $settings];
                 }
                 $rows[] = ['id' => $manifest->id, 'name' => $manifest->data['name'], 'version' => $manifest->version,
-                    'enabled' => isset($enabled[$manifest->id]), 'settings_url' => $settings];
+                    'enabled' => isset($enabled[$manifest->id]), 'settings_url' => $settings,
+                    'previous' => $kept[$manifest->id] ?? null, 'update' => $this->updateFor($manifest)];
             }
 
             $diagnostics = $this->manager->diagnostics();
         } catch (ExtensionFailure $failure) {
             $status = 422;
-            $error = $this->translator->translate('admin.extensions.invalid');
+            $panelUpdate = in_array(
+                $failure->getMessage(),
+                ['extension_update_unavailable', 'extension_update_download_failed'],
+                true,
+            );
+            $error = $this->translator->translate(
+                $panelUpdate ? 'admin.updates.package_failed' : 'admin.extensions.invalid',
+            );
             $diagnostics = ['operation' => strtok($failure->getMessage(), ':')];
         } catch (Throwable) {
             $status = 503;
@@ -151,7 +231,8 @@ final readonly class ExtensionsHandler implements RouteHandler
             'fresh' => $this->admin->isFresh(), 'safe' => $this->manager->state->safe(),
             'extensions' => $rows, 'diagnostics' => $diagnostics, 'error' => $error, 'installed' => $installed,
             'actions' => ['safe' => 'safe', 'resume' => 'resume', 'disable_all' => 'disable_all',
-                'enable' => 'enable', 'disable' => 'disable', 'upload' => 'upload', 'rollback' => 'rollback'],
+                'enable' => 'enable', 'disable' => 'disable', 'upload' => 'upload', 'update' => 'update',
+                'rollback' => 'rollback'],
         ]), $status, ['Cache-Control' => 'no-store, private']);
     }
 }

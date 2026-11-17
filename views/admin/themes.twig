@@ -58,7 +58,14 @@
 <h2>{{ t('admin.themes.installed') }}</h2>
 {% if themes is empty %}<p class="admin-empty">{{ t('admin.themes.empty') }}</p>{% endif %}
 <ul>{% for theme in themes %}<li><bdi>{{ theme.id }}</bdi> — {{ theme.version }}
-{% if not theme.valid %}{{ t('admin.themes.invalid_manifest') }}{% endif %}</li>{% endfor %}</ul>
+{% if not theme.valid %}{{ t('admin.themes.invalid_manifest') }}{% endif %}
+{% if theme.update|default(null) %}<div class="panel update-available"><p role="status"><strong>{{ t('admin.updates.package_available', {version: theme.update.version}) }}</strong>
+<a href="{{ ('https://github.com/' ~ theme.update.repository ~ '/releases/tag/' ~ theme.update.tag)|safe_url }}" rel="noopener noreferrer">{{ t('admin.updates.release_notes') }}</a></p>
+{% if fresh %}<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="theme" value="{{ theme.id }}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.upload_confirm') }}</label></p>
+<button type="submit" name="action" value="{{ actions.update }}">{{ t('admin.updates.package_install', {version: theme.update.version}) }}</button>
+</form>{% endif %}</div>{% endif %}</li>{% endfor %}</ul>
 {% if warnings is not empty %}
 <h2>{{ t('admin.themes.warnings') }}</h2>
 <p role="alert">{{ t('admin.themes.incompatible') }}</p>

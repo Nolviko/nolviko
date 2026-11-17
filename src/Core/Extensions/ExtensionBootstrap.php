@@ -12,10 +12,11 @@ use Throwable;
 final class ExtensionBootstrap
 {
     /**
-     * Extension API version manifests are checked against (`"engine"`). 1.1.0 (2026-11-17): routes under `/ext/`.
+     * Extension API version manifests are checked against (`"engine"`). 1.1.0 (2026-11-17): routes under `/ext/`;
+     * 1.2.0: optional `"repository"` for panel update checks.
      * Release packages publish the same value as `extension_api` (dev/src/PackageBuilder.php).
      */
-    public const API_VERSION = '1.1.0';
+    public const API_VERSION = '1.2.0';
 
     public static function manager(string $root, string $storage): ExtensionManager
     {

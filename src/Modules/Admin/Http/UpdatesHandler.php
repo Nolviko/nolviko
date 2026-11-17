@@ -62,7 +62,7 @@ final class UpdatesHandler implements RouteHandler
                 if (
                     !TransportPolicy::allows($request) || !$this->admin->isFresh() || !is_string($token)
                     || !$this->csrf->isValid($token) || !is_string($action)
-                    || !in_array($action, ['prepare_recovery', 'upload_release', 'stage_release',
+                    || !in_array($action, ['prepare_recovery', 'upload_release', 'download_release', 'stage_release',
                         'abandon_release', 'check_releases'], true)
                 ) {
                     return $this->render(
@@ -108,6 +108,10 @@ final class UpdatesHandler implements RouteHandler
                             ($input['confirmed'] ?? null) === '1'
                         );
                         $notice = $this->translator->translate('operations.uploaded');
+                    } elseif ($action === 'download_release') {
+                        // ADR-037: the newest signed release straight from the trusted repository.
+                        $job = $uploads->download($actor, ($input['confirmed'] ?? null) === '1');
+                        $notice = $this->translator->translate('operations.uploaded');
                     } elseif ($action === 'stage_release') {
                         $progress = $uploads->step($job ?? throw new RuntimeException('update_not_found'), $actor);
                         $notice = $this->translator->translate('operations.staging', ['count' => $progress['cursor']]);
@@ -140,6 +144,9 @@ final class UpdatesHandler implements RouteHandler
                 'update_quiescent_required', 'update_already_active' => 'operations.busy',
                 'update_schema_required' => 'operations.schema',
                 'update_upload_failed' => 'operations.upload_failed',
+                'update_signed_assets_missing', 'update_discovery_unavailable', 'package_download_invalid',
+                'package_download_failed', 'package_download_redirect', 'package_download_size'
+                    => 'operations.download_failed',
                 default => 'operations.refused',
             };
         }

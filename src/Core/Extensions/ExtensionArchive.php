@@ -137,6 +137,37 @@ final readonly class ExtensionArchive
         });
     }
 
+    /**
+     * Kept copies an update replaced (2026-11-17, restore button): extension ID => newest kept copy.
+     *
+     * @return array<string, array{token: string, version: string}>
+     */
+    public function previousVersions(): array
+    {
+        $kept = [];
+        foreach (glob($this->manager->state->directory . '/previous-*', GLOB_ONLYDIR) ?: [] as $directory) {
+            $token = substr(basename($directory), strlen('previous-'));
+            $json = $directory . '/extension.json';
+            if (preg_match('/^[a-f0-9]{32}$/D', $token) !== 1 || is_link($directory) || !is_file($json)) {
+                continue;
+            }
+            try {
+                $manifest = ExtensionManifest::parse((string) file_get_contents($json));
+            } catch (ExtensionFailure) {
+                continue;
+            }
+            $time = (int) filemtime($directory);
+            if (!isset($kept[$manifest->id]) || $time > $kept[$manifest->id]['time']) {
+                $kept[$manifest->id] = ['token' => $token, 'version' => $manifest->version, 'time' => $time];
+            }
+        }
+
+        return array_map(
+            static fn(array $copy): array => ['token' => $copy['token'], 'version' => $copy['version']],
+            $kept,
+        );
+    }
+
     /** The extension ID inside a staged package (one-step upload: an update disables it before install). */
     public function stagedId(string $token): string
     {

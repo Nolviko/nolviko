@@ -213,8 +213,37 @@ final class ThemeWorkflowTest extends TestCase
         self::assertSame('vendor.imported', $archive->import($path));
         self::assertNotNull((new ThemeCatalog($this->builds->root . '/themes'))->manifest('vendor.imported'));
         self::assertNull($this->builds->pointer(), 'import is not publication');
-        $this->expectExceptionMessage('theme_identity_exists');
+        // The same version again is not an update (2026-11-17).
+        $this->expectExceptionMessage('theme_update_not_newer');
         $archive->import($path);
+    }
+
+    public function testNewerVersionReplacesAnInstalledThemeAndOlderIsRefused(): void
+    {
+        $archive = new ThemeArchive($this->builds);
+        $source = $archive->export('default');
+        $package = function (string $version, string $marker) use ($source): string {
+            $path = $this->files->write('theme-' . $version . '.zip', $source);
+            $zip = new ZipArchive();
+            self::assertTrue($zip->open($path));
+            $manifest = '{"id":"vendor.updated","parent":"default","version":"' . $version . '"}';
+            $zip->addFromString('theme.json', $manifest);
+            $zip->addFromString('views/marker.twig', $marker);
+            $zip->close();
+
+            return $path;
+        };
+        $installed = $this->builds->root . '/themes/vendor.updated';
+
+        $archive->import($package('1.0.0', 'one'));
+        self::assertSame('1.0.0', ThemeArchive::installedVersion($installed));
+        $archive->import($package('1.1.0', 'two'));
+        self::assertSame('1.1.0', ThemeArchive::installedVersion($installed));
+        self::assertSame('two', file_get_contents($installed . '/views/marker.twig'));
+        self::assertSame([], glob($installed . '.old-*') ?: [], 'the old copy is removed');
+
+        $this->expectExceptionMessage('theme_update_not_newer');
+        $archive->import($package('1.0.5', 'older'));
     }
 
     #[DataProvider('unsafePaths')]

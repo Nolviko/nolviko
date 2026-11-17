@@ -122,6 +122,29 @@ final class SiteSettingsTest extends TestCase
         self::assertSame('approval', $this->settings()->peek('registration.mode'), 'peek reads the cache');
     }
 
+    public function testPageLanguageSurvivesACacheClearWithoutTheDatabase(): void
+    {
+        $boot = $this->storage->path . '/settings/boot.json';
+        $connection = $this->connection;
+        $settings = new SiteSettings(
+            static fn(): Connection => $connection,
+            (new CacheFactory($this->storage->path))->namespace('settings'),
+            $boot,
+        );
+        $settings->save(['locale.default' => 'en', 'site.name' => 'Forum'], [], $this->admin);
+        self::assertSame(['locale.default' => 'en'], json_decode((string) file_get_contents($boot), true));
+
+        // An update or a cache reset empties the cache; the language still resolves and no connection is built.
+        (new CacheFactory($this->storage->path))->namespace('settings')->clear();
+        $offline = new SiteSettings(
+            static fn(): Connection => throw new \LogicException('no database for the page language'),
+            (new CacheFactory($this->storage->path))->namespace('settings'),
+            $boot,
+        );
+        self::assertSame('en', $offline->cached('locale.default'));
+        self::assertNull($offline->cached('site.name'), 'only the boot keys live in the boot file');
+    }
+
     public function testStoredValuesFillOnlyWhatConfigLeavesAtTheDefault(): void
     {
         $settings = $this->settings();

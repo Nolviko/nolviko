@@ -25,13 +25,29 @@
 <section><h3>{{ extension.name }}</h3><p><code>{{ extension.id }}</code> {{ extension.version }}</p>
 <p>{% if extension.enabled %}{{ t('admin.extensions.enabled') }}{% else %}{{ t('admin.extensions.disabled') }}{% endif %}
 {% if extension.settings_url|default(null) %} · <a href="{{ extension.settings_url|safe_url }}">{{ t('admin.extensions.settings') }}</a>{% endif %}</p>
+{% if extension.update|default(null) %}<div class="panel update-available"><p role="status"><strong>{{ t('admin.updates.package_available', {version: extension.update.version}) }}</strong>
+<a href="{{ ('https://github.com/' ~ extension.update.repository ~ '/releases/tag/' ~ extension.update.tag)|safe_url }}" rel="noopener noreferrer">{{ t('admin.updates.release_notes') }}</a></p>
+{% if fresh %}<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ actions.update }}"><input type="hidden" name="id" value="{{ extension.id }}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.upload_confirm') }}</label></p>
+<button type="submit">{{ t('admin.updates.package_install', {version: extension.update.version}) }}</button>
+<span class="hint" data-submit-status hidden>{{ t('admin.extensions.uploading') }}</span>
+</form>{% endif %}</div>{% endif %}
 {% if fresh %}<form method="post" action="{{ action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <input type="hidden" name="id" value="{{ extension.id }}">
 <input type="hidden" name="action" value="{% if extension.enabled %}{{ actions.disable }}{% else %}{{ actions.enable }}{% endif %}">
 <p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
 <button type="submit">{% if extension.enabled %}{{ t('admin.extensions.disable') }}{% else %}{{ t('admin.extensions.enable') }}{% endif %}</button>
-</form>{% endif %}</section>
+</form>
+{% if extension.previous|default(null) %}<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ actions.rollback }}"><input type="hidden" name="token" value="{{ extension.previous.token }}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
+<button type="submit" class="btn-s">{{ t('admin.extensions.restore', {version: extension.previous.version}) }}</button>
+</form>{% endif %}
+{% endif %}</section>
 {% else %}<p class="admin-empty">{{ t('admin.extensions.empty') }}</p>{% endfor %}
 {% if fresh %}
 <h2>{{ t('admin.extensions.upload_heading') }}</h2>

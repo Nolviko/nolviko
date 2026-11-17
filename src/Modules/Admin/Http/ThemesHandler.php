@@ -11,6 +11,8 @@ use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\Session\Session;
+use Nolviko\Core\Updates\PackageAssetDownloader;
+use Nolviko\Core\Updates\PackageUpdates;
 use Nolviko\Core\View\TemplateException;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Core\View\ThemeArchive;
@@ -39,8 +41,27 @@ final readonly class ThemesHandler implements RouteHandler
         private MessageTranslator $translator,
         private UrlGenerator $urls,
         private ThemeArchive $archive,
-        private DbalAdminAudit $audit
+        private DbalAdminAudit $audit,
+        private ?PackageUpdates $updates = null,
+        private ?PackageAssetDownloader $downloader = null,
     ) {
+    }
+
+    /** @return array{repository: string, version: string, tag: string, asset: string, bytes: int}|null */
+    private function updateFor(string $theme): ?array
+    {
+        try {
+            $manifest = (new ThemeCatalog($this->builds->root . '/themes'))->manifest($theme);
+        } catch (Throwable) {
+            return null;
+        }
+        $repository = $manifest?->data['repository'] ?? null;
+
+        return $this->updates === null || !is_string($repository) ? null : $this->updates->available(
+            $repository,
+            (string) $manifest->data['version'],
+            PackageUpdates::themeAsset($theme),
+        );
     }
 
     public function handle(Request $request, array $parameters): Response
@@ -61,7 +82,13 @@ final readonly class ThemesHandler implements RouteHandler
                 $status = 403;
                 throw new TemplateException('theme_admin_denied');
             }
-            $themes = (new ThemeCatalog($this->builds->root . '/themes'))->all();
+            $themes = array_map(
+                fn(array $theme): array => $theme + [
+                    'update' => ($theme['valid'] ?? false) && is_string($theme['id'] ?? null)
+                        ? $this->updateFor($theme['id']) : null,
+                ],
+                (new ThemeCatalog($this->builds->root . '/themes'))->all(),
+            );
             $draft = $this->builds->draft($owner);
             if ($draft !== null) {
                 $warnings = $this->builds->get($draft['build'])['warnings'];
@@ -78,7 +105,8 @@ final readonly class ThemesHandler implements RouteHandler
                     throw new TemplateException('theme_admin_denied');
                 }
                 $action = $text('action');
-                if (!in_array($action, ['draft', 'preview', 'stop', 'publish', 'import', 'export', 'rollback'], true)) {
+                $actions = ['draft', 'preview', 'stop', 'publish', 'import', 'update', 'export', 'rollback'];
+                if (!in_array($action, $actions, true)) {
                     throw new TemplateException('theme_action_invalid');
                 }
                 $this->audit->record($owner, 'admin.theme_' . $action . '_requested');
@@ -119,7 +147,32 @@ final readonly class ThemesHandler implements RouteHandler
                         if (!$upload instanceof UploadedFile || !$upload->isValid()) {
                             throw new TemplateException('theme_package_invalid');
                         }
-                        $this->archive->import($upload->getPathname());
+                        $this->refreshActive($this->archive->import($upload->getPathname()), $owner);
+                        break;
+                    case 'update':
+                        // Panel update (2026-11-17): the theme's own repository, after the administrator confirmed.
+                        $update = $this->updateFor($text('theme'));
+                        $repository = $update === null ? null : PackageUpdates::repository($update['repository']);
+                        $ready = $update !== null && $repository !== null && $this->downloader !== null;
+                        if ($text('confirm') !== '1' || !$ready) {
+                            throw new TemplateException('theme_update_unavailable');
+                        }
+                        try {
+                            $file = $this->downloader->download(
+                                $repository,
+                                $update['tag'],
+                                $update['asset'],
+                                $update['bytes'],
+                                4194304,
+                            );
+                        } catch (Throwable) {
+                            throw new TemplateException('theme_update_download_failed');
+                        }
+                        try {
+                            $this->refreshActive($this->archive->import($file), $owner);
+                        } finally {
+                            @unlink($file);
+                        }
                         break;
                     case 'export':
                         return new Response($this->archive->export($text('theme')), 200, [
@@ -142,6 +195,8 @@ final readonly class ThemesHandler implements RouteHandler
                 'theme_draft_stale' => 'admin.themes.stale',
                 'theme_publish_incompatible' => 'admin.themes.incompatible',
                 'theme_identity_exists' => 'admin.themes.identity_exists',
+                'theme_update_not_newer' => 'diagnostics.theme_update_not_newer',
+                'theme_update_unavailable', 'theme_update_download_failed' => 'admin.updates.package_failed',
                 default => 'admin.themes.invalid',
             });
         } catch (Throwable) {
@@ -163,7 +218,24 @@ final readonly class ThemesHandler implements RouteHandler
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),
             'csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token(),
             'actions' => ['draft' => 'draft', 'preview' => 'preview', 'stop' => 'stop', 'publish' => 'publish',
-                'import' => 'import', 'export' => 'export', 'rollback' => 'rollback'],
+                'import' => 'import', 'update' => 'update', 'export' => 'export', 'rollback' => 'rollback'],
         ]), $status, ['Cache-Control' => 'no-store, private']);
+    }
+
+    /**
+     * After a theme update (2026-11-17): when the updated theme is the live one, build it again with the live
+     * token choices and publish it. A build with core-template warnings stays a draft for the administrator.
+     */
+    private function refreshActive(string $theme, int $owner): void
+    {
+        $active = $this->builds->active();
+        if ($active === null || ($active['theme'] ?? null) !== $theme) {
+            return;
+        }
+
+        $draft = $this->builds->build($theme, is_array($active['tokens'] ?? null) ? $active['tokens'] : [], $owner);
+        if ($draft['warnings'] === 0) {
+            $this->builds->publish($owner, $draft['build']);
+        }
     }
 }

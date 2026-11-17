@@ -71,11 +71,15 @@ final readonly class ThemeArchive
         $data = json_decode($files['theme.json'] ?? '', true, 16);
         $id = is_array($data) && is_string($data['id'] ?? null) ? $data['id'] : '';
         $manifest = ThemeManifest::parse($files['theme.json'] ?? '', $id);
-        if (
-            $id === 'default' || file_exists($this->builds->root . '/themes/' . $id)
-            || is_link($this->builds->root . '/themes/' . $id)
-        ) {
+        $installed = $this->builds->root . '/themes/' . $id;
+        // An installed theme is replaced only by a newer version of itself (2026-11-17, theme updates).
+        $replacing = $id !== 'default' && is_dir($installed) && !is_link($installed);
+        if ($id === 'default' || is_link($installed) || (file_exists($installed) && !$replacing)) {
             throw new TemplateException('theme_identity_exists');
+        }
+        $newer = version_compare((string) $manifest->data['version'], self::installedVersion($installed), '>');
+        if ($replacing && !$newer) {
+            throw new TemplateException('theme_update_not_newer');
         }
         $tokens = isset($files['tokens.json']) ? json_decode($files['tokens.json'], true, 16) : [];
         if (!is_array($tokens)) {
@@ -125,8 +129,23 @@ final readonly class ThemeArchive
             }
             try {
                 $target = $this->builds->root . '/themes/' . $id;
-                if (file_exists($target) || is_link($target) || !rename($stage . '/themes/' . $id, $target)) {
+                if (is_link($target) || (file_exists($target) && !$replacing)) {
                     throw new TemplateException('theme_identity_exists');
+                }
+                // Replace: the old folder steps aside in the same directory, the new one moves in, the old one
+                // is removed only after that; a failed move puts the old folder back.
+                $aside = $replacing ? $target . '.old-' . bin2hex(random_bytes(6)) : null;
+                if ($aside !== null && !rename($target, $aside)) {
+                    throw new TemplateException('theme_path_invalid');
+                }
+                if (!rename($stage . '/themes/' . $id, $target)) {
+                    if ($aside !== null) {
+                        rename($aside, $target);
+                    }
+                    throw new TemplateException('theme_identity_exists');
+                }
+                if ($aside !== null) {
+                    self::removeTree($aside);
                 }
             } finally {
                 flock($lock, LOCK_UN);
@@ -136,6 +155,36 @@ final readonly class ThemeArchive
             ThemeBuildCleanup::remove($this->builds->directory(), $stage);
         }
         return $id;
+    }
+
+    /**
+     * The version in an installed theme's theme.json: '1.0.0' when it names none (the manifest default), '0' when
+     * the file cannot be read, so a damaged installation can be repaired by any package.
+     */
+    public static function installedVersion(string $directory): string
+    {
+        $json = $directory . '/theme.json';
+        $data = is_file($json) && !is_link($json) ? json_decode((string) file_get_contents($json), true, 16) : null;
+        if (!is_array($data)) {
+            return '0';
+        }
+
+        return is_string($data['version'] ?? null) ? $data['version'] : '1.0.0';
+    }
+
+    private static function removeTree(string $path): void
+    {
+        if (is_link($path) || is_file($path)) {
+            @unlink($path);
+
+            return;
+        }
+        foreach (scandir($path) ?: [] as $name) {
+            if ($name !== '.' && $name !== '..') {
+                self::removeTree($path . '/' . $name);
+            }
+        }
+        @rmdir($path);
     }
 
     public function export(string $id): string

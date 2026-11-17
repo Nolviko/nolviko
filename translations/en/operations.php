@@ -17,6 +17,14 @@ return [
     'operations.confirm' => 'I approve preparing this release. Installation requires a verified backup.',
     'operations.upload' => 'Verify uploaded release',
     'operations.uploaded' => 'The release was verified. Continue preparing it.',
+    'operations.download_heading' => 'Install the newest official release',
+    'operations.download_help' => 'Downloads the newest release from GitHub and checks its signature with the '
+        . 'Nolviko key in config/update-trust.json before anything is prepared. A backup is taken before files change.',
+    'operations.download' => 'Download and verify',
+    'operations.downloading' => 'Downloading and verifying…',
+    'operations.manual_upload' => 'Or upload a release by hand',
+    'operations.download_failed' => 'The signed release could not be downloaded. Nothing was changed; try again '
+        . 'later or upload it by hand.',
     'operations.staging' => 'Preparation saved. Continue until recovery is ready.',
     'operations.denied' => 'Sign in again as an administrator and submit securely.',
     'operations.collision' => 'An account conflicts with an existing account. Resolve the '

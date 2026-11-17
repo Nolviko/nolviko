@@ -18,6 +18,14 @@ return [
     'operations.confirm' => 'Bu sürümün hazırlanmasını onaylıyorum. Kurulum için doğrulanmış yedek gereklidir.',
     'operations.upload' => 'Yüklenen sürümü doğrula',
     'operations.uploaded' => 'Sürüm doğrulandı. Hazırlamaya devam edin.',
+    'operations.download_heading' => 'En yeni resmi sürümü kur',
+    'operations.download_help' => 'En yeni sürümü GitHub\'dan indirir ve hiçbir şey hazırlanmadan önce imzasını '
+        . 'config/update-trust.json içindeki Nolviko anahtarıyla doğrular. Dosyalar değişmeden önce yedek alınır.',
+    'operations.download' => 'İndir ve doğrula',
+    'operations.downloading' => 'İndiriliyor ve doğrulanıyor…',
+    'operations.manual_upload' => 'Ya da sürümü elle yükleyin',
+    'operations.download_failed' => 'İmzalı sürüm indirilemedi. Hiçbir şey değişmedi; daha sonra tekrar deneyin '
+        . 'ya da elle yükleyin.',
     'operations.staging' => 'Hazırlık kaydedildi. Kurtarma hazır olana kadar devam edin.',
     'operations.denied' => 'Yönetici olarak yeniden doğrulama yapıp güvenli bağlantıdan gönderin.',
     'operations.collision' => 'Bir hesap mevcut hesapla çakışıyor. Yeniden denemeden önce '

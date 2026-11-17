@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nolviko\Core\Extensions;
 
 use JsonException;
+use Nolviko\Core\Updates\PackageUpdates;
 
 /** Strict data-only v1 manifest; discovery never evaluates PHP or arbitrary loader paths. */
 final readonly class ExtensionManifest
@@ -33,8 +34,17 @@ final readonly class ExtensionManifest
 
         $allowed = ['id', 'name', 'version', 'api', 'engine', 'php', 'license', 'depends_on', 'conflicts',
             'providers', 'routes', 'permissions', 'migrations', 'events', 'subscribes', 'ui_slots',
-            'translations', 'packages'];
+            'translations', 'packages', 'repository'];
         if (!is_array($data) || array_is_list($data) || array_diff(array_keys($data), $allowed) !== []) {
+            throw new ExtensionFailure('extension_manifest_invalid');
+        }
+
+        // Optional GitHub repository for update checks in the panel ("owner/name", 2026-11-17, API 1.2).
+        $repository = $data['repository'] ?? null;
+        if (
+            $repository !== null
+            && (!is_string($repository) || preg_match(PackageUpdates::REPOSITORY_PATTERN, $repository) !== 1)
+        ) {
             throw new ExtensionFailure('extension_manifest_invalid');
         }
 

@@ -1,0 +1,51 @@
+# Signs official release ZIPs (ADR-037). On a published release (or by hand for a tag), downloads the release ZIP,
+# writes <zip>.manifest.json and <zip>.sig with the publisher key from the NOLVIKO_RELEASE_SIGNING_KEY secret and
+# uploads both to the same release. Forums verify them with the public key that ships in config/update-trust.json.
+name: sign-release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to sign (e.g. 0.1.0-beta.4)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  sign:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sodium, zip
+          coverage: none
+      - name: Download the release ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          mkdir -p dist
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D dist -p 'nolviko-*.zip'
+          ls -l dist
+      - name: Sign
+        env:
+          NOLVIKO_RELEASE_SIGNING_KEY: ${{ secrets.NOLVIKO_RELEASE_SIGNING_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          channel=stable
+          if [ "$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = "true" ]; then
+            channel=prerelease
+          fi
+          for zip in dist/nolviko-*.zip; do php .github/scripts/sign-release.php "$zip" "$channel"; done
+      - name: Upload manifest and signature
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber dist/*.manifest.json dist/*.sig

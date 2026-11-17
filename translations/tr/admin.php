@@ -26,8 +26,8 @@ return [
     'admin.themes.import' => 'Tema içe aktar',
     'admin.themes.import_help' => 'Yalnızca güvendiğiniz yazarlardan kaynak paketleri yükleyin: temalar şablon '
         . 've betik içerebilir. ZIP sınırları: sıkıştırılmış 4 MiB, açılmış 8 MiB, 300 '
-        . 'dosya. Mevcut tema kimliklerinin üzerine yazılamaz. İçe aktarma temayı '
-        . 'yayımlamaz.',
+        . 'dosya. Kurulu bir temanın daha yeni sürümü eskisinin yerine geçer (sitedeki tema yeniden '
+        . 'yayımlanır).',
     'admin.themes.package' => 'Tema kaynak ZIP dosyası',
     'admin.themes.trusted' => 'Bu kaynak paketinin yazarına güveniyorum.',
     'admin.themes.installed' => 'Yüklü temalar',
@@ -441,6 +441,12 @@ return [
     'admin.extensions.uploading' => 'Kuruluyor…',
     'admin.extensions.installed_notice' => '{name} {version} kuruldu ve etkinleştirildi.',
     'admin.extensions.reauth' => 'Eklentileri yönetmek için parolanızı doğrulayın',
+    'admin.extensions.restore' => '{version} sürümüne geri dön',
+    'admin.updates.package_available' => '{version} sürümü yayımlandı.',
+    'admin.updates.release_notes' => 'Sürüm notları',
+    'admin.updates.package_install' => '{version} sürümüne güncelle',
+    'admin.updates.package_failed' => 'Güncelleme indirilemedi veya kurulamadı. Hiçbir şey değişmedi; '
+        . 'daha sonra tekrar deneyin ya da ZIP dosyasını elle yükleyin.',
     'admin.recovery.backup' => 'Yedekleri al ve doğrula',
     'admin.nav.group.general' => 'Genel',
     'admin.nav.group.forums' => 'Forumlar',

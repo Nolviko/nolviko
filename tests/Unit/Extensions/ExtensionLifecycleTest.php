@@ -249,8 +249,10 @@ final class ExtensionLifecycleTest extends TestCase
         }
 
         $this->manager->disable('acme/hello');
+        self::assertSame([], $archive->previousVersions(), 'nothing kept before an update');
         $archive->install($token);
         self::assertSame('1.1.0', $this->manager->catalog->discover()['manifests']['acme/hello']->version);
+        self::assertSame(['acme/hello' => ['token' => $token, 'version' => '1.0.0']], $archive->previousVersions());
         $archive->rollback($token);
         self::assertSame('1.0.0', $this->manager->catalog->discover()['manifests']['acme/hello']->version);
     }

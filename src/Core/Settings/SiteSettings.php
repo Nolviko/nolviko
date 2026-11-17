@@ -80,9 +80,16 @@ final class SiteSettings
     /**
      * @param Closure(): Connection $connection Built only when the cache misses or on save.
      */
+    /** Keys every request may need before it touches the database; also kept in the boot file (2026-11-17). */
+    public const BOOT_KEYS = ['locale.default', 'locale.time_zone'];
+
+    /**
+     * @param string|null $bootFile Small JSON copy of BOOT_KEYS that survives cache clears and updates; null: none.
+     */
     public function __construct(
         private readonly Closure $connection,
         private readonly Cache $cache,
+        private readonly ?string $bootFile = null,
     ) {
     }
 
@@ -129,6 +136,11 @@ final class SiteSettings
         }
 
         $this->cache->set(self::CACHE_KEY, $values, self::TTL);
+        // Sites that chose a language before the boot file existed get one on the next database read.
+        $boot = array_intersect_key($values, array_flip(self::BOOT_KEYS));
+        if ($this->bootFile !== null && $this->readBoot() !== $boot) {
+            $this->writeBoot($values);
+        }
 
         return $this->values = $values;
     }
@@ -146,8 +158,40 @@ final class SiteSettings
     public function cached(string $key): ?string
     {
         $values = $this->values ?? $this->cache->get(self::CACHE_KEY);
+        if (!is_array($values) && in_array($key, self::BOOT_KEYS, true)) {
+            // Cache cleared (an update, a cache reset): the boot file still knows the page language.
+            $values = $this->readBoot();
+        }
 
         return is_array($values) && is_string($values[$key] ?? null) ? $values[$key] : null;
+    }
+
+    /** @return array<string, string> */
+    private function readBoot(): array
+    {
+        if ($this->bootFile === null || is_link($this->bootFile) || !is_file($this->bootFile)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($this->bootFile), true, 4);
+
+        return is_array($data) ? array_filter($data, 'is_string') : [];
+    }
+
+    /** @param array<string, string> $values */
+    private function writeBoot(array $values): void
+    {
+        if ($this->bootFile === null) {
+            return;
+        }
+        $directory = dirname($this->bootFile);
+        if (!is_dir($directory) && !@mkdir($directory, 0700, true)) {
+            return;
+        }
+        $boot = array_intersect_key($values, array_flip(self::BOOT_KEYS));
+        $temporary = $this->bootFile . '.' . bin2hex(random_bytes(6));
+        if (@file_put_contents($temporary, json_encode($boot, JSON_THROW_ON_ERROR), LOCK_EX) !== false) {
+            @rename($temporary, $this->bootFile) || @unlink($temporary);
+        }
     }
 
     /** Display-only read: never opens a database connection (see values()). */
@@ -212,6 +256,9 @@ final class SiteSettings
         $fresh = array_filter(array_merge($current, $changes), 'is_string');
         $this->cache->set(self::CACHE_KEY, $fresh, self::TTL);
         $this->values = $fresh;
+        if (array_intersect(array_keys($changes), self::BOOT_KEYS) !== []) {
+            $this->writeBoot($fresh);
+        }
 
         return count($changes);
     }

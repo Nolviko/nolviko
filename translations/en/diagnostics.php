@@ -25,6 +25,7 @@ return [
     'diagnostics.theme_fragment_invalid' => 'The theme operation could not be validated or completed.',
     'diagnostics.theme_id_invalid' => 'The theme operation could not be validated or completed.',
     'diagnostics.theme_identity_exists' => 'The theme operation could not be validated or completed.',
+    'diagnostics.theme_update_not_newer' => 'This theme is already installed in the same or a newer version.',
     'diagnostics.theme_manifest_invalid' => 'The theme operation could not be validated or completed.',
     'diagnostics.theme_missing' => 'The theme operation could not be validated or completed.',
     'diagnostics.theme_package_invalid' => 'The theme operation could not be validated or completed.',

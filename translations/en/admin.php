@@ -30,7 +30,7 @@ return [
     'admin.themes.import' => 'Import theme',
     'admin.themes.import_help' => 'Only install source packages from authors you trust: themes may contain '
         . 'templates and scripts. ZIP limit: 4 MiB compressed, 8 MiB expanded, 300 '
-        . 'files. Existing theme IDs cannot be overwritten. Import does not publish.',
+        . 'files. A newer version of an installed theme replaces it (the live theme is published again).',
     'admin.themes.package' => 'Theme source ZIP',
     'admin.themes.trusted' => 'I trust the author of this source package.',
     'admin.themes.installed' => 'Installed themes',
@@ -446,6 +446,12 @@ return [
     'admin.extensions.uploading' => 'Installing…',
     'admin.extensions.installed_notice' => '{name} {version} is installed and enabled.',
     'admin.extensions.reauth' => 'Confirm your password to manage extensions',
+    'admin.extensions.restore' => 'Go back to version {version}',
+    'admin.updates.package_available' => 'Version {version} is available.',
+    'admin.updates.release_notes' => 'Release notes',
+    'admin.updates.package_install' => 'Update to {version}',
+    'admin.updates.package_failed' => 'The update could not be downloaded or installed. Nothing was changed; '
+        . 'try again later or upload the ZIP by hand.',
     'admin.recovery.backup' => 'Capture and verify backups',
     'admin.nav.group.general' => 'General',
     'admin.nav.group.forums' => 'Forums',

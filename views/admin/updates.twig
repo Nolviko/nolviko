@@ -14,13 +14,21 @@
 <button name="action" value="{{ 'stage_release' }}">{{ t('operations.stage') }}</button>
 <button name="action" value="{{ 'abandon_release' }}">{{ t('operations.abandon') }}</button></form>
 {% else %}
+<h2>{{ t('operations.download_heading') }}</h2>
+<p>{{ t('operations.download_help') }}</p>
+<form method="post" action="{{ post_url|safe_url }}" data-admin-progress>
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+<p><label><input type="checkbox" name="confirmed" value="1" required> {{ t('operations.confirm') }}</label></p>
+<button name="action" value="{{ 'download_release' }}">{{ t('operations.download') }}</button>
+<span class="hint" data-submit-status hidden>{{ t('operations.downloading') }}</span></form>
+<details><summary>{{ t('operations.manual_upload') }}</summary>
 <form method="post" action="{{ post_url|safe_url }}" enctype="multipart/form-data">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
 <p><label>{{ t('operations.archive') }} <input type="file" name="archive" accept=".zip" required></label></p>
 <p><label>{{ t('operations.manifest') }} <input type="file" name="manifest" accept=".json" required></label></p>
 <p><label>{{ t('operations.signature') }} <input type="file" name="signature" accept=".sig,.txt" required></label></p>
 <p><label><input type="checkbox" name="confirmed" value="1" required> {{ t('operations.confirm') }}</label></p>
-<button name="action" value="{{ 'upload_release' }}">{{ t('operations.upload') }}</button></form>
+<button name="action" value="{{ 'upload_release' }}">{{ t('operations.upload') }}</button></form></details>
 {% endif %}
 {% else %}<p>{{ t('operations.setup') }}</p>{% endif %}
 

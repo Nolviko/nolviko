@@ -20,6 +20,7 @@ return [
     'diagnostics.theme_fragment_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
     'diagnostics.theme_id_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
     'diagnostics.theme_identity_exists' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
+    'diagnostics.theme_update_not_newer' => 'Bu tema aynı veya daha yeni bir sürümle zaten kurulu.',
     'diagnostics.theme_manifest_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
     'diagnostics.theme_missing' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',
     'diagnostics.theme_package_invalid' => 'Tema işlemi doğrulanamadı veya tamamlanamadı.',

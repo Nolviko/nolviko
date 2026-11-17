@@ -9,6 +9,7 @@ use DateTimeZone;
 use Doctrine\DBAL\Connection;
 use Nolviko\Core\Updates\GitHubReleaseDiscovery;
 use Nolviko\Core\Updates\InstalledInventory;
+use Nolviko\Core\Updates\PackageAssetDownloader;
 use Nolviko\Core\Updates\RecoveryJobContext;
 use Nolviko\Core\Updates\ReleaseCompatibility;
 use Nolviko\Core\Updates\ReleaseVersion;
@@ -27,7 +28,70 @@ final readonly class UpdatePreparation
         private string $storage,
         private string $driver,
         private ?GitHubReleaseDiscovery $discovery = null,
+        private ?PackageAssetDownloader $downloader = null,
     ) {
+    }
+
+    /**
+     * Downloads the newest eligible release with its signed manifest and signature from the trusted repository and
+     * hands them to receive() (ADR-037, 2026-11-17): nothing is staged unless the signature verifies with a key in
+     * config/update-trust.json. Assets: `<zip>`, `<zip>.manifest.json`, `<zip>.sig`.
+     */
+    public function download(int $actor, bool $confirmed): string
+    {
+        if ($actor < 1 || !$confirmed) {
+            throw new RuntimeException('update_confirmation_required');
+        }
+        $trust = $this->trust();
+        $result = ($this->discovery ?? throw new RuntimeException('update_discovery_unavailable'))
+            ->check($trust->repository, $trust->channel, $this->now(), true);
+        $installed = (new UpdatePreflight($this->db, $this->site, $this->storage, $this->driver))->current($trust);
+        $release = ReleaseVersion::select($result->releases, $installed, $trust->channel)
+            ?? throw new RuntimeException('update_not_newer');
+
+        $assets = [];
+        foreach ($release->assets as $asset) {
+            $assets[$asset['name']] = $asset['bytes'];
+        }
+        $zip = null;
+        foreach (array_keys($assets) as $name) {
+            if (str_ends_with($name, '.zip') && isset($assets[$name . '.manifest.json'], $assets[$name . '.sig'])) {
+                $zip = $name;
+            }
+        }
+        if ($zip === null || $this->downloader === null) {
+            throw new RuntimeException('update_signed_assets_missing');
+        }
+
+        $files = [];
+        try {
+            $caps = [
+                $zip => SignedReleaseManifest::MAX_ARCHIVE_BYTES,
+                $zip . '.manifest.json' => SignedReleaseManifest::MAX_BODY_BYTES,
+                $zip . '.sig' => 128,
+            ];
+            foreach ($caps as $name => $cap) {
+                $files[$name] = $this->downloader->download(
+                    $trust->repository,
+                    $release->tag,
+                    $name,
+                    $assets[$name],
+                    $cap,
+                );
+            }
+
+            return $this->receive(
+                $files[$zip],
+                (string) file_get_contents($files[$zip . '.manifest.json']),
+                trim((string) file_get_contents($files[$zip . '.sig'])),
+                $actor,
+                true,
+            );
+        } finally {
+            foreach ($files as $file) {
+                @unlink($file);
+            }
+        }
     }
 
     public function configured(): bool

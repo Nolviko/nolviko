@@ -76,6 +76,8 @@ use Nolviko\Core\Settings\EffectivePostingRules;
 use Nolviko\Core\Settings\SiteSettings;
 use Nolviko\Core\Updates\GitHubReleaseDiscovery;
 use Nolviko\Core\Updates\NativeReleaseHttpClient;
+use Nolviko\Core\Updates\PackageAssetDownloader;
+use Nolviko\Core\Updates\PackageUpdates;
 use Nolviko\Core\Updates\RecoveryPreparation;
 use Nolviko\Core\Updates\SiteAccessLock;
 use Nolviko\Core\View\TemplateRenderer;
@@ -626,11 +628,24 @@ final class CoreServiceProvider implements ServiceProvider
             [TemplateRenderer::class, MessageTranslator::class, CsrfTokens::class, Router::class,
                 ThemeRequest::class, RequestSubject::class, Connection::class],
         );
+        // Panel update checks for extensions and themes (2026-11-17): the core's cached GitHub release discovery.
+        $services->factory(
+            PackageUpdates::class,
+            static fn(CacheFactory $caches, LoggerInterface $logger): PackageUpdates => new PackageUpdates(
+                new GitHubReleaseDiscovery(
+                    new NativeReleaseHttpClient(),
+                    $caches->namespace('update-discovery'),
+                    $logger,
+                ),
+            ),
+            [CacheFactory::class, LoggerInterface::class],
+        );
         $services->factory(
             ExtensionsHandler::class,
             static fn(ExtensionManager $manager, Connection $connection, RequestSubject $subjects,
                 AdminSession $admin, CsrfTokens $csrf, TemplateRenderer $views, MessageTranslator $translator,
-                Router $urls, ExtensionRegistry $extensions): ExtensionsHandler => new ExtensionsHandler(
+                Router $urls, ExtensionRegistry $extensions, PackageUpdates $updates): ExtensionsHandler
+                => new ExtensionsHandler(
                     $manager,
                     new ExtensionMigrations($connection, $manager->catalog),
                     $subjects,
@@ -641,16 +656,19 @@ final class CoreServiceProvider implements ServiceProvider
                     $urls,
                     new DbalAdminAudit($connection),
                     $extensions->adminPages,
+                    $updates,
+                    new PackageAssetDownloader(),
                 ),
             [ExtensionManager::class, Connection::class, RequestSubject::class, AdminSession::class,
                 CsrfTokens::class, TemplateRenderer::class, MessageTranslator::class,
-                Router::class, ExtensionRegistry::class],
+                Router::class, ExtensionRegistry::class, PackageUpdates::class],
         );
         $services->factory(
             ThemesHandler::class,
             static fn(ThemeBuildStore $builds, ThemePresentation $presentation, RequestSubject $subjects,
                 AdminSession $admin, CsrfTokens $csrf, Session $session, TemplateRenderer $views,
-                MessageTranslator $translator, Router $urls, Connection $connection): ThemesHandler
+                MessageTranslator $translator, Router $urls, Connection $connection,
+                PackageUpdates $updates): ThemesHandler
                 => new ThemesHandler(
                     $builds,
                     $presentation,
@@ -662,11 +680,13 @@ final class CoreServiceProvider implements ServiceProvider
                     $translator,
                     $urls,
                     new ThemeArchive($builds),
-                    new DbalAdminAudit($connection)
+                    new DbalAdminAudit($connection),
+                    $updates,
+                    new PackageAssetDownloader(),
                 ),
             [ThemeBuildStore::class, ThemePresentation::class, RequestSubject::class, AdminSession::class,
                 CsrfTokens::class, Session::class, TemplateRenderer::class, MessageTranslator::class,
-                Router::class, Connection::class],
+                Router::class, Connection::class, PackageUpdates::class],
         );
         $services->factory(
             Connection::class,
@@ -1965,7 +1985,8 @@ final class CoreServiceProvider implements ServiceProvider
                         new NativeReleaseHttpClient(),
                         $caches->namespace('update-discovery'),
                         $logger
-                    )
+                    ),
+                    new PackageAssetDownloader(),
                 ),
                 new DbalAdminAudit($connection),
             ),
@@ -2123,9 +2144,9 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             SiteSettings::class,
-            static fn(Closure $connection, CacheFactory $caches): SiteSettings
-                => new SiteSettings($connection, $caches->namespace('settings')),
-            [new Lazy(Connection::class), CacheFactory::class],
+            static fn(Closure $connection, CacheFactory $caches, string $storage): SiteSettings
+                => new SiteSettings($connection, $caches->namespace('settings'), $storage . '/settings/boot.json'),
+            [new Lazy(Connection::class), CacheFactory::class, CompositionRoot::STORAGE],
         );
         // ADR-034: config/local.php wins; otherwise the administrator's stored value; otherwise the default.
         $services->factory(
