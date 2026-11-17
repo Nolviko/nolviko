@@ -16,14 +16,16 @@ final readonly class ExtensionArchive
     ) {
     }
 
-    public function stage(string $archive, bool $trusted, string $expectedSha256): string
+    /**
+     * Unpacks an uploaded ZIP into a private stage and returns its token. Owner decision 2026-11-17: the
+     * administrator no longer types the package's SHA-256; the upload itself (admin session, CSRF, one
+     * confirmation) is the trust decision. The stage still gets its own digest, so `install()` refuses files that
+     * changed between the two steps.
+     */
+    public function stage(string $archive): string
     {
-        if (
-            !$trusted || !is_file($archive) || is_link($archive) || filesize($archive) > 4194304
-            || preg_match('/^[a-f0-9]{64}$/D', $expectedSha256) !== 1
-            || !hash_equals($expectedSha256, (string) hash_file('sha256', $archive))
-        ) {
-            throw new ExtensionFailure('extension_package_untrusted');
+        if (!is_file($archive) || is_link($archive) || filesize($archive) > 4194304) {
+            throw new ExtensionFailure('extension_package_invalid');
         }
 
         return $this->manager->state->locked(function () use ($archive): string {
@@ -133,6 +135,17 @@ final readonly class ExtensionArchive
                 throw new ExtensionFailure('extension_state_write_failed');
             }
         });
+    }
+
+    /** The extension ID inside a staged package (one-step upload: an update disables it before install). */
+    public function stagedId(string $token): string
+    {
+        $manifest = $this->manager->state->directory . '/stage-' . $token . '/extension.json';
+        if (preg_match('/^[a-f0-9]{32}$/D', $token) !== 1 || is_link($manifest) || !is_file($manifest)) {
+            throw new ExtensionFailure('extension_package_invalid');
+        }
+
+        return ExtensionManifest::parse((string) file_get_contents($manifest))->id;
     }
 
     public function install(string $token): void

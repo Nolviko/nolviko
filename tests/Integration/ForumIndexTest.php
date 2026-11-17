@@ -135,10 +135,12 @@ final class ForumIndexTest extends TestCase
         self::assertStringNotContainsString('Secret', $guest . $member);
         self::assertStringNotContainsString('Do not show', $guest . $member);
         self::assertStringContainsString('2 threads · 2 posts', $guest);
-        self::assertStringContainsString('Last post in “Second &lt;i&gt;” by alice', $guest);
+        // Two-line last post (2026-11-17): the escaped title, then what happened and by whom.
+        self::assertStringContainsString('<bdi>Second &lt;i&gt;</bdi></a>', $guest);
+        self::assertStringContainsString('New thread by alice · ', $guest);
         self::assertStringNotContainsString('Release notes', $guest, 'no last post where threads are unreadable');
         self::assertStringContainsString('Release notes', $member);
-        self::assertStringNotContainsString('New thread', $guest);
+        self::assertStringNotContainsString('>New thread</a>', $guest, 'guests get no new-thread button');
         self::assertSame(2, substr_count($member, '>New thread</a>'), 'members may start threads in both forums');
         self::assertStringContainsString('/forums/' . $chat . '/new-thread', $member);
     }

@@ -22,7 +22,7 @@ final class DbalForumIndex implements ForumIndex
 {
     private const SQL = 'SELECT f.id, f.parent_id, f.type, f.title, f.slug, f.depth, f.sort_order, f.description, '
         . 's.thread_count, s.post_count, s.last_post_at, t.id AS last_thread_id, t.title AS last_thread_title, '
-        . 't.slug AS last_thread_slug, '
+        . 't.slug AS last_thread_slug, CASE WHEN t.first_post_id = p.id THEN 1 ELSE 0 END AS last_is_thread_start, '
         . 'u.username AS last_poster_name '
         . 'FROM forums f LEFT JOIN forum_statistics s ON s.forum_id = f.id '
         . 'LEFT JOIN posts p ON p.id = s.last_post_id LEFT JOIN threads t ON t.id = p.thread_id '
@@ -92,6 +92,7 @@ final class DbalForumIndex implements ForumIndex
             $last && $row['last_poster_name'] !== null ? (string) $row['last_poster_name'] : null,
             isset($row['description']) && $row['description'] !== '' ? (string) $row['description'] : null,
             $last && isset($row['last_thread_slug']) ? (string) $row['last_thread_slug'] : null,
+            $last && (int) ($row['last_is_thread_start'] ?? 0) === 1,
         );
     }
 }

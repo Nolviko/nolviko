@@ -8,7 +8,6 @@ use Nolviko\Core\Database\ExtensionMigrations;
 use Nolviko\Core\Extensions\ExtensionArchive;
 use Nolviko\Core\Extensions\ExtensionFailure;
 use Nolviko\Core\Extensions\ExtensionManager;
-use Nolviko\Core\Extensions\ExtensionManifest;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
@@ -49,7 +48,7 @@ final readonly class ExtensionsHandler implements RouteHandler
 
         $status = 200;
         $error = null;
-        $stage = null;
+        $installed = null;
         $rows = [];
         $diagnostics = [];
         try {
@@ -62,8 +61,8 @@ final readonly class ExtensionsHandler implements RouteHandler
 
                 $action = $text('action');
                 if (
-                    !in_array($action, ['enable', 'disable', 'safe', 'resume', 'stage',
-                     'install', 'rollback', 'disable_all'], true)
+                    !in_array($action, ['enable', 'disable', 'safe', 'resume', 'upload', 'rollback',
+                        'disable_all'], true)
                 ) {
                     throw new ExtensionFailure('extension_action_invalid');
                 }
@@ -90,33 +89,45 @@ final readonly class ExtensionsHandler implements RouteHandler
                     case 'resume':
                         $this->manager->resume();
                         break;
-                    case 'stage':
+                    case 'upload':
+                        // One step (owner request 2026-11-17): upload, replace an older version, enable. An update
+                        // still swaps files only while the extension is off, as the core rule requires.
                         $upload = $request->files->get('package');
                         if (!$upload instanceof UploadedFile || !$upload->isValid()) {
                             throw new ExtensionFailure('extension_package_invalid');
                         }
 
-                        $stage = $archive->stage($upload->getPathname(), $text('trusted') === '1', $text('sha256'));
-                        break;
-                    case 'install':
-                        $archive->install($text('token'));
-                        break;
+                        $token = $archive->stage($upload->getPathname());
+                        $id = $archive->stagedId($token);
+                        if (isset($this->manager->state->enabled()[$id])) {
+                            $this->manager->disable($id);
+                        }
+
+                        $archive->install($token);
+                        $this->manager->enable($id, $this->migrations->apply(...));
+
+                        return InstallerPage::redirect(
+                            $this->urls->generate(CoreRoutes::ADMIN_EXTENSIONS) . '?installed=' . rawurlencode($id),
+                        );
                     case 'rollback':
                         $archive->rollback($text('token'));
                         break;
                 }
 
-                if ($stage === null) {
-                    return InstallerPage::redirect($this->urls->generate(CoreRoutes::ADMIN_EXTENSIONS));
-                }
+                return InstallerPage::redirect($this->urls->generate(CoreRoutes::ADMIN_EXTENSIONS));
             }
 
             $enabled = $this->manager->state->enabled();
             $catalog = $this->manager->catalog->discover();
+            $just = $request->query->get('installed');
             foreach ($catalog['manifests'] as $manifest) {
                 // An enabled extension's own settings page, when it registered one (2026-11-15).
                 $settings = isset($enabled[$manifest->id], $this->settingsPages[$manifest->id])
                     ? $this->urls->generate($this->settingsPages[$manifest->id]) : null;
+                if ($just === $manifest->id) {
+                    $installed = ['name' => $manifest->data['name'], 'version' => $manifest->version,
+                        'settings_url' => $settings];
+                }
                 $rows[] = ['id' => $manifest->id, 'name' => $manifest->data['name'], 'version' => $manifest->version,
                     'enabled' => isset($enabled[$manifest->id]), 'settings_url' => $settings];
             }
@@ -138,10 +149,9 @@ final readonly class ExtensionsHandler implements RouteHandler
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),
             'csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token(),
             'fresh' => $this->admin->isFresh(), 'safe' => $this->manager->state->safe(),
-            'extensions' => $rows, 'diagnostics' => $diagnostics, 'error' => $error, 'stage' => $stage,
+            'extensions' => $rows, 'diagnostics' => $diagnostics, 'error' => $error, 'installed' => $installed,
             'actions' => ['safe' => 'safe', 'resume' => 'resume', 'disable_all' => 'disable_all',
-                'enable' => 'enable', 'disable' => 'disable', 'stage' => 'stage',
-                'install' => 'install', 'rollback' => 'rollback'],
+                'enable' => 'enable', 'disable' => 'disable', 'upload' => 'upload', 'rollback' => 'rollback'],
         ]), $status, ['Cache-Control' => 'no-store, private']);
     }
 }

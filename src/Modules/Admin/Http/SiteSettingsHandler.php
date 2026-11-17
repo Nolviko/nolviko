@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Admin\Http;
 
+use DateTimeZone;
 use InvalidArgumentException;
+use Locale;
 use Nolviko\Core\Config\Config;
 use Nolviko\Core\Config\PostingRules;
 use Nolviko\Core\Config\RegistrationRules;
@@ -38,6 +40,8 @@ final readonly class SiteSettingsHandler implements RouteHandler
         private MessageTranslator $translator,
         private TemplateRenderer $views,
         private UrlGenerator $urls,
+        /** @var list<string> Installed catalog locales, offered as the default language. */
+        private array $locales = ['en'],
     ) {
     }
 
@@ -59,6 +63,13 @@ final readonly class SiteSettingsHandler implements RouteHandler
 
         if ($request->isMethod('POST')) {
             try {
+                // Only installed languages can be the default; a forged value is refused like any invalid one.
+                $locale = $submitted['locale.default'] ?? '';
+
+                if ($locale !== '' && !in_array($locale, $this->locales, true)) {
+                    throw new InvalidArgumentException('setting_invalid:locale.default');
+                }
+
                 if (
                     !$this->csrf->isValid(is_string($input[CsrfTokens::FIELD] ?? null) ? $input[CsrfTokens::FIELD] : '')
                     || !$this->admin->isFresh() || $subject->userId === null || !$subject->allows('admin.access')
@@ -91,10 +102,14 @@ final readonly class SiteSettingsHandler implements RouteHandler
                 'id' => 'setting-' . str_replace('.', '-', $key),
                 'label' => $this->label($key),
                 'hint' => $this->hint($key),
-                'type' => $type,
+                'type' => in_array($type, ['locale', 'timezone'], true) ? 'enum' : $type,
                 'value' => $status !== 200 && isset($submitted[$key]) ? $submitted[$key]
                     : ($pinned[$key] ?? $stored[$key] ?? ''),
-                'options' => $type === 'enum' ? array_map(fn(string $option): array => ['value' => $option,
+                'options' => match ($type) {
+                    'locale' => $this->localeOptions(),
+                    'timezone' => $this->timeZoneOptions(),
+                    default => [],
+                } ?: ($type === 'enum' ? array_map(fn(string $option): array => ['value' => $option,
                     'label' => $this->translator->translate(match ($key) {
                         'registration.challenge' => 'admin.site.challenge',
                         'home.layout' => 'admin.site.layout',
@@ -102,7 +117,7 @@ final readonly class SiteSettingsHandler implements RouteHandler
                         'gallery.enabled', 'gallery.approval', 'api.enabled', 'seo.indexnow', 'posting.images'
                             => 'admin.site.switch',
                         default => 'admin.site.mode',
-                    }, ['mode' => $option])], $limit) : [],
+                    }, ['mode' => $option])], $limit) : []),
                 'min' => $type === 'int' ? $limit[0] : null, 'max' => $type === 'int' ? $limit[1] : $limit,
                 'pinned' => isset($pinned[$key]),
                 'default' => SiteSettings::DEFAULTS[$key] ?? '',
@@ -139,6 +154,12 @@ final readonly class SiteSettingsHandler implements RouteHandler
         if ($rules !== null && $rules->challenge !== RegistrationRules::CHALLENGE_NONE) {
             $pinned['registration.challenge'] = $rules->challenge;
         }
+        if ($this->config?->defaultLocale !== null) {
+            $pinned['locale.default'] = $this->config->defaultLocale;
+        }
+        if ($this->config?->defaultTimeZone !== null) {
+            $pinned['locale.time_zone'] = $this->config->defaultTimeZone;
+        }
         if ($mail?->fromAddress !== null) {
             $pinned['mail.from_address'] = $mail->fromAddress;
         }
@@ -166,6 +187,39 @@ final readonly class SiteSettingsHandler implements RouteHandler
         }
 
         return $pinned;
+    }
+
+    /**
+     * "Automatic" first, then each installed language named in itself (English, Türkçe).
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    private function localeOptions(): array
+    {
+        $options = [['value' => '', 'label' => $this->translator->translate('admin.site.locale_auto')]];
+
+        foreach ($this->locales as $locale) {
+            $name = Locale::getDisplayName($locale, $locale);
+            $options[] = ['value' => $locale, 'label' => mb_strtoupper(mb_substr($name, 0, 1)) . mb_substr($name, 1)];
+        }
+
+        return $options;
+    }
+
+    /**
+     * "UTC (default)" first, then every time zone identifier.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    private function timeZoneOptions(): array
+    {
+        $options = [['value' => '', 'label' => $this->translator->translate('admin.site.time_zone_auto')]];
+
+        foreach (DateTimeZone::listIdentifiers() as $zone) {
+            $options[] = ['value' => $zone, 'label' => str_replace('_', ' ', $zone)];
+        }
+
+        return $options;
     }
 
     private function label(string $key): string

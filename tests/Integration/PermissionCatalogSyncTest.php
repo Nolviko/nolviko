@@ -58,6 +58,9 @@ final class PermissionCatalogSyncTest extends TestCase
         $installer = new SchemaInstaller(
             fn(): Connection => $this->connection,
             MigrationRegistry::core(),
+            // One run must finish the whole schema here; a slow engine (Docker on Windows) can exceed the default
+            // per-request budget, which would only test timing (2026-11-17).
+            budget: 3600.0,
             afterComplete: [
                 static function (Connection $db) use (&$syncs): void {
                     $syncs[] = (new PermissionCatalogSync($db))->sync(PermissionCatalog::core());

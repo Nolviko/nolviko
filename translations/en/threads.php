@@ -49,6 +49,10 @@ return [
     'threads.show.marker' => '{status, select, hidden {Deleted: only moderators see this.} '
         . 'pending {Waiting for approval: only moderators see this.} other {Not public.}}',
     'threads.show.locked' => 'This thread is locked.',
+    'threads.show.command.sticky' => 'Pin',
+    'threads.show.command.unsticky' => 'Unpin',
+    'threads.show.command.lock' => 'Lock',
+    'threads.show.command.unlock' => 'Unlock',
     'threads.show.removed_account' => 'A removed account',
     'threads.show.edited' => 'edited {date}',
     'threads.show.empty' => 'There are no posts to show.',

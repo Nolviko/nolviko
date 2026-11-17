@@ -29,6 +29,7 @@ use Nolviko\Modules\Threads\Domain\EditPost;
 use Nolviko\Modules\Threads\Domain\ModerateContent;
 use Nolviko\Modules\Threads\Domain\ReadTracker;
 use Nolviko\Modules\Threads\Domain\Thread;
+use Nolviko\Modules\Threads\Domain\ThreadCommands;
 use Nolviko\Modules\Threads\Domain\ThreadRepository;
 use Nolviko\Modules\Threads\Domain\ThreadStatus;
 use Nolviko\Modules\Threads\Infrastructure\ThreadTaxonomy;
@@ -220,6 +221,7 @@ final class ThreadPageHandler implements RouteHandler
         $forms = $subject->userId !== null && $this->csrf !== null
             ? ['csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token()]
             : [];
+        $forms['moderation'] = $forms === [] ? null : $this->moderationTools($subject, $thread);
         $this->viewCounter?->record(
             (string) $request->headers->get('User-Agent', ''),
             (string) ($request->headers->get('Sec-Purpose') ?? $request->headers->get('Purpose') ?? ''),
@@ -257,6 +259,30 @@ final class ThreadPageHandler implements RouteHandler
             'Content-Type' => 'text/html; charset=UTF-8',
             'Cache-Control' => 'private, no-cache',
         ]);
+    }
+
+    /**
+     * Pin/lock buttons and the manage link for moderators of this forum (2026-11-17); null when they may do none.
+     *
+     * @return array{action: string, manage_url: string, sticky: string|null, lock: string|null}|null
+     */
+    private function moderationTools(SubjectPermissions $subject, Thread $thread): ?array
+    {
+        $may = static fn(string $command): bool => $subject->allows(
+            (string) ThreadCommands::permissionFor($command),
+            $thread->forumId,
+        );
+        $sticky = $may(ThreadCommands::STICKY) ? ($thread->isSticky ? ThreadCommands::UNSTICKY : ThreadCommands::STICKY)
+            : null;
+        $lock = $may(ThreadCommands::LOCK) ? ($thread->isLocked ? ThreadCommands::UNLOCK : ThreadCommands::LOCK) : null;
+
+        if ($sticky === null && $lock === null && !$may(ThreadCommands::MOVE)) {
+            return null;
+        }
+
+        $manage = $this->urls->generate(CoreRoutes::THREAD_MANAGE, ['thread' => (string) $thread->id]);
+
+        return ['action' => $manage, 'manage_url' => $manage, 'sticky' => $sticky, 'lock' => $lock];
     }
 
     /**

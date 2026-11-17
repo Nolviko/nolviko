@@ -432,6 +432,15 @@ return [
     'admin.extensions.install' => 'Hazırlanan paketi kur',
     'admin.extensions.token' => 'Paket referansı',
     'admin.extensions.rollback' => 'Önceki paketi geri yükle (veriler korunur)',
+    'admin.extensions.upload_heading' => 'Eklenti kur veya güncelle',
+    'admin.extensions.upload_drop' => 'Eklenti ZIP dosyasını buraya bırakın veya seçmek için tıklayın',
+    'admin.extensions.upload_hint' => 'Hemen kurulur ve etkinleşir. Kurulu bir eklentinin yeni sürümü '
+        . 'eskisinin yerine geçer, verileri korunur.',
+    'admin.extensions.upload_confirm' => 'Bu pakete güveniyorum ve güncel bir yedeğim var.',
+    'admin.extensions.upload_submit' => 'Kur',
+    'admin.extensions.uploading' => 'Kuruluyor…',
+    'admin.extensions.installed_notice' => '{name} {version} kuruldu ve etkinleştirildi.',
+    'admin.extensions.reauth' => 'Eklentileri yönetmek için parolanızı doğrulayın',
     'admin.recovery.backup' => 'Yedekleri al ve doğrula',
     'admin.nav.group.general' => 'Genel',
     'admin.nav.group.forums' => 'Forumlar',
@@ -569,6 +578,13 @@ return [
     'admin.site.hint.site_name' => 'Üst çubukta, alt bilgide ve e-postalarda görünür. Boşsa: Nolviko.',
     'admin.site.hint.site_description' => 'Arama motorları için sayfa açıklaması olarak kullanılır (en fazla '
         . '300 karakter).',
+    'admin.site.field.locale_default' => 'Varsayılan dil',
+    'admin.site.field.locale_time_zone' => 'Varsayılan saat dilimi',
+    'admin.site.hint.locale_default' => 'Ziyaretçiler ve dil seçmemiş üyeler için tüm sayfaların dili. '
+        . 'Otomatik: ziyaretçinin tarayıcı dili.',
+    'admin.site.hint.locale_time_zone' => 'Ziyaretçiler ve saat dilimi seçmemiş üyeler için tarih ve saatler.',
+    'admin.site.locale_auto' => 'Otomatik (ziyaretçinin tarayıcısı)',
+    'admin.site.time_zone_auto' => 'UTC (varsayılan)',
     'admin.site.hint.registration_min_seconds' => 'Daha hızlı gönderimler bot sayılır (0–60).',
     'admin.site.field.registration_challenge' => 'Kayıtta bot denetimi',
     'admin.site.hint.registration_challenge' => 'İş kanıtı tarayıcıda kendiliğinden çalışır; JavaScript yoksa '

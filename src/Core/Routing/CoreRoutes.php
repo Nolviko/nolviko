@@ -101,6 +101,9 @@ final class CoreRoutes
 
     public const ACCOUNT_EMAIL = 'account.email';
 
+    /** POST: the member's own language and time zone (2026-11-17). */
+    public const ACCOUNT_PREFERENCES = 'account.preferences';
+
     public const ACCOUNT_EMAIL_CONFIRM = 'account.email_confirm';
 
     public const ADMIN_DASHBOARD = 'admin.dashboard';
@@ -392,6 +395,7 @@ final class CoreRoutes
             ),
             new RouteDefinition(self::ACCOUNT_PASSWORD, '/account/password', ['POST'], requiresHttps: true),
             new RouteDefinition(self::ACCOUNT_EMAIL, '/account/email', ['POST'], requiresHttps: true),
+            new RouteDefinition(self::ACCOUNT_PREFERENCES, '/account/preferences', ['POST'], requiresHttps: true),
             new RouteDefinition(
                 self::ACCOUNT_EMAIL_CONFIRM,
                 '/account/email/confirm',

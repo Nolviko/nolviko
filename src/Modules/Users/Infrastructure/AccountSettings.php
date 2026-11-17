@@ -142,6 +142,18 @@ final class AccountSettings
         $this->mail->emailChangeNotice($user->email, $user->username);
     }
 
+    /**
+     * The member's own language and time zone (2026-11-17); null means "the site default". The caller validates
+     * both against the installed locales and the IANA zone list.
+     */
+    public function changePreferences(int $userId, ?string $locale, ?string $timeZone): void
+    {
+        $this->connection->executeStatement(
+            'UPDATE users SET preferred_locale = ?, time_zone = ?, updated_at = ? WHERE id = ?',
+            [$locale, $timeZone, self::stamp(($this->clock)()), $userId],
+        );
+    }
+
     public function isValidChange(#[SensitiveParameter] string $token): bool
     {
         return preg_match(self::TOKEN, $token) === 1 && $this->connection->fetchOne(

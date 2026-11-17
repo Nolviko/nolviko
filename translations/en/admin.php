@@ -437,6 +437,15 @@ return [
     'admin.extensions.install' => 'Install prepared package',
     'admin.extensions.token' => 'Package reference',
     'admin.extensions.rollback' => 'Restore previous package (data is kept)',
+    'admin.extensions.upload_heading' => 'Install or update an extension',
+    'admin.extensions.upload_drop' => 'Drop the extension ZIP here, or click to choose it',
+    'admin.extensions.upload_hint' => 'It is installed and enabled at once. A newer version of an installed '
+        . 'extension replaces it and keeps its data.',
+    'admin.extensions.upload_confirm' => 'I trust this package and have a current backup.',
+    'admin.extensions.upload_submit' => 'Install',
+    'admin.extensions.uploading' => 'Installing…',
+    'admin.extensions.installed_notice' => '{name} {version} is installed and enabled.',
+    'admin.extensions.reauth' => 'Confirm your password to manage extensions',
     'admin.recovery.backup' => 'Capture and verify backups',
     'admin.nav.group.general' => 'General',
     'admin.nav.group.forums' => 'Forums',
@@ -574,6 +583,14 @@ return [
     'admin.site.field.mail_from_name' => 'Sender name of forum emails',
     'admin.site.hint.site_name' => 'Shown in the header, the footer and emails. Empty: Nolviko.',
     'admin.site.hint.site_description' => 'Used as the page description for search engines (up to 300 characters).',
+    'admin.site.field.locale_default' => 'Default language',
+    'admin.site.field.locale_time_zone' => 'Default time zone',
+    'admin.site.hint.locale_default' => 'The language of every page for visitors and for members who have not '
+        . 'chosen one. Automatic: the visitor\'s browser language.',
+    'admin.site.hint.locale_time_zone' => 'Dates and times for visitors and for members who have not chosen a '
+        . 'time zone.',
+    'admin.site.locale_auto' => 'Automatic (visitor\'s browser)',
+    'admin.site.time_zone_auto' => 'UTC (default)',
     'admin.site.hint.registration_min_seconds' => 'Faster submissions are treated as bots (0–60).',
     'admin.site.field.registration_challenge' => 'Bot check on sign-up',
     'admin.site.hint.registration_challenge' => 'Proof of work runs in the browser by itself; without '

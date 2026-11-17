@@ -9,7 +9,9 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use InvalidArgumentException;
 use Nolviko\Core\Cache\Cache;
+use Nolviko\Core\Config\ConfigSchema;
 use Nolviko\Core\Config\RegistrationRules;
+use Nolviko\Core\Locale\LocaleFormatter;
 use Nolviko\Core\View\ThemeTokens;
 use Throwable;
 
@@ -34,6 +36,9 @@ final class SiteSettings
     public const KEYS = [
         'site.name' => ['string', 80],
         'site.description' => ['string', 300],
+        // Owner rule 2026-11-17: every site setting is reachable from the panel; empty means automatic.
+        'locale.default' => ['locale', 16],
+        'locale.time_zone' => ['timezone', 64],
         'registration.mode' => ['enum', RegistrationRules::MODES],
         'registration.min_seconds' => ['int', [0, 60]],
         'registration.challenge' => ['enum', RegistrationRules::CHALLENGES],
@@ -62,6 +67,9 @@ final class SiteSettings
     ];
 
     private const CACHE_KEY = 'site-settings-v1';
+
+    /** Seconds stored values stay cached; only save() changes them and it writes through (2026-11-17). */
+    private const TTL = 2592000;
 
     /** Seconds an unreadable database is remembered as "no stored values". */
     private const FAILURE_TTL = 30;
@@ -120,7 +128,7 @@ final class SiteSettings
             $values[(string) $key] = (string) $value;
         }
 
-        $this->cache->set(self::CACHE_KEY, $values, 3600);
+        $this->cache->set(self::CACHE_KEY, $values, self::TTL);
 
         return $this->values = $values;
     }
@@ -128,6 +136,18 @@ final class SiteSettings
     public function get(string $key): ?string
     {
         return $this->values()[$key] ?? null;
+    }
+
+    /**
+     * Cache-only read (2026-11-17): never builds or opens a connection, for values every request needs before it
+     * knows whether it touches the database (the page language). save() writes the cache through, and any full
+     * values() read refills it after it expires.
+     */
+    public function cached(string $key): ?string
+    {
+        $values = $this->values ?? $this->cache->get(self::CACHE_KEY);
+
+        return is_array($values) && is_string($values[$key] ?? null) ? $values[$key] : null;
     }
 
     /** Display-only read: never opens a database connection (see values()). */
@@ -188,8 +208,10 @@ final class SiteSettings
                 'details' => json_encode(['changed' => array_keys($changes)], JSON_THROW_ON_ERROR),
                 'created_at' => $now]);
         });
-        $this->cache->delete(self::CACHE_KEY);
-        $this->values = null;
+        // Write through, so cache-only readers (the page language) see the change on the next request.
+        $fresh = array_filter(array_merge($current, $changes), 'is_string');
+        $this->cache->set(self::CACHE_KEY, $fresh, self::TTL);
+        $this->values = $fresh;
 
         return count($changes);
     }
@@ -215,6 +237,8 @@ final class SiteSettings
             'int' => preg_match('/^[0-9]{1,6}$/D', $value) === 1 && (int) $value >= $limit[0]
                 && (int) $value <= $limit[1],
             'enum' => in_array($value, $limit, true),
+            'locale' => strlen($value) <= $limit && preg_match(ConfigSchema::LOCALE_PATTERN, $value) === 1,
+            'timezone' => strlen($value) <= $limit && LocaleFormatter::isTimeZone($value),
             default => false,
         };
 

@@ -41,8 +41,12 @@ final readonly class ExtensionContext
         array $dependencies = [],
     ): void {
         $this->owned($route->name);
+        // `/ext/{vendor}/{name}/` (2026-11-17): `/extensions/` collided with the real extensions/ folder when the
+        // ZIP root is the document root, so Apache refused those pages. The old prefix stays valid for packages
+        // built before the change.
+        $owned = str_replace('_', '-', $this->manifest->id) . '/';
         if (
-            !str_starts_with($route->path, '/extensions/' . str_replace('_', '-', $this->manifest->id) . '/')
+            !(str_starts_with($route->path, '/ext/' . $owned) || str_starts_with($route->path, '/extensions/' . $owned))
             || !in_array($route->name, $this->manifest->data['routes'] ?? [], true)
             || !in_array($permission, $this->manifest->data['permissions'] ?? [], true)
             || isset($this->registry->routes[$route->name])

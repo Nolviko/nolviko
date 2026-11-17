@@ -286,13 +286,17 @@ final class CoreServiceProvider implements ServiceProvider
                 InstallationState $state,
                 Closure $auth,
                 Closure $users,
+                Closure $settings,
             ): LocaleContext => new LocaleContext(
                 new LocaleResolver(TranslatorFactory::supportedLocales($root . '/translations')),
                 static fn(Request $request): ?array => $state->isInstalled()
                     ? self::userPreferences($auth, $users, $request)
                     : null,
-                static fn(): ?string => $config?->defaultLocale,
-                static fn(): ?string => $config?->defaultTimeZone,
+                // config/local.php wins; otherwise the value chosen in Admin > Site settings (2026-11-17).
+                static fn(): ?string => $config?->defaultLocale
+                    ?? ($state->isInstalled() ? $settings()->cached('locale.default') : null),
+                static fn(): ?string => $config?->defaultTimeZone
+                    ?? ($state->isInstalled() ? $settings()->cached('locale.time_zone') : null),
             ),
             [
                 CompositionRoot::ROOT,
@@ -300,6 +304,7 @@ final class CoreServiceProvider implements ServiceProvider
                 InstallationState::class,
                 new Lazy(AuthSession::class),
                 new Lazy(UserRepository::class),
+                new Lazy(SiteSettings::class),
             ],
         );
         $services->factory(
@@ -2362,6 +2367,7 @@ final class CoreServiceProvider implements ServiceProvider
                 MessageTranslator $translator,
                 TemplateRenderer $views,
                 Router $router,
+                string $root,
             ): SiteSettingsHandler => new SiteSettingsHandler(
                 $settings,
                 $config,
@@ -2372,9 +2378,11 @@ final class CoreServiceProvider implements ServiceProvider
                 $translator,
                 $views,
                 $router,
+                TranslatorFactory::supportedLocales($root . '/translations'),
             ),
             [SiteSettings::class, CompositionRoot::CONFIG, RequestSubject::class, AdminSession::class,
-                CsrfTokens::class, Session::class, MessageTranslator::class, TemplateRenderer::class, Router::class],
+                CsrfTokens::class, Session::class, MessageTranslator::class, TemplateRenderer::class, Router::class,
+                CompositionRoot::ROOT],
         );
         $services->factory(
             MemberHandler::class,
@@ -2699,6 +2707,7 @@ final class CoreServiceProvider implements ServiceProvider
             AccountHandler::PASSWORD,
             AccountHandler::EMAIL,
             AccountHandler::CONFIRM,
+            AccountHandler::PREFERENCES,
         ];
 
         foreach ($accountModes as $mode) {
@@ -2716,6 +2725,7 @@ final class CoreServiceProvider implements ServiceProvider
                     Closure $identityProviders,
                     Connection $connection,
                     CsrfTokens $tokens,
+                    string $root,
                 ): AccountHandler => new AccountHandler(
                     $translator,
                     $views,
@@ -2737,6 +2747,7 @@ final class CoreServiceProvider implements ServiceProvider
                         'unlink_action' => $router->generate(CoreRoutes::ACCOUNT_EXTERNAL),
                         'csrf_token' => $tokens->token(),
                     ],
+                    TranslatorFactory::supportedLocales($root . '/translations'),
                 ),
                 [
                     MessageTranslator::class,
@@ -2750,6 +2761,7 @@ final class CoreServiceProvider implements ServiceProvider
                     new Lazy(IdentityProviders::class),
                     Connection::class,
                     CsrfTokens::class,
+                    CompositionRoot::ROOT,
                 ],
             );
         }
@@ -3432,6 +3444,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Closure $accountPassword,
                 Closure $accountEmail,
                 Closure $accountConfirm,
+                Closure $accountPreferences,
                 Closure $auditLog,
                 Closure $forumRead,
                 Closure $permissionSimulator,
@@ -3576,6 +3589,7 @@ final class CoreServiceProvider implements ServiceProvider
                     CoreRoutes::ACCOUNT_PASSWORD => $accountPassword,
                     CoreRoutes::ACCOUNT_EMAIL => $accountEmail,
                     CoreRoutes::ACCOUNT_EMAIL_CONFIRM => $accountConfirm,
+                    CoreRoutes::ACCOUNT_PREFERENCES => $accountPreferences,
                     CoreRoutes::ADMIN_AUDIT => $auditLog,
                     CoreRoutes::FORUM_READ => $forumRead,
                     CoreRoutes::ADMIN_PERMISSIONS => $permissionSimulator,
@@ -3662,6 +3676,7 @@ final class CoreServiceProvider implements ServiceProvider
                 new Lazy(AccountHandler::class . '.' . AccountHandler::PASSWORD),
                 new Lazy(AccountHandler::class . '.' . AccountHandler::EMAIL),
                 new Lazy(AccountHandler::class . '.' . AccountHandler::CONFIRM),
+                new Lazy(AccountHandler::class . '.' . AccountHandler::PREFERENCES),
                 new Lazy(AuditLogHandler::class),
                 new Lazy(ForumReadHandler::class),
                 new Lazy(PermissionSimulatorHandler::class),

@@ -3,7 +3,7 @@
 **A modern, self-hosted forum that runs on ordinary shared hosting.**
 Upload a folder, open your site, follow the installer — no Composer, Node, cron, Redis or shell access needed.
 
-> **Status: public beta (0.1.0-beta.2).** Feature-complete for everyday communities and tested on MySQL,
+> **Status: public beta (0.1.0-beta.3).** Feature-complete for everyday communities and tested on MySQL,
 > MariaDB and PostgreSQL. Expect rough edges; keep backups and read the [known limitations](#known-limitations).
 
 ---

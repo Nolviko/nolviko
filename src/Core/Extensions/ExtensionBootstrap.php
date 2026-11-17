@@ -24,7 +24,7 @@ final class ExtensionBootstrap
         return new ExtensionManager(
             new ExtensionCatalog($root . '/extensions'),
             new ExtensionState($storage . '/extensions'),
-            new ExtensionResolver(new ComposerVersionConstraint(), '1.0.0', PHP_VERSION, $packages),
+            new ExtensionResolver(new ComposerVersionConstraint(), '1.1.0', PHP_VERSION, $packages),
         );
     }
 

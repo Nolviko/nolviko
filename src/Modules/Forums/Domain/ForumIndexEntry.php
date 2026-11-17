@@ -27,6 +27,7 @@ final class ForumIndexEntry
         public readonly ?string $lastPosterName,
         public readonly ?string $description = null,
         public readonly ?string $lastThreadSlug = null,
+        public readonly bool $lastIsThreadStart = false,
     ) {
     }
 }

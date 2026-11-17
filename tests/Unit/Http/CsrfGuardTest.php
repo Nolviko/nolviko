@@ -131,6 +131,19 @@ final class CsrfGuardTest extends TestCase
             'other scheme' => [['HTTP_ORIGIN' => 'http://forum.example'], Response::HTTP_FORBIDDEN],
             'other port' => [['HTTP_ORIGIN' => self::SITE . ':8443'], Response::HTTP_FORBIDDEN],
             'opaque origin' => [['HTTP_ORIGIN' => 'null'], Response::HTTP_FORBIDDEN],
+            // A page served with Referrer-Policy: no-referrer posts its own forms with Origin: null (2026-11-17).
+            'opaque origin, same-origin fetch' => [
+                ['HTTP_ORIGIN' => 'null', 'HTTP_SEC_FETCH_SITE' => 'same-origin'],
+                Response::HTTP_OK,
+            ],
+            'opaque origin, cross-site (sandboxed frame)' => [
+                ['HTTP_ORIGIN' => 'null', 'HTTP_SEC_FETCH_SITE' => 'cross-site'],
+                Response::HTTP_FORBIDDEN,
+            ],
+            'opaque origin, same-site subdomain' => [
+                ['HTTP_ORIGIN' => 'null', 'HTTP_SEC_FETCH_SITE' => 'same-site'],
+                Response::HTTP_FORBIDDEN,
+            ],
             'origin wins over referer' => [
                 ['HTTP_ORIGIN' => 'https://evil.example', 'HTTP_REFERER' => self::SITE . '/act'],
                 Response::HTTP_FORBIDDEN,

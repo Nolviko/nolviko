@@ -137,6 +137,7 @@ final class ForumIndexHandler implements RouteHandler
                 ),
             $entry->description,
             $subforums,
+            $entry->lastIsThreadStart,
         );
     }
 }

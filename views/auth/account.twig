@@ -20,6 +20,22 @@
 {% endif %}
 <p>{{ t('auth.account.signed_in_as', {name: username, email: email}) }}</p>
 
+{% if preferences|default(null) %}
+<h2>{{ t('auth.account.preferences_heading') }}</h2>
+<form method="post" action="{{ preferences.action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="preferences-locale">{{ t('auth.account.language') }}</label>
+<select id="preferences-locale" name="locale"><option value="">{{ t('auth.account.language_default') }}</option>
+{% for option in preferences.locales %}<option value="{{ option.value }}" lang="{{ option.value }}"{% if option.value == preferences.locale %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select></p>
+<p><label for="preferences-zone">{{ t('auth.account.time_zone') }}</label>
+<select id="preferences-zone" name="time_zone"><option value="">{{ t('auth.account.time_zone_default') }}</option>
+{% for zone in preferences.zones %}<option value="{{ zone }}"{% if zone == preferences.time_zone %} selected{% endif %}>{{ zone|replace({'_': ' '}) }}</option>{% endfor %}
+</select></p>
+<p><button type="submit">{{ t('auth.account.preferences_submit') }}</button></p>
+</form>
+{% endif %}
+
 <h2>{{ t('auth.account.password_heading') }}</h2>
 <form method="post" action="{{ password_action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">

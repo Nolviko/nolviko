@@ -63,6 +63,12 @@ final class ThreadCommands
         );
     }
 
+    /** The permission one command needs in the thread's forum (null for an unknown command). */
+    public static function permissionFor(string $command): ?string
+    {
+        return self::PERMISSIONS[$command] ?? null;
+    }
+
     /**
      * @param int|null $targetForumId Required for MOVE, ignored otherwise.
      *

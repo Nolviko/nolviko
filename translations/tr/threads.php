@@ -46,6 +46,10 @@ return [
         . 'görebilir.} pending {Onay bekliyor: yalnızca moderatörler '
         . 'görebilir.} other {Herkese açık değil.}}',
     'threads.show.locked' => 'Bu konu kilitli.',
+    'threads.show.command.sticky' => 'Sabitle',
+    'threads.show.command.unsticky' => 'Sabitlemeyi kaldır',
+    'threads.show.command.lock' => 'Kilitle',
+    'threads.show.command.unlock' => 'Kilidi aç',
     'threads.show.removed_account' => 'Silinmiş hesap',
     'threads.show.edited' => 'düzenlendi: {date}',
     'threads.show.empty' => 'Gösterilecek ileti yok.',

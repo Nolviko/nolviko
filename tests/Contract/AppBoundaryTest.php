@@ -75,7 +75,11 @@ final class AppBoundaryTest extends TestCase
 
         self::assertNotContains('/vendor/', $ignored);
         self::assertContains('/.env', $ignored);
-        self::assertContains('/storage/cache/', $ignored);
+        // Since 0.1.0-beta.2 the whole runtime folder is ignored (`/storage/*`, only its .htaccess committed).
+        self::assertTrue(
+            in_array('/storage/cache/', $ignored, true) || in_array('/storage/*', $ignored, true),
+            'storage/ runtime data must stay out of git',
+        );
     }
 
     private static function root(): string

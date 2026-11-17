@@ -240,7 +240,7 @@ final class ExtensionLifecycleTest extends TestCase
             'extension.json' => self::json(['version' => '1.1.0']),
             'src/Provider.php' => '<?php return null;',
         ]);
-        $token = $archive->stage($zip, true, hash_file('sha256', $zip));
+        $token = $archive->stage($zip);
         try {
             $archive->install($token);
             self::fail('active update installed');
@@ -291,7 +291,7 @@ final class ExtensionLifecycleTest extends TestCase
             'src/p.php' => '<?php',
         ]);
         try {
-            (new ExtensionArchive($this->manager))->stage($zip, true, hash_file('sha256', $zip));
+            (new ExtensionArchive($this->manager))->stage($zip);
             self::fail('incompatible update staged');
         } catch (ExtensionFailure $failure) {
             self::assertSame('extension_incompatible', $failure->getMessage());
@@ -300,33 +300,21 @@ final class ExtensionLifecycleTest extends TestCase
         self::assertSame('1.0.0', $this->manager->active()[0]->version);
     }
 
-    public function testArchiveTraversalAndTrustHashAreRejected(): void
+    public function testArchiveTraversalIsRejected(): void
     {
         $zip = $this->zip(['extension.json' => self::json(), '../escape.php' => '<?php']);
         $archive = new ExtensionArchive($this->manager);
-        try {
-            $archive->stage($zip, false, str_repeat('0', 64));
-            self::fail('untrusted archive accepted');
-        } catch (ExtensionFailure $failure) {
-            self::assertSame('extension_package_untrusted', $failure->getMessage());
-        }
 
         $this->expectExceptionMessage('extension_path_invalid');
-        $archive->stage($zip, true, hash_file('sha256', $zip));
+        $archive->stage($zip);
     }
 
-    public function testWrongFingerprintAndTamperedStageCannotInstall(): void
+    public function testStagedIdAndTamperedStageCannotInstall(): void
     {
         $zip = $this->zip(['extension.json' => self::json(), 'src/Provider.php' => '<?php return null;']);
         $archive = new ExtensionArchive($this->manager);
-        try {
-            $archive->stage($zip, true, str_repeat('0', 64));
-            self::fail('wrong fingerprint accepted');
-        } catch (ExtensionFailure $failure) {
-            self::assertSame('extension_package_untrusted', $failure->getMessage());
-        }
-
-        $token = $archive->stage($zip, true, hash_file('sha256', $zip));
+        $token = $archive->stage($zip);
+        self::assertSame('acme/hello', $archive->stagedId($token));
         $this->files->write('private/stage-' . $token . '/src/Provider.php', '<?php changed();');
         $this->expectExceptionMessage('extension_integrity_changed');
         $archive->install($token);

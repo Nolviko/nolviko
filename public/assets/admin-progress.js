@@ -26,3 +26,29 @@
         form.querySelectorAll('[data-submit-status]').forEach(status => { status.hidden = false; });
     });
 })();
+/* Drop zones (2026-11-17): drop or choose a ZIP and the form is sent at once when its other fields are valid. */
+(() => {
+    'use strict';
+    document.querySelectorAll('form[data-dropzone]').forEach(form => {
+        const zone = form.querySelector('.dropzone');
+        const input = form.querySelector('input[type=file]');
+        if (!zone || !input) return;
+        const send = () => {
+            if (input.files.length === 0) return;
+            if (form.checkValidity()) form.requestSubmit(); else form.reportValidity();
+        };
+        ['dragenter', 'dragover'].forEach(type => zone.addEventListener(type, event => {
+            event.preventDefault();
+            zone.classList.add('is-over');
+        }));
+        ['dragleave', 'dragend'].forEach(type => zone.addEventListener(type, () => zone.classList.remove('is-over')));
+        zone.addEventListener('drop', event => {
+            event.preventDefault();
+            zone.classList.remove('is-over');
+            if (!event.dataTransfer || event.dataTransfer.files.length === 0) return;
+            input.files = event.dataTransfer.files;
+            send();
+        });
+        input.addEventListener('change', send);
+    });
+})();

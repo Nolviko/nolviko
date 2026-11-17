@@ -10,7 +10,7 @@ use Nolviko\Core\View\ViewModel;
 /**
  * One board index row for `forums/index.twig` (M03.09). `url` is the forum page (null for categories, M03.11);
  * `newThreadUrl` is null when the reader may not start threads there; the last-post fields are null when there
- * is none to show.
+ * is none to show. `lastIsThreadStart` tells whether that last post opened its thread (two-line display, 2026-11-17).
  */
 final readonly class ForumRowView implements ViewModel
 {
@@ -29,6 +29,7 @@ final readonly class ForumRowView implements ViewModel
         public ?string $lastThreadUrl = null,
         public ?string $description = null,
         public array $subforums = [],
+        public bool $lastIsThreadStart = false,
     ) {
     }
 }

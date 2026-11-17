@@ -14,7 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * The token comes from the `X-CSRF-Token` header or the `_csrf_token` form field. As a second layer, an
  * `Origin` header (or, without one, a `Referer`) must name this site; a request with neither relies on the
- * token alone, since privacy tools strip both. `Origin: null` is refused.
+ * token alone, since privacy tools strip both. `Origin: null` is refused unless the browser itself marks the
+ * request `Sec-Fetch-Site: same-origin` (2026-11-17): pages sent with `Referrer-Policy: no-referrer` (account,
+ * conversations, password reset) make browsers post their own forms with `Origin: null`. Page scripts cannot set
+ * that header, and a sandboxed or foreign frame is marked `cross-site`.
  */
 final class CsrfGuard implements RouteGuard
 {
@@ -62,6 +65,10 @@ final class CsrfGuard implements RouteGuard
     {
         $site = $request->getSchemeAndHttpHost();
         $origin = $request->headers->get('Origin');
+
+        if ($origin === 'null') {
+            return $request->headers->get('Sec-Fetch-Site') === 'same-origin';
+        }
 
         if ($origin !== null) {
             return $origin === $site;

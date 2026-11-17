@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Nolviko\Modules\Users\Http;
 
 use Closure;
+use DateTimeZone;
+use Locale;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
+use Nolviko\Core\Locale\LocaleFormatter;
 use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Mail\MailDeliveryFailed;
 use Nolviko\Core\Routing\CoreRoutes;
@@ -39,6 +42,9 @@ final class AccountHandler implements RouteHandler
 
     public const CONFIRM = 'confirm';
 
+    /** POST `/account/preferences`: language and time zone (2026-11-17). */
+    public const PREFERENCES = 'preferences';
+
     private const TOKEN = '/^[A-Za-z0-9_-]{1,64}$/D';
 
     public function __construct(
@@ -52,6 +58,8 @@ final class AccountHandler implements RouteHandler
         private readonly string $mode,
         private readonly ?Closure $factors = null,
         private readonly ?Closure $external = null,
+        /** @var list<string> Installed catalog locales a member may choose. */
+        private readonly array $locales = [],
     ) {
     }
 
@@ -102,6 +110,7 @@ final class AccountHandler implements RouteHandler
                 'notice' => match ($request->query->get('done')) {
                     'password' => $this->translator->translate('auth.account.password_changed'),
                     'email' => $this->translator->translate('auth.account.email_requested'),
+                    'preferences' => $this->translator->translate('auth.account.preferences_saved'),
                     default => null,
                 },
             ]);
@@ -110,6 +119,26 @@ final class AccountHandler implements RouteHandler
         $field = static fn(string $name): string => is_string($request->request->get($name))
             ? (string) $request->request->get($name)
             : '';
+
+        if ($this->mode === self::PREFERENCES) {
+            $locale = $field('locale');
+            $zone = $field('time_zone');
+
+            // Empty means "use the site default"; anything else must be installed or a known zone.
+            if (
+                ($locale !== '' && !in_array($locale, $this->locales, true))
+                || ($zone !== '' && !LocaleFormatter::isTimeZone($zone))
+            ) {
+                return $this->page($userId, [
+                    'errors' => [$this->translator->translate('auth.account.preferences_invalid')],
+                    'form' => $this->mode,
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $this->settings->changePreferences($userId, $locale === '' ? null : $locale, $zone === '' ? null : $zone);
+
+            return InstallerPage::redirect($this->urls->generate(CoreRoutes::ACCOUNT) . '?done=' . $this->mode);
+        }
 
         try {
             if ($this->mode === self::PASSWORD) {
@@ -181,6 +210,17 @@ final class AccountHandler implements RouteHandler
             'privacy_url' => $this->urls->generate(CoreRoutes::ACCOUNT_PRIVACY),
             'password_action' => $this->urls->generate(CoreRoutes::ACCOUNT_PASSWORD),
             'email_action' => $this->urls->generate(CoreRoutes::ACCOUNT_EMAIL),
+            'preferences' => [
+                'action' => $this->urls->generate(CoreRoutes::ACCOUNT_PREFERENCES),
+                'locale' => $user?->preferredLocale ?? '',
+                'time_zone' => $user?->timeZone ?? '',
+                'locales' => array_map(static function (string $locale): array {
+                    $name = Locale::getDisplayName($locale, $locale);
+
+                    return ['value' => $locale, 'label' => mb_strtoupper(mb_substr($name, 0, 1)) . mb_substr($name, 1)];
+                }, $this->locales),
+                'zones' => DateTimeZone::listIdentifiers(),
+            ],
             'second_factors' => $this->secondFactors($userId),
             // Outside accounts (2026-11-15): {accounts: list, notice: ?string, csrf_token, unlink_action}.
             'external' => $this->external === null ? null : ($this->external)($userId),

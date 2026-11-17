@@ -32,6 +32,12 @@
 {% if reply_url is not null %}<a class="btn" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>{% endif %}
 </div>
 </div>
+{% if moderation|default(null) %}
+<div class="row thread-moderation">
+{% for command in [moderation.sticky, moderation.lock] %}{% if command %}<form method="post" action="{{ moderation.action|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="command" value="{{ command }}"><button type="submit" class="btn btn-s">{% if command == 'sticky' %}{{ t('threads.show.command.sticky') }}{% elseif command == 'unsticky' %}{{ t('threads.show.command.unsticky') }}{% elseif command == 'lock' %}{{ t('threads.show.command.lock') }}{% else %}{{ t('threads.show.command.unlock') }}{% endif %}</button></form>{% endif %}{% endfor %}
+<a class="btn-s" href="{{ moderation.manage_url|safe_url }}">{{ t('threads.manage.title') }}</a>
+</div>
+{% endif %}
 {% if labels|default(null) and (labels.tags is not empty or labels.manage_url) %}
 <p class="row thread-tags">{% for tag in labels.tags %}<a class="chip chip-tag" href="{{ path('tags.show', {tag: tag.slug})|safe_url }}">#<bdi>{{ tag.name }}</bdi></a>{% endfor %}
 {% if labels.manage_url %}<a class="btn-s" href="{{ labels.manage_url|safe_url }}">{{ t('threads.labels.edit') }}</a>{% endif %}</p>
