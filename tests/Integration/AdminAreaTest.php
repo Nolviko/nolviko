@@ -23,6 +23,7 @@ use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\RouteDefinition;
 use Nolviko\Core\Routing\Router;
 use Nolviko\Core\Session\CsrfTokens;
+use Nolviko\Core\Updates\RecoveryPreparation;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Core\View\ThemeArchive;
 use Nolviko\Core\View\ThemeBuildStore;
@@ -37,8 +38,10 @@ use Nolviko\Modules\Admin\Http\ReauthHandler;
 use Nolviko\Modules\Admin\Http\SavedFiltersHandler;
 use Nolviko\Modules\Admin\Http\SettingsCatalog;
 use Nolviko\Modules\Admin\Http\ThemesHandler;
+use Nolviko\Modules\Admin\Http\UpdatesHandler;
 use Nolviko\Modules\Admin\Infrastructure\DbalAdminAudit;
 use Nolviko\Modules\Admin\Infrastructure\DbalAdminStats;
+use Nolviko\Modules\Admin\Infrastructure\DbalUpdateOverview;
 use Nolviko\Modules\Admin\Infrastructure\ForumModeratorAssignments;
 use Nolviko\Modules\Admin\Infrastructure\SavedAdminFilters;
 use Nolviko\Modules\Forums\Domain\ForumType;
@@ -193,7 +196,7 @@ final class AdminAreaTest extends TestCase
 
         self::assertSame('/admin/members?status=active', $confirm('/admin/members?status=active'));
         self::assertStringContainsString(
-            'Your password is confirmed for 60 more minutes.',
+            'Your password is confirmed for 15 more minutes.',
             (string) $this->reauth($session)->handle(Request::create('/admin/reauth'), [])->getContent(),
             'an open window is shown, not hidden behind the same prompt',
         );
@@ -211,12 +214,50 @@ final class AdminAreaTest extends TestCase
 
         $user = (new DbalUserRepository($this->connection))->findById($this->admin);
         self::assertNotNull($user);
-        $auth = new AuthSession($session, new CsrfTokens($session), new MemoryUsers(), new ResponseCookies());
-        $auth->login($user, false, Request::create('/login/external/google'), confirmsAdmin: false);
-        self::assertFalse((new AdminSession($session))->isFresh(), 'an external sign-in never inherits the window');
-        // Owner decision 2026-11-17: a sign-in that checked the password (and second factor) opens the window.
-        $auth->login($user, false, Request::create('/login'));
-        self::assertTrue((new AdminSession($session))->isFresh(), 'a password sign-in confirms the administrator');
+        (new AuthSession($session, new CsrfTokens($session), new MemoryUsers(), new ResponseCookies()))
+            ->login($user, false, Request::create('/login'));
+        // Owner decision 2026-11-18: signing in never confirms; actions that can break the site ask in a popup.
+        self::assertFalse((new AdminSession($session))->isConfirmed(), 'a login never inherits the confirmation');
+    }
+
+    /** Owner decision 2026-11-18: of the update steps, only those that can break the site ask, in a popup. */
+    public function testCoreUpdateStepsAskForThePasswordInThePopup(): void
+    {
+        $session = $this->session($this->admin);
+        $csrf = new CsrfTokens($session);
+        $admin = new AdminSession($session);
+        $files = new TemporaryDirectory();
+        try {
+            $handler = new UpdatesHandler(
+                self::translator(),
+                self::views(),
+                new DbalUpdateOverview($this->connection),
+                self::router(),
+                $admin,
+                $this->subjects($session),
+                $csrf,
+                new RecoveryPreparation($files->path, $files->path . '/storage'),
+            );
+            $step = static function () use ($handler, $csrf): array {
+                $request = Request::create('https://example.test/admin/updates', 'POST', [
+                    'action' => 'download_release', 'confirmed' => '1', CsrfTokens::FIELD => $csrf->token(),
+                ]);
+                $request->headers->set('X-Nolviko-Update', '1');
+                $response = $handler->handle($request, []);
+
+                return [$response->getStatusCode(), json_decode((string) $response->getContent(), true)];
+            };
+            self::assertTrue($admin->isFresh(), 'ordinary admin work never asks');
+            [$status, $body] = $step();
+            self::assertSame(403, $status);
+            self::assertTrue($body['password'], 'the page opens the password popup');
+            $admin->confirm();
+            [$status, $body] = $step();
+            self::assertSame(422, $status, 'past the password: this fixture has no update trust');
+            self::assertArrayNotHasKey('password', $body);
+        } finally {
+            $files->remove();
+        }
     }
 
     public function testReauthenticationIsAuditedThrottledAndOpensTheWindow(): void
@@ -298,8 +339,6 @@ final class AdminAreaTest extends TestCase
         );
         $input = ['action' => 'assign', 'forum' => (string) $forum, 'member' => 'Member',
             CsrfTokens::FIELD => $csrf->token()];
-        self::assertSame(403, $moderators->handle(Request::create('/admin/forum-moderators', 'POST', $input), [])
-            ->getStatusCode());
         $adminSession->confirm();
         self::assertSame(303, $moderators->handle(Request::create('/admin/forum-moderators', 'POST', $input), [])
             ->getStatusCode());
@@ -336,17 +375,6 @@ final class AdminAreaTest extends TestCase
             );
             self::assertSame(200, $handler->handle(Request::create('/admin/themes'), [])->getStatusCode());
             $input = ['action' => 'draft', 'theme' => 'default', 'tokens' => '{}', CsrfTokens::FIELD => $csrf->token()];
-            self::assertSame(
-                403,
-                $handler->handle(
-                    Request::create(
-                        '/admin/themes',
-                        'POST',
-                        $input
-                    ),
-                    []
-                )->getStatusCode()
-            );
             $admin->confirm();
             $input[CsrfTokens::FIELD] = 'invalid';
             self::assertSame(
@@ -462,10 +490,6 @@ final class AdminAreaTest extends TestCase
             );
             self::assertSame(200, $handler->handle(Request::create('/admin/extensions'), [])->getStatusCode());
             $input = ['action' => 'safe', 'confirm' => '1', CsrfTokens::FIELD => $csrf->token()];
-            self::assertSame(403, $handler->handle(
-                Request::create('/admin/extensions', 'POST', $input),
-                [],
-            )->getStatusCode());
             $admin->confirm();
             $bad = $input;
             $bad[CsrfTokens::FIELD] = 'bad';

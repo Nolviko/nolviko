@@ -28,6 +28,15 @@ use Throwable;
 /** Fresh administration actions; untrusted uploads cannot provide paths, publisher keys or safety assertions. */
 final class UpdatesHandler implements RouteHandler
 {
+    /**
+     * One-click updates (owner request 2026-11-17, "like WordPress"): admin-update.js drives the same server steps
+     * one after another; each request keeps working for about this long, well inside a 30 s PHP limit.
+     */
+    private const STEP_SECONDS = 12.0;
+
+    /** Steps that can break the site: they need the password from the popup (owner decision 2026-11-18). */
+    private const CRITICAL = ['download_release', 'upload_release', 'stage_release', 'prepare_recovery'];
+
     public function __construct(
         private readonly MessageTranslator $translator,
         private readonly TemplateRenderer $views,
@@ -49,6 +58,8 @@ final class UpdatesHandler implements RouteHandler
             return new Response('', 403, ['Cache-Control' => 'no-store']);
         }
         $job = $this->overview->preparableJob();
+        $wantsJson = $request->headers->get('X-Nolviko-Update') === '1';
+        $progress = null;
         $prepared = null;
         $error = null;
         $notice = null;
@@ -66,11 +77,33 @@ final class UpdatesHandler implements RouteHandler
                     || !in_array($action, ['prepare_recovery', 'upload_release', 'download_release', 'stage_release',
                         'abandon_release', 'check_releases'], true)
                 ) {
+                    if ($wantsJson) {
+                        $denied = ['admin.updates.prepare_denied'];
+                        return $this->json($job, null, null, Response::HTTP_FORBIDDEN, $denied, []);
+                    }
                     return $this->render(
                         $request,
                         $job,
                         null,
                         'admin.updates.prepare_denied',
+                        null,
+                        $configured,
+                        Response::HTTP_FORBIDDEN
+                    );
+                }
+                if (in_array($action, self::CRITICAL, true) && !$this->admin->isConfirmed()) {
+                    if ($wantsJson) {
+                        return new Response(json_encode(['ok' => false, 'password' => true, 'problems' => [],
+                            'codes' => []], JSON_THROW_ON_ERROR), Response::HTTP_FORBIDDEN, [
+                            'Content-Type' => 'application/json; charset=UTF-8',
+                            'Cache-Control' => 'no-store',
+                        ]);
+                    }
+                    return $this->render(
+                        $request,
+                        $job,
+                        null,
+                        'admin.updates.confirm_first',
                         null,
                         $configured,
                         Response::HTTP_FORBIDDEN
@@ -85,13 +118,16 @@ final class UpdatesHandler implements RouteHandler
                         'language' => str_replace('_', '-', $this->translator->locale()),
                         'stage_labels' => $this->labels(),
                     ]);
-                    $prepared = $this->preparation->prepare(
-                        $job,
-                        $actor,
-                        $request->getSchemeAndHttpHost(),
-                        Request::getTrustedProxies(),
-                        $shell
-                    );
+                    $deadline = microtime(true) + self::STEP_SECONDS;
+                    do {
+                        $prepared = $this->preparation->prepare(
+                            $job,
+                            $actor,
+                            $request->getSchemeAndHttpHost(),
+                            Request::getTrustedProxies(),
+                            $shell
+                        );
+                    } while ($prepared['grant'] === null && microtime(true) < $deadline);
                     if ($prepared['grant'] !== null) {
                         $prepared['approved'] = $this->uploads?->publish($job, $actor) ?? false;
                     }
@@ -114,7 +150,10 @@ final class UpdatesHandler implements RouteHandler
                         $job = $uploads->download($actor, ($input['confirmed'] ?? null) === '1');
                         $notice = $this->translator->translate('operations.uploaded');
                     } elseif ($action === 'stage_release') {
-                        $progress = $uploads->step($job ?? throw new RuntimeException('update_not_found'), $actor);
+                        $deadline = microtime(true) + self::STEP_SECONDS;
+                        do {
+                            $progress = $uploads->step($job ?? throw new RuntimeException('update_not_found'), $actor);
+                        } while (!$progress['ready'] && microtime(true) < $deadline);
                         $notice = $this->translator->translate('operations.staging', ['count' => $progress['cursor']]);
                     } elseif ($action === 'abandon_release') {
                         $uploads->abandon($job ?? throw new RuntimeException('update_not_found'));
@@ -141,6 +180,9 @@ final class UpdatesHandler implements RouteHandler
                     && preg_match('/^[a-z0-9_]{1,64}$/D', $issue) === 1,
             ));
         }
+        if ($wantsJson) {
+            return $this->json($job, $progress, $prepared, $status, $details ?? [], $codes ?? []);
+        }
         return $this->render(
             $request,
             $job,
@@ -152,6 +194,43 @@ final class UpdatesHandler implements RouteHandler
             $details ?? [],
             $codes ?? [],
         );
+    }
+
+    /**
+     * The one-click driver's answer. The recovery grant goes back only to this fresh, CSRF-checked administrator,
+     * exactly as the page used to show it for copying.
+     *
+     * @param array{ready: bool, cursor: int}|null $progress
+     * @param array<string, mixed>|null $prepared
+     * @param list<string> $details
+     * @param list<string> $codes
+     */
+    private function json(
+        ?string $job,
+        ?array $progress,
+        ?array $prepared,
+        int $status,
+        array $details,
+        array $codes,
+    ): Response {
+        $grant = is_array($prepared['grant'] ?? null)
+            ? $prepared['grant']['id'] . '.' . $prepared['grant']['code'] . '.' . $prepared['grant']['nonce'] : null;
+        $data = [
+            'ok' => $status < 400,
+            'job' => $job !== null,
+            'ready' => $progress['ready'] ?? false,
+            'cursor' => $progress['cursor'] ?? ($prepared['progress']['copied'] ?? 0),
+            'grant' => $grant !== null && ($prepared['approved'] ?? false) === true ? $grant : null,
+            // The safety copy is finished but the release was not approved for recovery: stop, do not loop.
+            'refused' => $grant !== null && ($prepared['approved'] ?? false) !== true,
+            'problems' => array_map(fn(string $key): string => $this->translator->translate($key), $details),
+            'codes' => $codes,
+        ];
+
+        return new Response(json_encode($data, JSON_THROW_ON_ERROR), $status, [
+            'Content-Type' => 'application/json; charset=UTF-8',
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     /** The translation key that explains one update issue and what to do about it. */
@@ -200,7 +279,7 @@ final class UpdatesHandler implements RouteHandler
         $html = $this->views->render('admin/updates.twig', [
             'title' => $this->translator->translate('admin.updates.title'),
             'nav' => AdminNavigation::items($this->urls, $this->translator, CoreRoutes::ADMIN_UPDATES),
-            'runs' => $runs, 'prepare_available' => $job !== null && $this->admin->isFresh(),
+            'runs' => $runs, 'prepare_available' => $job !== null && $this->admin->isConfirmed(),
             'prepared' => $prepared, 'prepare_error' => $error, 'notice' => $notice, 'configured' => $configured,
             'has_job' => $job !== null, 'problems' => $details, 'problem_codes' => $codes,
             'recovery_url' => $this->urls->generate(CoreRoutes::ADMIN_RECOVERY_ENTRY),

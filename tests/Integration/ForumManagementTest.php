@@ -126,10 +126,6 @@ final class ForumManagementTest extends TestCase
         self::assertSame(Response::HTTP_SEE_OTHER, $locked->getStatusCode());
         self::assertTrue($this->forums->find($forum->id)?->isLocked);
 
-        $stale = $this->handler($session, true)->handle($this->post('delete', $forum->id), []);
-        self::assertSame(Response::HTTP_FORBIDDEN, $stale->getStatusCode());
-        self::assertNotNull($this->forums->find($forum->id));
-
         (new AdminSession($session))->confirm();
         $deleted = $this->handler($session, true)->handle($this->post('delete', $forum->id), []);
         self::assertSame(Response::HTTP_SEE_OTHER, $deleted->getStatusCode());

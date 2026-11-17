@@ -64,6 +64,9 @@ final class RecoveryGrantStore
                 'job' => $job,
                 'actor' => $actor,
                 'expires' => $expires,
+                // Sliding (2026-11-17): every accepted command renews the window, so a long backup or file switch
+                // driven by the one-click page never outlives its grant; an idle grant still expires.
+                'window' => $seconds,
                 'code' => hash('sha256', $code),
                 'nonce' => hash('sha256', $nonce),
                 'sequence' => 0,
@@ -136,6 +139,10 @@ final class RecoveryGrantStore
 
             ++$state['sequence'];
             $state['revoked'] = $revoke;
+            $window = $state['window'] ?? null;
+            if (is_int($window) && $window >= 60 && $window <= 900) {
+                $state['expires'] = max($state['expires'], time() + $window);
+            }
             // Consume before dispatch: after a crash the same browser request must never execute twice.
             self::save($stream, $state);
             $result = $revoke ? [] : $operation($state['job'], $state['actor']);

@@ -63,7 +63,7 @@
 <a href="{{ ('https://github.com/' ~ theme.update.repository ~ '/releases/tag/' ~ theme.update.tag)|safe_url }}" rel="noopener noreferrer">{{ t('admin.updates.release_notes') }}</a></p>
 {% if fresh %}<form method="post" action="{{ action|safe_url }}" data-admin-progress>
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="theme" value="{{ theme.id }}">
-<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.upload_confirm') }}</label></p>
+<input type="hidden" name="confirm" value="{{ '1' }}">
 <button type="submit" name="action" value="{{ actions.update }}">{{ t('admin.updates.package_install', {version: theme.update.version}) }}</button>
 </form>{% endif %}</div>{% endif %}</li>{% endfor %}</ul>
 {% if warnings is not empty %}

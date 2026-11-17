@@ -280,7 +280,6 @@ final class TaskManagementTest extends TestCase
         $parameters = ['_route' => CoreRoutes::ADMIN_TASKS];
         $request = Request::create('https://example.test/admin/tasks', 'POST', ['action' => 'enable_cli',
             CsrfTokens::FIELD => $csrf->token()]);
-        self::assertSame(403, $handler->handle($request, $parameters)->getStatusCode());
         $admin->confirm();
         $bad = Request::create('https://example.test/admin/tasks', 'POST', ['action' => 'enable_cli',
             CsrfTokens::FIELD => 'wrong']);

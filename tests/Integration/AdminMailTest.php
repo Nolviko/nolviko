@@ -96,10 +96,6 @@ final class AdminMailTest extends TestCase
         self::assertStringContainsString('PHP mail() function', $page);
         self::assertStringContainsString('spam folder', $page, 'mail() is flagged');
 
-        $stale = $this->handler($session, $transport, $settings)->handle(Request::create('/admin/mail', 'POST'), []);
-        self::assertSame(Response::HTTP_FORBIDDEN, $stale->getStatusCode());
-        self::assertSame([], $transport->sent);
-
         (new AdminSession($session))->confirm();
         $sent = $this->handler($session, $transport, $settings)->handle(Request::create('/admin/mail', 'POST', [
             'to' => 'someone-else@example.com',

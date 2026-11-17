@@ -195,9 +195,9 @@ return [
     'admin.dashboard.fresh' => 'You confirmed your password recently.',
     'admin.dashboard.reauth' => 'Confirm your password for sensitive actions',
     'admin.reauth.title' => 'Confirm password',
-    'admin.reauth.intro' => 'Signing in already confirms you. You are asked again only after '
-        . '{minutes, plural, one {# minute} other {# minutes}} without admin activity, or when you came back '
-        . 'through "Remember me".',
+    'admin.reauth.intro' => 'Only actions that can break the site, such as updating the forum, ask for your password. '
+        . 'It stays confirmed while the action runs and for {minutes, plural, one {# minute} other {# minutes}} '
+        . 'after.',
     'admin.reauth.password' => 'Password',
     'admin.reauth.submit' => 'Confirm',
     'admin.bans.title' => 'IP and email bans',
@@ -373,7 +373,7 @@ return [
     'admin.updates.state_unknown' => 'Unknown status',
     'admin.updates.preparation' => 'Prepare recovery',
     'admin.updates.prepared_count' => 'Control files copied:',
-    'admin.updates.code_notice' => 'Keep this private code securely. It expires in 10 minutes. '
+    'admin.updates.code_notice' => 'Keep this private code securely. It expires 15 minutes after its last use. '
         . 'Preparation does not start installation; commands require a '
         . 'separately approved signed release.',
     'admin.updates.recovery_code' => 'Private recovery code',

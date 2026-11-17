@@ -229,11 +229,6 @@ final class BansTest extends TestCase
             'value' => 'spam.example',
             'reason' => 'Spam wave',
         ];
-        $stale = $this->handler($session)->handle(Request::create('/admin/bans', 'POST', $add), []);
-
-        self::assertSame(Response::HTTP_FORBIDDEN, $stale->getStatusCode());
-        self::assertSame([], $this->bans->active($this->now, 10));
-
         (new AdminSession($session))->confirm();
         $added = $this->handler($session)->handle(Request::create('/admin/bans', 'POST', $add), []);
         self::assertSame(Response::HTTP_SEE_OTHER, $added->getStatusCode());

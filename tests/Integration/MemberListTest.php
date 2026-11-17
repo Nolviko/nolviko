@@ -112,9 +112,6 @@ final class MemberListTest extends TestCase
             'x',
         ]];
 
-        $stale = $this->handler($session, true)->handle(Request::create('/admin/members/bulk', 'POST', $form), []);
-        self::assertSame(Response::HTTP_FORBIDDEN, $stale->getStatusCode());
-
         (new AdminSession($session))->confirm();
         $done = $this->handler($session, true)->handle(Request::create('/admin/members/bulk', 'POST', $form), []);
         self::assertSame(Response::HTTP_SEE_OTHER, $done->getStatusCode());

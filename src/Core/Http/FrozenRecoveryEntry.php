@@ -91,7 +91,7 @@ final class FrozenRecoveryEntry
                     new RecoveryGrantStore($recovery . '/grants', $site . '/public'),
                     $origin,
                     static fn(Request $incoming, int $actor): bool => $subjects->userId($incoming) === $actor
-                        && $subjects->of($incoming)->allows(AdminGuard::PERMISSION) && $admin->isFresh(),
+                        && $subjects->of($incoming)->allows(AdminGuard::PERMISSION) && $admin->isConfirmed(),
                     $dispatcher->actions(),
                 );
                 $response = $gateway->handle($request, []);

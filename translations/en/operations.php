@@ -53,6 +53,31 @@ return [
     'operations.clock' => 'The server clock is outside the release signature validity. Ask your host to correct '
         . 'the server time, then retry.',
     'operations.problem_codes' => 'Technical code: {codes}',
+    'operations.update_now' => 'Update now',
+    'operations.password_title' => 'Confirm with your password',
+    'operations.password_help' => 'Updating changes the whole forum, so it needs your password once.',
+    'operations.password_code' => 'Code from your authenticator app',
+    'operations.password_confirm' => 'Confirm and update',
+    'operations.password_cancel' => 'Cancel',
+    'operations.continue_update' => 'Continue the update',
+    'operations.one_click_help' => 'The forum downloads the newest release and checks it, backs up the database, '
+        . 'closes the site for a moment, replaces the files and opens it again. Keep this page open until it says '
+        . 'it is done.',
+    'operations.manual_steps' => 'Step by step (without JavaScript)',
+    'operations.progress_download' => 'Downloading and checking the release…',
+    'operations.progress_stage' => 'Preparing the new files',
+    'operations.progress_copy' => 'Preparing the safety copy…',
+    'operations.progress_backup' => 'Backing up the database',
+    'operations.progress_switch' => 'Replacing the files',
+    'operations.progress_migrate' => 'Updating the database…',
+    'operations.progress_check' => 'Checking the new version…',
+    'operations.progress_finish' => 'Finishing…',
+    'operations.progress_cancelled' => 'The update was not started.',
+    'operations.progress_done' => 'The update is complete. Reloading…',
+    'operations.progress_failed' => 'The update stopped. Nothing is lost: press "Continue the update" to carry on.',
+    'operations.code_fallback' => 'If this page closes during the update',
+    'operations.code_fallback_help' => 'Open the recovery page and enter this code to carry on (valid until 15 '
+        . 'minutes after the last step).',
     'operations.backup_unavailable' => 'Automatic backups are not available for this database, so the update is not '
         . 'started.',
     'operations.channel' => 'This release is for another update channel (beta versus stable).',

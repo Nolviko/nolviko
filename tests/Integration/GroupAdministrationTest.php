@@ -251,7 +251,6 @@ final class GroupAdministrationTest extends TestCase
         self::assertStringContainsString('Administrators', (string) $page->getContent());
         self::assertSame(403, $list->handle(Request::create('/admin/groups', 'POST', $create), [])->getStatusCode());
         $create[CsrfTokens::FIELD] = $csrf->token();
-        self::assertSame(403, $list->handle(Request::create('/admin/groups', 'POST', $create), [])->getStatusCode());
 
         $adminSession->confirm();
         $created = $list->handle(Request::create('/admin/groups', 'POST', $create), []);
@@ -344,7 +343,6 @@ final class GroupAdministrationTest extends TestCase
             'user' => (string) $this->member,
         ])->getContent();
         self::assertStringContainsString('member@example.com', $page);
-        self::assertSame(403, $post('add_group', $moderators)->getStatusCode(), 'stale session');
 
         $adminSession->confirm();
         self::assertSame(303, $post('add_group', $moderators)->getStatusCode());

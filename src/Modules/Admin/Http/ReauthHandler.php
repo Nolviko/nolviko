@@ -58,13 +58,23 @@ final class ReauthHandler implements RouteHandler
         $this->codeNeeded = $this->needsCode($userId);
 
         $return = $this->returnPath($request);
+        // The password popup on pages such as Admin > Updates (owner decision 2026-11-18) talks JSON.
+        $popup = $request->headers->get('X-Nolviko-Update') === '1';
 
         if (!$request->isMethod('POST')) {
-            return $this->form(null, Response::HTTP_OK, [], $return);
+            return $popup ? self::json(['ok' => true, 'needs_code' => $this->codeNeeded], Response::HTTP_OK)
+                : $this->form(null, Response::HTTP_OK, [], $return);
         }
 
         $identifier = self::THROTTLE_PREFIX . $userId;
         $wait = $this->throttle->retryAfter($identifier, $request->getClientIp());
+
+        if ($wait > 0 && $popup) {
+            return self::json(['ok' => false, 'message' => $this->translator->translate(
+                'diagnostics.login_throttled',
+                ['minutes' => (int) ceil($wait / 60)],
+            )], Response::HTTP_TOO_MANY_REQUESTS);
+        }
 
         if ($wait > 0) {
             $response = $this->form(
@@ -90,10 +100,18 @@ final class ReauthHandler implements RouteHandler
         $this->audit->record($userId, $valid ? 'admin.reauth' : 'admin.reauth_failed');
 
         if (!$valid) {
-            return $this->form('admin_reauth_invalid', Response::HTTP_UNPROCESSABLE_ENTITY, [], $return);
+            return $popup ? self::json([
+                'ok' => false,
+                'message' => $this->translator->translate('diagnostics.admin_reauth_invalid'),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY)
+                : $this->form('admin_reauth_invalid', Response::HTTP_UNPROCESSABLE_ENTITY, [], $return);
         }
 
         $this->admin->confirm();
+
+        if ($popup) {
+            return self::json(['ok' => true], Response::HTTP_OK);
+        }
 
         return InstallerPage::redirect(
             $return ?? $this->urls->generate(CoreRoutes::ADMIN_DASHBOARD) . '?confirmed=1',
@@ -123,6 +141,15 @@ final class ReauthHandler implements RouteHandler
 
         return $inside && strlen($candidate) <= 2000 && preg_match('~//|\\\\|[^\x21-\x7e]~', $candidate) !== 1
             && strtok($candidate, '?') !== $self ? $candidate : null;
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function json(array $data, int $status): Response
+    {
+        return new Response(json_encode($data, JSON_THROW_ON_ERROR), $status, [
+            'Content-Type' => 'application/json; charset=UTF-8',
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     /**

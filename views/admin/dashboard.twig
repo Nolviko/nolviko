@@ -26,11 +26,6 @@
 <dt>{{ t('admin.dashboard.posts') }}</dt><dd>{{ stats.posts|format_number }}</dd>
 </dl>
 {% endif %}
-{% if fresh %}
-<p class="meta">{{ t('admin.dashboard.fresh') }}</p>
-{% else %}
-<p class="alert alert-warn"><a href="{{ reauth_url|safe_url }}">{{ t('admin.dashboard.reauth') }}</a></p>
-{% endif %}
 {% if exposure is not null %}
 <h2>{{ t('admin.exposure.title') }}</h2>
 <p>{{ t('admin.exposure.help') }}</p>

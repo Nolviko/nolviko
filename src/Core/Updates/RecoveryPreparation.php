@@ -84,7 +84,9 @@ final class RecoveryPreparation
 
         return [
             'progress' => $progress,
-            'grant' => (new RecoveryGrantStore($grants, $public))->issue($job, $actor),
+            // 15 minutes, renewed by every step (RecoveryGrantStore): the one-click driver runs backup, file switch
+            // and migrations with it in one go.
+            'grant' => (new RecoveryGrantStore($grants, $public))->issue($job, $actor, 900),
         ];
     }
 }

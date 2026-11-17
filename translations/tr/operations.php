@@ -55,6 +55,31 @@ return [
     'operations.clock' => 'Sunucu saati sürüm imzasının geçerlilik aralığının dışında. Barındırma firmanızdan '
         . 'sunucu saatini düzeltmesini isteyin ve tekrar deneyin.',
     'operations.problem_codes' => 'Teknik kod: {codes}',
+    'operations.update_now' => 'Şimdi güncelle',
+    'operations.password_title' => 'Parolanızla onaylayın',
+    'operations.password_help' => 'Güncelleme tüm forumu değiştirir, bu yüzden bir kez parolanız gerekir.',
+    'operations.password_code' => 'Doğrulama uygulamanızdaki kod',
+    'operations.password_confirm' => 'Onayla ve güncelle',
+    'operations.password_cancel' => 'Vazgeç',
+    'operations.continue_update' => 'Güncellemeye devam et',
+    'operations.one_click_help' => 'Forum en yeni sürümü indirip kontrol eder, veritabanını yedekler, siteyi kısa bir '
+        . 'süre kapatır, dosyaları değiştirir ve yeniden açar. Bitti diyene kadar bu sayfayı açık tutun.',
+    'operations.manual_steps' => 'Adım adım (JavaScript olmadan)',
+    'operations.progress_download' => 'Sürüm indiriliyor ve kontrol ediliyor…',
+    'operations.progress_stage' => 'Yeni dosyalar hazırlanıyor',
+    'operations.progress_copy' => 'Güvenlik kopyası hazırlanıyor…',
+    'operations.progress_backup' => 'Veritabanı yedekleniyor',
+    'operations.progress_switch' => 'Dosyalar değiştiriliyor',
+    'operations.progress_migrate' => 'Veritabanı güncelleniyor…',
+    'operations.progress_check' => 'Yeni sürüm kontrol ediliyor…',
+    'operations.progress_finish' => 'Bitiriliyor…',
+    'operations.progress_cancelled' => 'Güncelleme başlatılmadı.',
+    'operations.progress_done' => 'Güncelleme tamamlandı. Sayfa yenileniyor…',
+    'operations.progress_failed' => 'Güncelleme durdu. Hiçbir şey kaybolmadı: devam etmek için "Güncellemeye devam et" '
+        . 'düğmesine basın.',
+    'operations.code_fallback' => 'Güncelleme sırasında bu sayfa kapanırsa',
+    'operations.code_fallback_help' => 'Kurtarma sayfasını açıp bu kodu girerek devam edin (son adımdan sonra 15 '
+        . 'dakika geçerli).',
     'operations.backup_unavailable' => 'Bu veritabanı için otomatik yedek alınamıyor, bu yüzden güncelleme '
         . 'başlatılmadı.',
     'operations.channel' => 'Bu sürüm başka bir güncelleme kanalına ait (beta ya da kararlı).',

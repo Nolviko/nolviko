@@ -209,7 +209,7 @@ return [
     'admin.updates.state_unknown' => 'Bilinmeyen durum',
     'admin.updates.preparation' => 'Kurtarma hazırlığı',
     'admin.updates.prepared_count' => 'Kopyalanan kontrol dosyası:',
-    'admin.updates.code_notice' => 'Bu özel kodu güvenle saklayın; 10 dakika sonra sona erer. '
+    'admin.updates.code_notice' => 'Bu özel kodu güvenle saklayın; son kullanımından 15 dakika sonra sona erer. '
         . 'Hazırlık kurulumu başlatmaz; komutlar ayrıca onaylanmış imzalı '
         . 'paket gerektirir.',
     'admin.updates.recovery_code' => 'Özel kurtarma kodu',
@@ -264,9 +264,8 @@ return [
     'admin.dashboard.fresh' => 'Parolanızı kısa süre önce doğruladınız.',
     'admin.dashboard.reauth' => 'Hassas işlemler için parolanızı doğrulayın',
     'admin.reauth.title' => 'Parolayı doğrula',
-    'admin.reauth.intro' => 'Giriş yapmanız zaten doğrulama sayılır. Yalnızca '
-        . '{minutes, plural, one {# dakika} other {# dakika}} yönetim işlemi yapmazsanız ya da "Beni hatırla" '
-        . 'ile döndüyseniz yeniden sorulur.',
+    'admin.reauth.intro' => 'Yalnızca siteyi bozabilecek işlemler (örneğin forumu güncellemek) parolanızı sorar. '
+        . 'Onay, işlem sürerken ve sonrasında {minutes, plural, one {# dakika} other {# dakika}} geçerli kalır.',
     'admin.reauth.password' => 'Parola',
     'admin.reauth.submit' => 'Doğrula',
     'admin.bans.title' => 'IP ve e-posta yasakları',

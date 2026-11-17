@@ -28,7 +28,7 @@ final class AuthSession
 {
     public const REMEMBER_COOKIE = 'forum_remember';
 
-    /** The administrator confirmation (AdminSession); reset on every login so it never passes to another user. */
+    /** The administrator confirmation (AdminSession); cleared on every login so it never passes to another user. */
     public const ELEVATION_KEY = '_admin_reauth_at';
 
     private const USER_KEY = '_user_id';
@@ -46,21 +46,11 @@ final class AuthSession
     ) {
     }
 
-    /**
-     * @param bool $confirmsAdmin False when the sign-in checked neither the password nor a second factor (an external
-     *                            provider alone); the administrator is then asked once before sensitive actions.
-     */
-    public function login(User $user, bool $remember, Request $request, bool $confirmsAdmin = true): void
+    public function login(User $user, bool $remember, Request $request): void
     {
         $this->session->regenerate();
         $this->csrf->rotate();
-        // Owner decision 2026-11-17: a sign-in that just checked the password (and the second factor when the
-        // member uses one) also confirms the administrator; AdminSession keeps it while they stay active.
-        if ($confirmsAdmin) {
-            $this->session->set(self::ELEVATION_KEY, time());
-        } else {
-            $this->session->remove(self::ELEVATION_KEY);
-        }
+        $this->session->remove(self::ELEVATION_KEY);
         $this->session->set(self::USER_KEY, $user->id);
         $this->rememberEpoch($user->id);
 

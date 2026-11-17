@@ -30,7 +30,7 @@
 {% if fresh %}<form method="post" action="{{ action|safe_url }}" data-admin-progress>
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <input type="hidden" name="action" value="{{ actions.update }}"><input type="hidden" name="id" value="{{ extension.id }}">
-<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.upload_confirm') }}</label></p>
+<input type="hidden" name="confirm" value="{{ '1' }}">
 <button type="submit">{{ t('admin.updates.package_install', {version: extension.update.version}) }}</button>
 <span class="hint" data-submit-status hidden>{{ t('admin.extensions.uploading') }}</span>
 </form>{% endif %}</div>{% endif %}

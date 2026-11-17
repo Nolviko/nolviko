@@ -11,6 +11,29 @@
 <form method="post" action="{{ post_url|safe_url }}">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
 <button name="action" value="{{ 'check_releases' }}">{{ t('operations.check') }}</button></form>
+<div class="panel" data-update-driver hidden data-url="{{ post_url|safe_url }}" data-recovery="{{ recovery_url|safe_url }}"
+ data-csrf-field="{{ '_csrf_token' }}" data-csrf="{{ csrf_token }}" data-job="{{ has_job|default(false) ? 1 : 0 }}"
+ data-text="{{ {download: t('operations.progress_download'), stage: t('operations.progress_stage'), copy: t('operations.progress_copy'), recovery_backup: t('operations.progress_backup'), recovery_resume: t('operations.progress_switch'), recovery_migrate: t('operations.progress_migrate'), recovery_smoke: t('operations.progress_check'), recovery_finish: t('operations.progress_finish'), done: t('operations.progress_done'), cancelled: t('operations.progress_cancelled'), failed: t('operations.progress_failed'), continue: t('operations.continue_update'), code: t('operations.problem_codes', {codes: ''})}|json_encode|e('html_attr') }}">
+<p>{{ t('operations.one_click_help') }}</p>
+<p><button type="button" data-update-start>{{ has_job|default(false) ? t('operations.continue_update') : t('operations.update_now') }}</button></p>
+<progress hidden></progress>
+<p data-update-status role="status" aria-live="polite"></p>
+<ul data-update-problems role="alert" hidden></ul>
+<dialog data-update-password data-url="{{ reauth_url|safe_url }}">
+<form method="dialog">
+<h2>{{ t('operations.password_title') }}</h2>
+<p>{{ t('operations.password_help') }}</p>
+<p><label>{{ t('admin.reauth.password') }} <input type="password" name="password" autocomplete="current-password" required></label></p>
+<p data-update-code-field hidden><label>{{ t('operations.password_code') }} <input name="code" inputmode="numeric" autocomplete="one-time-code"></label></p>
+<p role="alert" data-update-password-error hidden></p>
+<p><button value="{{ 'confirm' }}">{{ t('operations.password_confirm') }}</button> <button value="{{ 'cancel' }}" formnovalidate>{{ t('operations.password_cancel') }}</button></p>
+</form>
+</dialog>
+<details data-update-code hidden><summary>{{ t('operations.code_fallback') }}</summary>
+<p>{{ t('operations.code_fallback_help') }}</p><p><a href="{{ recovery_url|safe_url }}">{{ t('admin.recovery.open') }}</a></p><p><code></code></p></details>
+</div>
+<script src="{{ asset('admin-update.js') }}" defer></script>
+<details><summary>{{ t('operations.manual_steps') }}</summary>
 {% if has_job|default(false) %}
 <form method="post" action="{{ post_url|safe_url }}">
 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
@@ -33,9 +56,9 @@
 <p><label><input type="checkbox" name="confirmed" value="1" required> {{ t('operations.confirm') }}</label></p>
 <button name="action" value="{{ 'upload_release' }}">{{ t('operations.upload') }}</button></form></details>
 {% endif %}
+</details>
 {% else %}<p>{{ t('operations.setup') }}</p>{% endif %}
 
-<p role="note">{{ t('admin.updates.notify') }}</p>
 {% if runs is null %}
 <p role="alert">{{ t('admin.updates.error') }}</p>
 {% elseif runs is empty %}
@@ -62,6 +85,7 @@
 </tbody>
 </table>
 {% endif %}
+<details><summary>{{ t('operations.manual_steps') }}</summary>
 <h2>{{ t('admin.updates.preparation') }}</h2>
 {% if prepare_error %}<p role="alert">{{ t(prepare_error) }}</p>{% endif %}
 {% if prepared %}
@@ -90,4 +114,5 @@
 <li>{{ t('admin.updates.open') }}</li>
 </ol>
 <p>{{ t('admin.updates.pending') }}</p>
+</details>
 {% endblock %}
