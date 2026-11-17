@@ -13,6 +13,7 @@ use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\Updates\RecoveryPreparation;
 use Nolviko\Core\Updates\SignedReleaseManifest;
+use Nolviko\Core\Updates\UpdatePreflightFailed;
 use Nolviko\Core\Updates\UpdateStage;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Admin\Infrastructure\DbalAdminAudit;
@@ -129,28 +130,40 @@ final class UpdatesHandler implements RouteHandler
             }
         } catch (Throwable $failure) {
             $status = Response::HTTP_UNPROCESSABLE_ENTITY;
-            $error = match ($failure->getMessage()) {
-                'update_trust_missing' => 'operations.setup',
-                'update_inventory_missing', 'update_inventory_invalid' => 'operations.manual_baseline',
-                'update_not_newer' => 'operations.not_newer',
-                'update_confirmation_required' => 'operations.confirm_required',
-                'update_disk_insufficient' => 'operations.disk',
-                'update_addon_incompatible', 'update_addon_package_incompatible', 'update_theme_incompatible'
-                    => 'operations.addons',
-                'update_php_incompatible', 'update_php_extension_missing', 'update_database_incompatible'
-                    => 'operations.platform',
-                'update_integrity_required', 'update_writable_required', 'update_private_storage_required'
-                    => 'operations.files',
-                'update_quiescent_required', 'update_already_active' => 'operations.busy',
-                'update_schema_required' => 'operations.schema',
-                'update_upload_failed' => 'operations.upload_failed',
-                'update_signed_assets_missing', 'update_discovery_unavailable', 'package_download_invalid',
-                'package_download_failed', 'package_download_redirect', 'package_download_size'
-                    => 'operations.download_failed',
-                default => 'operations.refused',
-            };
+            // Every failed check with its own explanation (2026-11-17, owner request), not one summary line.
+            $issues = $failure instanceof UpdatePreflightFailed ? $failure->issues : [$failure->getMessage()];
+            $details = array_values(array_unique(array_map(self::message(...), $issues)));
+            $error = $details[0];
         }
-        return $this->render($request, $job, $prepared, $error, $notice, $configured, $status);
+        return $this->render($request, $job, $prepared, $error, $notice, $configured, $status, $details ?? []);
+    }
+
+    /** The translation key that explains one update issue and what to do about it. */
+    private static function message(string $issue): string
+    {
+        return match ($issue) {
+            'update_trust_missing' => 'operations.setup',
+            'update_inventory_missing', 'update_inventory_invalid' => 'operations.manual_baseline',
+            'update_not_newer' => 'operations.not_newer',
+            'update_confirmation_required' => 'operations.confirm_required',
+            'update_disk_insufficient' => 'operations.disk',
+            'update_addon_incompatible', 'update_addon_package_incompatible', 'update_theme_incompatible'
+                => 'operations.addons',
+            'update_php_incompatible', 'update_php_extension_missing', 'update_database_incompatible'
+                => 'operations.platform',
+            'update_integrity_required' => 'operations.integrity',
+            'update_writable_required' => 'operations.writable',
+            'update_private_storage_required' => 'operations.private_storage',
+            'update_backup_required' => 'operations.backup_unavailable',
+            'update_channel_mismatch' => 'operations.channel',
+            'update_quiescent_required', 'update_already_active' => 'operations.busy',
+            'update_schema_required' => 'operations.schema',
+            'update_upload_failed' => 'operations.upload_failed',
+            'update_signed_assets_missing', 'update_discovery_unavailable', 'package_download_invalid',
+            'package_download_failed', 'package_download_redirect', 'package_download_size'
+                => 'operations.download_failed',
+            default => 'operations.refused',
+        };
     }
 
     private function render(
@@ -161,6 +174,7 @@ final class UpdatesHandler implements RouteHandler
         ?string $notice,
         bool $configured,
         int $status,
+        array $details = [],
     ): Response {
         $runs = $this->overview->read();
         $html = $this->views->render('admin/updates.twig', [
@@ -168,7 +182,7 @@ final class UpdatesHandler implements RouteHandler
             'nav' => AdminNavigation::items($this->urls, $this->translator, CoreRoutes::ADMIN_UPDATES),
             'runs' => $runs, 'prepare_available' => $job !== null && $this->admin->isFresh(),
             'prepared' => $prepared, 'prepare_error' => $error, 'notice' => $notice, 'configured' => $configured,
-            'has_job' => $job !== null,
+            'has_job' => $job !== null, 'problems' => $details,
             'recovery_url' => $this->urls->generate(CoreRoutes::ADMIN_RECOVERY_ENTRY),
             'post_url' => $this->urls->generate(CoreRoutes::ADMIN_UPDATES),
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),

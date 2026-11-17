@@ -170,7 +170,12 @@ final class UpdatePolicyTest extends TestCase
             $this->files->path . '/storage',
             TestDatabase::driver(),
         );
+        @unlink($this->files->path . '/storage/.htaccess');
         self::assertContains('update_private_storage_required', $internal->issues($metadata, $manifest, true));
+        // Owner decision 2026-11-17: storage/ inside the application is fine while its deny-all .htaccess stands.
+        file_put_contents($this->files->path . '/storage/.htaccess', "<IfModule mod_authz_core.c>\n"
+            . "    Require all denied\n</IfModule>\n");
+        self::assertNotContains('update_private_storage_required', $internal->issues($metadata, $manifest, true));
         file_put_contents($this->files->path . '/src/Core/Updates/SiteAccessLock.php', 'changed');
         self::assertContains('update_integrity_required', $preflight->issues($metadata, $manifest, true));
         $this->db->executeStatement("UPDATE migration_history SET status = 'pending' WHERE id = '0042_import_jobs'");

@@ -194,7 +194,7 @@ return [
         . 'adı girin.',
     'diagnostics.ban_own_address' => 'Bu yasak şu anda kullandığınız adresi de kapsar.',
     'diagnostics.ban_not_found' => 'Bu yasak yok veya artık etkin değil.',
-    'diagnostics.admin_reauth_required' => 'Önce parolanızı doğrulayın; doğrulama 15 dakika geçerlidir.',
+    'diagnostics.admin_reauth_required' => 'Önce parolanızı doğrulayın; işlem yaptığınız sürece geçerli kalır.',
     'diagnostics.verify_resend_wait' => 'Yeni bağlantı istemeden önce {seconds, plural, one {# saniye} other {# '
         . 'saniye}} bekleyin.',
     'diagnostics.register_too_fast' => 'Formu doldurmak için biraz zaman ayırıp tekrar gönderin.',

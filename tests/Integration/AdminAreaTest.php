@@ -193,7 +193,7 @@ final class AdminAreaTest extends TestCase
 
         self::assertSame('/admin/members?status=active', $confirm('/admin/members?status=active'));
         self::assertStringContainsString(
-            'Your password is confirmed for 15 more minutes.',
+            'Your password is confirmed for 60 more minutes.',
             (string) $this->reauth($session)->handle(Request::create('/admin/reauth'), [])->getContent(),
             'an open window is shown, not hidden behind the same prompt',
         );
@@ -211,9 +211,12 @@ final class AdminAreaTest extends TestCase
 
         $user = (new DbalUserRepository($this->connection))->findById($this->admin);
         self::assertNotNull($user);
-        (new AuthSession($session, new CsrfTokens($session), new MemoryUsers(), new ResponseCookies()))
-            ->login($user, false, Request::create('/login'));
-        self::assertFalse((new AdminSession($session))->isFresh(), 'a login never inherits the confirmation');
+        $auth = new AuthSession($session, new CsrfTokens($session), new MemoryUsers(), new ResponseCookies());
+        $auth->login($user, false, Request::create('/login/external/google'), confirmsAdmin: false);
+        self::assertFalse((new AdminSession($session))->isFresh(), 'an external sign-in never inherits the window');
+        // Owner decision 2026-11-17: a sign-in that checked the password (and second factor) opens the window.
+        $auth->login($user, false, Request::create('/login'));
+        self::assertTrue((new AdminSession($session))->isFresh(), 'a password sign-in confirms the administrator');
     }
 
     public function testReauthenticationIsAuditedThrottledAndOpensTheWindow(): void

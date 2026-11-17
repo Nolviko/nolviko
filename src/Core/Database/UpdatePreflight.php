@@ -54,12 +54,19 @@ final readonly class UpdatePreflight
         $private = realpath($this->storage);
         $application = realpath($this->site);
         $public = realpath($this->site . '/public');
+        $insideApplication = $private !== false && $application !== false && str_starts_with(
+            strtolower(str_replace('\\', '/', $private)) . '/',
+            strtolower(str_replace('\\', '/', $application)) . '/',
+        );
+        // Owner decision 2026-11-17: storage/ inside the application folder (the default when the ZIP is uploaded
+        // as it is) is accepted when it can never be served: not under public/, not a link, and its deny-all
+        // .htaccess in place. The file switch never touches storage/ (FileSwitchPlan protected paths).
+        $denyFile = $this->storage . '/.htaccess';
+        $denied = is_file($denyFile) && !is_link($denyFile)
+            && preg_match('~Require\s+all\s+denied~i', (string) file_get_contents($denyFile)) === 1;
         $privateStorage = $private !== false && $public !== false && $application !== false
             && !is_link($this->storage)
-            && !str_starts_with(
-                strtolower(str_replace('\\', '/', $private)) . '/',
-                strtolower(str_replace('\\', '/', $application)) . '/',
-            )
+            && (!$insideApplication || $denied)
             && !str_starts_with(
                 strtolower(str_replace('\\', '/', $private)) . '/',
                 strtolower(str_replace('\\', '/', $public)) . '/'

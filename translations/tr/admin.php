@@ -264,8 +264,9 @@ return [
     'admin.dashboard.fresh' => 'Parolanızı kısa süre önce doğruladınız.',
     'admin.dashboard.reauth' => 'Hassas işlemler için parolanızı doğrulayın',
     'admin.reauth.title' => 'Parolayı doğrula',
-    'admin.reauth.intro' => 'Siteyi değiştiren işlemler için parolanızı doğrulayın. Doğrulama '
-        . '{minutes, plural, one {# dakika} other {# dakika}} geçerlidir.',
+    'admin.reauth.intro' => 'Giriş yapmanız zaten doğrulama sayılır. Yalnızca '
+        . '{minutes, plural, one {# dakika} other {# dakika}} yönetim işlemi yapmazsanız ya da "Beni hatırla" '
+        . 'ile döndüyseniz yeniden sorulur.',
     'admin.reauth.password' => 'Parola',
     'admin.reauth.submit' => 'Doğrula',
     'admin.bans.title' => 'IP ve e-posta yasakları',

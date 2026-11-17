@@ -41,6 +41,16 @@ return [
     'operations.busy' => 'Başka bir iş veya aktarım etkin. Güncellemeden önce tamamlayın.',
     'operations.addons' => 'Kurulu bir eklenti veya tema uyumsuz.',
     'operations.files' => 'Kurulu dosyalar değişmiş veya güvenle değiştirilemiyor.',
+    'operations.problems_heading' => 'Güncelleme henüz başlatılamıyor:',
+    'operations.integrity' => 'Bazı Nolviko dosyaları kurulu sürümden farklı veya eksik (elle düzenleme ya da yarım '
+        . 'kalmış bir yükleme). Kurulu sürümünüzün ZIP\'ini forum klasörünün üzerine yeniden yükleyip tekrar deneyin.',
+    'operations.writable' => 'PHP forum klasörüne, config/ veya storage/ klasörüne yazamıyor. Web sunucusu '
+        . 'kullanıcısına yazma izni verin (barındırma firmanız yapabilir) ve tekrar deneyin.',
+    'operations.private_storage' => 'storage/ web\'den erişilememeli: public/ içinde olmamalı, bir bağlantı (link) '
+        . 'olmamalı ve .htaccess dosyası (Require all denied) yerinde durmalı.',
+    'operations.backup_unavailable' => 'Bu veritabanı için otomatik yedek alınamıyor, bu yüzden güncelleme '
+        . 'başlatılmadı.',
+    'operations.channel' => 'Bu sürüm başka bir güncelleme kanalına ait (beta ya da kararlı).',
     'operations.disk' => 'Güvenli güncelleme için yeterli boş alan yok.',
     'operations.platform' => 'Sunucu bu sürümün gereksinimlerini karşılamıyor.',
     'operations.schema' => 'Önce bekleyen veritabanı geçişlerini tamamlayın.',

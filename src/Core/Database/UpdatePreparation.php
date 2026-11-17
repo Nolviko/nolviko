@@ -15,6 +15,7 @@ use Nolviko\Core\Updates\ReleaseCompatibility;
 use Nolviko\Core\Updates\ReleaseVersion;
 use Nolviko\Core\Updates\SafeReleaseArchive;
 use Nolviko\Core\Updates\SignedReleaseManifest;
+use Nolviko\Core\Updates\UpdatePreflightFailed;
 use Nolviko\Core\Updates\UpdateStage;
 use Nolviko\Core\Updates\UpdateTrust;
 use RuntimeException;
@@ -280,7 +281,7 @@ final readonly class UpdatePreparation
         $issues = (new UpdatePreflight($this->db, $this->site, $this->storage, $this->driver))
             ->issues($compatibility, $manifest, true);
         if ($issues !== []) {
-            throw new RuntimeException($issues[0]);
+            throw new UpdatePreflightFailed($issues);
         }
     }
 

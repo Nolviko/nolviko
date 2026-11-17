@@ -195,8 +195,9 @@ return [
     'admin.dashboard.fresh' => 'You confirmed your password recently.',
     'admin.dashboard.reauth' => 'Confirm your password for sensitive actions',
     'admin.reauth.title' => 'Confirm password',
-    'admin.reauth.intro' => 'For actions that change the site, confirm your password. It stays confirmed for '
-        . '{minutes, plural, one {# minute} other {# minutes}}.',
+    'admin.reauth.intro' => 'Signing in already confirms you. You are asked again only after '
+        . '{minutes, plural, one {# minute} other {# minutes}} without admin activity, or when you came back '
+        . 'through "Remember me".',
     'admin.reauth.password' => 'Password',
     'admin.reauth.submit' => 'Confirm',
     'admin.bans.title' => 'IP and email bans',

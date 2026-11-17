@@ -12,6 +12,7 @@ use Nolviko\Core\Updates\BackupVerification;
 use Nolviko\Core\Updates\RecoveryJobContext;
 use Nolviko\Core\Updates\ReleaseCompatibility;
 use Nolviko\Core\Updates\SiteAccessLock;
+use Nolviko\Core\Updates\UpdatePreflightFailed;
 use Nolviko\Core\Updates\UpdateRun;
 use Nolviko\Core\Updates\UpdateStage;
 use RuntimeException;
@@ -63,7 +64,7 @@ final readonly class UpdateCapture
                 SqlDialect::driver($this->db),
             ))->issues($compatibility, $context->manifest, true, true);
             if ($issues !== []) {
-                throw new RuntimeException($issues[0]);
+                throw new UpdatePreflightFailed($issues);
             }
             $backups = new BackupChunkStore($context->data['backup_root'], $this->site . '/public');
             if ($run->stage === UpdateStage::Staged) {

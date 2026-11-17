@@ -185,7 +185,7 @@ return [
     'diagnostics.ban_value_invalid' => 'Enter a valid IP address, CIDR range, email address or domain for this type.',
     'diagnostics.ban_own_address' => 'This ban would include the address you are using now.',
     'diagnostics.ban_not_found' => 'This ban does not exist or is no longer active.',
-    'diagnostics.admin_reauth_required' => 'Confirm your password first; it stays confirmed for 15 minutes.',
+    'diagnostics.admin_reauth_required' => 'Confirm your password first; it stays confirmed while you are active.',
     'diagnostics.verify_resend_wait' => 'Please wait {seconds, plural, one {# second} other {# seconds}} before '
         . 'you ask for another link.',
     'diagnostics.register_too_fast' => 'Please take a moment to fill in the form and send it again.',

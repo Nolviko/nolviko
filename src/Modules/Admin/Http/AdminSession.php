@@ -11,13 +11,15 @@ use Nolviko\Core\Session\Session;
 use Nolviko\Modules\Users\Http\AuthSession;
 
 /**
- * Recent re-authentication of an administrator (M02.15): sensitive admin actions require the password to have
- * been confirmed within FRESH_SECONDS. Kept in the session, which is regenerated at login and invalidated at
- * logout, so freshness never outlives the sign-in it belongs to.
+ * Recent authentication of an administrator (M02.15): sensitive admin actions need the password (and second factor)
+ * confirmed recently. Owner decision 2026-11-17 (phpBB/MyBB-like, no prompt on every page): the sign-in itself
+ * confirms, and the confirmation slides while the administrator stays active; it lapses after FRESH_SECONDS without
+ * admin activity, or when the member came back through a remember-me cookie. Kept in the session, which is
+ * regenerated at login and invalidated at logout, so it never outlives the sign-in it belongs to.
  */
 final class AdminSession
 {
-    public const FRESH_SECONDS = 900;
+    public const FRESH_SECONDS = 3600;
 
     private const KEY = AuthSession::ELEVATION_KEY;
 
@@ -43,7 +45,13 @@ final class AdminSession
 
     public function isFresh(): bool
     {
-        return $this->remainingSeconds() > 0;
+        if ($this->remainingSeconds() <= 0) {
+            return false;
+        }
+        // Activity keeps the confirmation alive (idle timeout, not an absolute one).
+        $this->confirm();
+
+        return true;
     }
 
     /** Seconds left in the confirmation window; 0 when it has not been opened or has run out. */

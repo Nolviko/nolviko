@@ -40,6 +40,16 @@ return [
     'operations.busy' => 'Another task or import is active. Finish it before updating.',
     'operations.addons' => 'An installed extension or theme is incompatible.',
     'operations.files' => 'Installed files changed or cannot be replaced safely.',
+    'operations.problems_heading' => 'The update cannot start yet:',
+    'operations.integrity' => 'Some Nolviko files differ from the installed version or are missing (a manual edit or '
+        . 'an incomplete upload). Upload the ZIP of your current version over the forum folder again, then retry.',
+    'operations.writable' => 'PHP cannot write to the forum folder, config/ or storage/. Give the web server user '
+        . 'write permission to them (your host can do this), then retry.',
+    'operations.private_storage' => 'storage/ must not be reachable from the web: it must not be inside public/, must '
+        . 'not be a link, and must keep its .htaccess file (Require all denied).',
+    'operations.backup_unavailable' => 'Automatic backups are not available for this database, so the update is not '
+        . 'started.',
+    'operations.channel' => 'This release is for another update channel (beta versus stable).',
     'operations.disk' => 'There is not enough free space for a safe update.',
     'operations.platform' => 'The server does not meet the release requirements.',
     'operations.schema' => 'Finish pending database migrations first.',

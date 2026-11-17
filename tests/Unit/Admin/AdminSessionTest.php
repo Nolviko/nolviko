@@ -11,7 +11,7 @@ use Nolviko\Tests\Support\ArraySession;
 use PHPUnit\Framework\TestCase;
 
 /**
- * M02.15: a re-authentication stays fresh for exactly FRESH_SECONDS.
+ * M02.15: a confirmation stays fresh for FRESH_SECONDS without activity; activity slides it (owner, 2026-11-17).
  */
 final class AdminSessionTest extends TestCase
 {
@@ -29,8 +29,10 @@ final class AdminSessionTest extends TestCase
         $at(0)->confirm();
 
         self::assertTrue($at(0)->isFresh());
-        self::assertTrue($at(AdminSession::FRESH_SECONDS - 1)->isFresh());
-        self::assertFalse($at(AdminSession::FRESH_SECONDS)->isFresh(), '15 minutes later');
+        self::assertTrue($at(AdminSession::FRESH_SECONDS - 1)->isFresh(), 'active just before the idle limit');
+        self::assertTrue($at(2 * AdminSession::FRESH_SECONDS - 2)->isFresh(), 'that activity slid the window');
+        self::assertFalse($at(3 * AdminSession::FRESH_SECONDS - 1)->isFresh(), 'idle for a full window');
+        self::assertSame(0, $at(3 * AdminSession::FRESH_SECONDS - 1)->remainingSeconds());
     }
 
     public function testATamperedValueIsNotFresh(): void

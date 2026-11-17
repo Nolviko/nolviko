@@ -311,7 +311,7 @@ final class ExternalAuthHandler implements RouteHandler
                 if ($user->status !== UserStatus::Active) {
                     return $this->message('external_pending_approval', 200);
                 }
-                $this->auth->login($user, false, $request);
+                $this->auth->login($user, false, $request, confirmsAdmin: false);
                 ($this->secondFactor)()->signedIn($user->id);
 
                 return InstallerPage::redirect($this->urls->generate(CoreRoutes::HOME));
@@ -380,7 +380,7 @@ final class ExternalAuthHandler implements RouteHandler
 
             return InstallerPage::redirect($this->urls->generate(CoreRoutes::LOGIN_VERIFY));
         }
-        $this->auth->login($user, false, $request);
+        $this->auth->login($user, false, $request, confirmsAdmin: false);
         $secondFactor->signedIn($user->id);
 
         return InstallerPage::redirect($this->urls->generate(CoreRoutes::HOME));
