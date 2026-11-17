@@ -152,6 +152,25 @@ final class ReleasePolicyTest extends TestCase
         }
     }
 
+    public function testOfficialReleaseTrustAppliesUnlessTheSiteHasItsOwn(): void
+    {
+        $root = new TemporaryDirectory();
+        $trust = static fn(string $owner, string $key): string => json_encode(['format' => 1, 'owner' => $owner,
+            'repository' => 'nolviko', 'installed_version' => '0.1.0-beta.4', 'channel' => 'prerelease',
+            'keys' => ['nolviko-release-1' => base64_encode(str_repeat($key, 32))]], JSON_THROW_ON_ERROR);
+        try {
+            // ADR-037: the release ships config/release-trust.json, so a fresh install trusts official updates.
+            $root->write('config/release-trust.json', $trust('Nolviko', 'o'));
+            self::assertSame('Nolviko', UpdateTrust::load($root->path)?->repository->owner);
+
+            // The site's own config/update-trust.json (never touched by updates) wins.
+            $root->write('config/update-trust.json', $trust('example', 's'));
+            self::assertSame('example', UpdateTrust::load($root->path)?->repository->owner);
+        } finally {
+            $root->remove();
+        }
+    }
+
     public function testExclusiveCaptureCannotOverlapRequests(): void
     {
         $root = new TemporaryDirectory();

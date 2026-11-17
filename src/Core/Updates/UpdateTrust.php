@@ -28,10 +28,18 @@ final readonly class UpdateTrust
         }
     }
 
+    /**
+     * The site owner's config/update-trust.json wins (never touched by updates). Otherwise the official trust that
+     * ships with every release, config/release-trust.json (ADR-037, 2026-11-17): it is part of the signed package,
+     * so a signed update can also deliver a rotated key.
+     */
     public static function load(string $root): ?self
     {
         $path = $root . '/config/update-trust.json';
-        if (!file_exists($path)) {
+        if (!file_exists($path) && !is_link($path)) {
+            $path = $root . '/config/release-trust.json';
+        }
+        if (!file_exists($path) && !is_link($path)) {
             return null;
         }
         if (is_link($path) || !is_file($path) || filesize($path) > 8192) {
