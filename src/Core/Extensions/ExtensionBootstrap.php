@@ -11,6 +11,12 @@ use Throwable;
 /** Data and integrity checks precede every provider; failures leave a recoverable core-only safe mode. */
 final class ExtensionBootstrap
 {
+    /**
+     * Extension API version manifests are checked against (`"engine"`). 1.1.0 (2026-11-17): routes under `/ext/`.
+     * Release packages publish the same value as `extension_api` (dev/src/PackageBuilder.php).
+     */
+    public const API_VERSION = '1.1.0';
+
     public static function manager(string $root, string $storage): ExtensionManager
     {
         $packages = [];
@@ -24,7 +30,7 @@ final class ExtensionBootstrap
         return new ExtensionManager(
             new ExtensionCatalog($root . '/extensions'),
             new ExtensionState($storage . '/extensions'),
-            new ExtensionResolver(new ComposerVersionConstraint(), '1.1.0', PHP_VERSION, $packages),
+            new ExtensionResolver(new ComposerVersionConstraint(), self::API_VERSION, PHP_VERSION, $packages),
         );
     }
 
