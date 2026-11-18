@@ -51,8 +51,11 @@ final class DatabaseHealthCheckTest extends TestCase
             'mariadb as mysql' => [$with(['version' => '11.4.4-MariaDB-ubu2404']), ['database_family_invalid:mariadb']],
             'mariadb compatibility prefix' => [$with(['version' => '5.5.5-10.11.6-MariaDB']),
                 ['database_family_invalid:mariadb']],
-            'mysql 8.0' => [$with(['version' => '8.0.40']), ['database_version_unsupported:8.0.40']],
-            'mysql 9' => [$with(['version' => '9.1.0-commercial']), ['database_version_unsupported:9.1.0']],
+            // Beta.10: MySQL 8.0 and newer, including 9.x; 5.7 and a future 10 are refused.
+            'mysql 8.0' => [$with(['version' => '8.0.40']), []],
+            'mysql 9' => [$with(['version' => '9.1.0-commercial']), []],
+            'mysql 5.7' => [$with(['version' => '5.7.44-log']), ['database_version_unsupported:5.7.44']],
+            'mysql 10' => [$with(['version' => '10.0.0']), ['database_version_unsupported:10.0.0']],
             'latin1 results' => [$with(['charset_results' => 'latin1']), ['database_charset_invalid']],
             'three-byte utf8' => [$with(['charset_connection' => 'utf8mb3']), ['database_charset_invalid']],
             'system time zone' => [$with(['time_zone' => 'SYSTEM']), ['database_timezone_invalid']],
@@ -63,8 +66,8 @@ final class DatabaseHealthCheckTest extends TestCase
                 ['database_sql_mode_invalid'],
             ],
             'several problems' => [
-                $with(['version' => '8.0.1', 'time_zone' => '+03:00', 'sql_mode' => 'ANSI']),
-                ['database_version_unsupported:8.0.1', 'database_timezone_invalid', 'database_sql_mode_invalid'],
+                $with(['version' => '5.7.1', 'time_zone' => '+03:00', 'sql_mode' => 'ANSI']),
+                ['database_version_unsupported:5.7.1', 'database_timezone_invalid', 'database_sql_mode_invalid'],
             ],
         ];
     }
@@ -84,7 +87,8 @@ final class DatabaseHealthCheckTest extends TestCase
             'mariadb 10.11' => [$with(['version' => '10.11.16-MariaDB']), []],
             'mariadb 11.4 build' => [$with(['version' => '11.4.4-MariaDB-ubu2404']), []],
             'compatibility prefix' => [$with(['version' => '5.5.5-10.11.6-MariaDB-log']), []],
-            'mariadb 10.6' => [$with(['version' => '10.6.19-MariaDB']), ['database_version_unsupported:10.6.19']],
+            'mariadb 10.6' => [$with(['version' => '10.6.19-MariaDB']), []],
+            'mariadb 10.5' => [$with(['version' => '10.5.27-MariaDB']), ['database_version_unsupported:10.5.27']],
             'mysql as mariadb' => [self::healthyFacts(), ['database_family_invalid:mysql']],
             'mariadb without strict all' => [
                 $with(['version' => '10.11.16-MariaDB', 'sql_mode' => 'STRICT_TRANS_TABLES']),
@@ -109,16 +113,17 @@ final class DatabaseHealthCheckTest extends TestCase
         self::assertSame($expected, DatabaseHealthCheck::mysqlDiagnostics($facts));
     }
 
-    public function testPostgresqlFactsNeedVersion16Utf8AndUtc(): void
+    public function testPostgresqlFactsNeedVersion14Utf8AndUtc(): void
     {
         $good = ['version' => '16.16 (Debian 16.16-1.pgdg13+1)', 'version_num' => '160016',
             'server_encoding' => 'UTF8', 'client_encoding' => 'UTF8', 'time_zone' => 'UTC'];
 
         self::assertSame([], DatabaseHealthCheck::postgresDiagnostics($good));
         self::assertSame([], DatabaseHealthCheck::postgresDiagnostics(['version_num' => '170002'] + $good));
+        self::assertSame([], DatabaseHealthCheck::postgresDiagnostics(['version_num' => '140019'] + $good));
         self::assertSame(
-            ['database_version_unsupported:15.8', 'database_charset_invalid', 'database_timezone_invalid'],
-            DatabaseHealthCheck::postgresDiagnostics(['version' => '15.8', 'version_num' => '150008',
+            ['database_version_unsupported:13.18', 'database_charset_invalid', 'database_timezone_invalid'],
+            DatabaseHealthCheck::postgresDiagnostics(['version' => '13.18', 'version_num' => '130018',
                 'server_encoding' => 'SQL_ASCII', 'time_zone' => 'Europe/Istanbul'] + $good),
         );
     }

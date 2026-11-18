@@ -44,6 +44,17 @@
 <p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
 </form>
 {% endif %}
+{% if official|default([]) is not empty %}
+<h2>{{ t('admin.themes.catalog_heading') }}</h2>
+<p class="hint">{{ t('admin.themes.catalog_hint') }}</p>
+{% for package in official %}<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="theme" value="{{ package.id }}">
+<p><strong><bdi>{{ package.id }}</bdi></strong> <span class="meta">{{ package.version }}</span>
+<a href="{{ ('https://github.com/' ~ package.repository ~ '/releases/tag/' ~ package.tag)|safe_url }}" rel="noopener noreferrer">{{ t('admin.updates.release_notes') }}</a>
+<button type="submit" name="action" value="{{ actions.install_official }}">{{ t('admin.themes.catalog_install') }}</button></p>
+<p role="status" data-submit-status hidden>{{ t('admin.progress.loading') }}</p>
+</form>{% endfor %}
+{% endif %}
 <h2>{{ t('admin.themes.import') }}</h2>
 <p id="theme-import-help">{{ t('admin.themes.import_help') }}</p>
 <form method="post" action="{{ action|safe_url }}" enctype="multipart/form-data" data-admin-progress>

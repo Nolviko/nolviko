@@ -32,6 +32,7 @@ return [
     'installer.database.password' => 'Database password',
     'installer.database.submit' => 'Test and save',
     'installer.migrate.heading' => 'Database tables',
+    'installer.migrate.auto' => 'Continuing automatically…',
     'installer.migrate.pending' => '{count, plural, one {# database update is waiting.} other {# database '
         . 'updates are waiting.}}',
     'installer.migrate.submit' => 'Create the tables',
@@ -52,6 +53,13 @@ return [
     'installer.status.warning' => 'Warning',
     'installer.status.failed' => 'Failed',
     'installer.check.php_version' => 'PHP {version} is supported.',
+    'installer.check.php_end_of_life' => 'PHP {version} no longer gets security fixes from the PHP project. The '
+        . 'forum works, but ask your host for a newer PHP version.',
+    'installer.check.extension_missing' => 'The required PHP extension {extension} is not loaded. It is needed for '
+        . '{feature, select, database {the database connection} languages {languages, dates and numbers} text '
+        . '{handling text} packages {updates and installing extensions and themes} security {passwords, tokens '
+        . 'and secure connections} uploads {uploads, avatars and images} sign_in {signing in} other {the '
+        . 'forum}}. Ask your host to enable it.',
     'installer.check.extension' => 'The PHP extension {extension} is loaded.',
     'installer.check.memory_limit' => 'The PHP memory limit is {limit}.',
     'installer.check.storage_writable' => 'The storage directory is writable by the web server.',

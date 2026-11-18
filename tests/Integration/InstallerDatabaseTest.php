@@ -92,16 +92,32 @@ final class InstallerDatabaseTest extends TestCase
         self::assertSame(['steps' => 0, 'complete' => true], $installer->run(), 'repeating is a no-op');
     }
 
-    public function testOneRequestFinishesTheCoreSchemaWithinTheBudget(): void
+    /**
+     * Every request stays near the time budget and the core schema finishes in a few of them (beta.10: the
+     * installer page starts the next request by itself, so one request no longer has to hold the whole schema).
+     */
+    public function testEachRequestStaysInTheBudgetAndTheSchemaFinishesInAFewRequests(): void
     {
         $installer = new SchemaInstaller(static fn(): Connection => self::connect(), MigrationRegistry::core());
+        $requests = 0;
+        $steps = 0;
         $started = microtime(true);
-        $result = $installer->run();
+        do {
+            $begun = microtime(true);
+            $result = $installer->run();
+            // The budget is checked between steps, so one step may run past it, never far.
+            self::assertLessThan(SchemaInstaller::TIME_BUDGET_SECONDS * 2, microtime(true) - $begun);
+            $steps += $result['steps'];
+        } while (!$result['complete'] && ++$requests < 10);
         $seconds = microtime(true) - $started;
 
-        self::assertTrue($result['complete']);
-        self::assertLessThan(SchemaInstaller::TIME_BUDGET_SECONDS, $seconds);
-        fwrite(STDERR, sprintf("installer_schema_batch %.1f ms, %d steps\n", $seconds * 1000, $result['steps']));
+        self::assertTrue($result['complete'], 'finished within ten requests');
+        fwrite(STDERR, sprintf(
+            "installer_schema_batch %.1f ms, %d steps, %d requests\n",
+            $seconds * 1000,
+            $steps,
+            $requests + 1,
+        ));
     }
 
     private function dropTables(): void

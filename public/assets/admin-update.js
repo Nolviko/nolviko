@@ -74,12 +74,34 @@
         });
     };
 
+    /* beta.10: a dropped connection is retried a few times (every server step is resumable); a refusal is not. */
+    const pause = milliseconds => new Promise(resolve => window.setTimeout(resolve, milliseconds));
+    const reach = async (url, options) => {
+        for (let attempt = 1; ; attempt++) {
+            try {
+                return await fetch(url, options);
+            } catch (failure) {
+                if (attempt >= 4) throw failure;
+                say('retry');
+                await pause(2000 * attempt);
+            }
+        }
+    };
+    /* The recovery code survives a closed tab for its own lifetime, so the recovery page can carry on. */
+    const GRANT_KEY = 'nolviko-update-grant';
+    const keep = value => {
+        try {
+            if (value === null) window.localStorage.removeItem(GRANT_KEY);
+            else window.localStorage.setItem(GRANT_KEY, JSON.stringify({grant: value, until: Date.now() + 900000}));
+        } catch { /* storage may be unavailable */ }
+    };
+
     const post = async action => {
         const body = new FormData();
         body.append(box.dataset.csrfField, box.dataset.csrf);
         body.append('action', action);
         body.append('confirmed', '1');
-        const response = await fetch(box.dataset.url, {
+        const response = await reach(box.dataset.url, {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: {'X-Nolviko-Update': '1', 'Accept': 'application/json'}, body,
         });
@@ -101,7 +123,7 @@
         const parts = grant.split('.');
         let sequence = 0;
         const send = async (action, reconcile = true) => {
-            const response = await fetch(box.dataset.recovery, {
+            const response = await reach(box.dataset.recovery, {
                 method: 'POST', credentials: 'same-origin', cache: 'no-store',
                 headers: {
                     'Content-Type': 'application/json', 'X-Nolviko-Recovery-Grant': parts[0],
@@ -124,6 +146,7 @@
             if (!state.next_action) throw new Error('update_recovery_stopped');
             say('recovery_' + state.next_action, state.cursor);
             await send(state.next_action);
+            keep(grant);
         }
         throw new Error('update_recovery_budget');
     };
@@ -138,7 +161,12 @@
             if (grant === null) {
                 if (!hasJob) {
                     say('download');
-                    await post('download_release');
+                    try {
+                        await post('download_release');
+                    } catch (failure) {
+                        // The answer was lost but the job was opened (or another tab opened it): carry on with it.
+                        if (!(failure.result?.issues || []).includes('update_already_active')) throw failure;
+                    }
                     hasJob = true;
                 }
                 for (let round = 0; ; round++) {
@@ -150,13 +178,19 @@
                 for (let round = 0; grant === null; round++) {
                     say('copy');
                     const step = await post('prepare_recovery');
-                    if (step.refused || round > 1000) throw new Error('update_copy_refused');
+                    if (step.refused || round > 1000) {
+                        const failure = new Error('update_copy_refused');
+                        failure.result = step;
+                        throw failure;
+                    }
                     grant = step.grant;
                 }
+                keep(grant);
                 fallback.querySelector('code').textContent = grant;
                 fallback.hidden = false;
             }
             await recover();
+            keep(null);
             running = false;
             say('done');
             window.setTimeout(() => window.location.reload(), 2000);

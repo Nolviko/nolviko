@@ -26,7 +26,8 @@
 <p><a href="{{ admin_url|safe_url }}">{{ t('installer.migrate.continue') }}</a></p>
 {% else %}
 <p role="status">{{ t('installer.migrate.pending', {count: pending}) }}</p>
-<form method="post" action="{{ action|safe_url }}">
+{% if auto_continue|default(false) %}<p data-auto-continue-note hidden>{{ t('installer.migrate.auto') }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}"{% if auto_continue|default(false) %} data-auto-continue{% endif %}>
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 {% if needs_code %}
 <p id="setup-code-help">{{ t('installer.setup_code.help', {file: code_file}) }}</p>
@@ -36,4 +37,5 @@
 <p><button type="submit">{{ t('installer.migrate.submit') }}</button></p>
 </form>
 {% endif %}
+<script src="{{ asset('installer-continue.js') }}" defer></script>
 {% endblock %}

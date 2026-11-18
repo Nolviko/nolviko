@@ -46,10 +46,14 @@ final class LoginHandler implements RouteHandler
     ) {
     }
 
+    /** Where to go after signing in (beta.10), for example back to an interrupted reply. */
+    private ?string $return = null;
+
     public function handle(Request $request, array $parameters): Response
     {
+        $this->return = ReturnPath::of($request);
         if ($this->auth->userId($request) !== null) {
-            return InstallerPage::redirect($this->urls->generate(CoreRoutes::HOME));
+            return InstallerPage::redirect($this->return ?? $this->urls->generate(CoreRoutes::HOME));
         }
 
         if (!$request->isMethod('POST')) {
@@ -99,13 +103,15 @@ final class LoginHandler implements RouteHandler
             // Not signed in yet: the second step (2026-11-15) finishes the sign-in.
             $this->secondFactor->begin($result->user->id, $remember);
 
-            return InstallerPage::redirect($this->urls->generate(CoreRoutes::LOGIN_VERIFY));
+            return InstallerPage::redirect(
+                ReturnPath::append($this->urls->generate(CoreRoutes::LOGIN_VERIFY), $this->return),
+            );
         }
 
         $this->auth->login($result->user, $remember, $request);
         $this->secondFactor?->signedIn($result->user->id);
 
-        return InstallerPage::redirect($this->urls->generate(CoreRoutes::HOME));
+        return InstallerPage::redirect($this->return ?? $this->urls->generate(CoreRoutes::HOME));
     }
 
     /**
@@ -116,7 +122,7 @@ final class LoginHandler implements RouteHandler
         $html = $this->views->render('auth/login.twig', [
             'language' => str_replace('_', '-', $this->translator->locale()),
             'title' => $this->translator->translate('auth.login.title'),
-            'action' => $this->urls->generate(CoreRoutes::LOGIN),
+            'action' => ReturnPath::append($this->urls->generate(CoreRoutes::LOGIN), $this->return),
             'csrf_field' => CsrfTokens::FIELD,
             'csrf_token' => $this->csrf->token(),
             'identifier' => $identifier,

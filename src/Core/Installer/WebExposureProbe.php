@@ -181,7 +181,9 @@ final class WebExposureProbe
             'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
         ]);
         $body = @file_get_contents($url, false, $context, 0, 65536);
-        $headers = function_exists('http_get_last_response_headers') ? http_get_last_response_headers() : null;
+        // PHP 8.4+ has the function; 8.2/8.3 (beta.10) fill the local $http_response_header instead.
+        $headers = function_exists('http_get_last_response_headers') ? http_get_last_response_headers()
+            : ($http_response_header ?? null);
 
         $status = is_array($headers) && preg_match('~^HTTP/\S+\s+(\d{3})~', $headers[0] ?? '', $m) === 1
             ? (int) $m[1]

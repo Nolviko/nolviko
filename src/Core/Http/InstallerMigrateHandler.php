@@ -15,11 +15,13 @@ use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Installer step 3 (M01.14): create the database tables. GET shows the status, POST (CSRF-checked, setup
  * code proven) runs a time-bounded batch of migration steps and redirects back, so refreshing is safe.
- * No JavaScript: the visitor presses the button again if one batch was not enough.
+ * One batch at a time; installer-continue.js starts the next one by itself (beta.10), and without JavaScript the
+ * visitor presses the button again.
  */
 final class InstallerMigrateHandler implements RouteHandler
 {
@@ -70,7 +72,12 @@ final class InstallerMigrateHandler implements RouteHandler
      */
     private function status(array $diagnostics, int $status): Response
     {
-        $pending = ($this->schema)()->pending();
+        // After a database failure the same pending() query may fail again: the page still shows the error.
+        try {
+            $pending = ($this->schema)()->pending();
+        } catch (Throwable) {
+            $pending = null;
+        }
         $this->setupCode->ensure();
 
         return $this->page->render('installer/migrate.twig', [
@@ -79,8 +86,10 @@ final class InstallerMigrateHandler implements RouteHandler
             'csrf_token' => $this->csrf->token(),
             'needs_code' => !$this->setupCode->isProven(),
             'code_file' => 'storage/' . SetupCode::FILE,
-            'pending' => count($pending),
+            'pending' => $pending === null ? 0 : count($pending),
             'complete' => $pending === [],
+            'auto_continue' => $pending !== null && $pending !== [] && $diagnostics === []
+                && $this->setupCode->isProven(),
             'admin_url' => $this->urls->generate(CoreRoutes::INSTALLER_MAIL),
             'errors' => $this->page->messages($diagnostics),
         ], $status);

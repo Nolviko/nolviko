@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "api": 1,
   "engine": "^1.0",
-  "php": "~8.4.27 || ~8.5.12",
+  "php": "~8.2.35 || ~8.3.36 || ~8.4.27 || ~8.5.12",
   "license": "MIT",
   "providers": [
     "src/Provider.php"

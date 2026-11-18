@@ -27,6 +27,8 @@ use Nolviko\Modules\Threads\Domain\Thread;
 use Nolviko\Modules\Threads\Domain\ThreadRuleViolation;
 use Nolviko\Modules\Users\Domain\UserRepository;
 use Nolviko\Modules\Users\Http\RequestSubject;
+use Nolviko\Modules\Users\Http\ReturnPath;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -44,6 +46,9 @@ final class CreateReplyHandler implements RouteHandler
     public const DRAFT = 'draft';
 
     public const TOKEN_FIELD = 'token';
+
+    /** Set after a successful reply (beta.10): draft-keeper.js drops the browser copy of that form. */
+    public const POSTED_COOKIE = 'nolviko_posted';
 
     private const STATUS = [
         'reply_permission_denied' => Response::HTTP_FORBIDDEN,
@@ -69,7 +74,11 @@ final class CreateReplyHandler implements RouteHandler
     public function handle(Request $request, array $parameters): Response
     {
         if ($this->subjects->userId($request) === null) {
-            return InstallerPage::redirect($this->urls->generate(CoreRoutes::LOGIN));
+            // Back to this reply page after signing in (beta.10); draft-keeper.js still holds the typed text.
+            return InstallerPage::redirect(ReturnPath::append(
+                $this->urls->generate(CoreRoutes::LOGIN),
+                ReturnPath::safe($request->getBasePath() . $request->getPathInfo(), $request->getBasePath()),
+            ));
         }
 
         $subject = $this->subjects->of($request);
@@ -142,9 +151,24 @@ final class CreateReplyHandler implements RouteHandler
         $this->drafts?->discard($userId, $context);
 
         // The new reply (its permalink finds the right page), or the thread while the reply waits for approval.
-        return InstallerPage::redirect($created->status === PostStatus::Visible
+        $response = InstallerPage::redirect($created->status === PostStatus::Visible
             ? $this->urls->generate(CoreRoutes::POST_SHOW, ['post' => (string) $created->postId])
             : $this->urls->generate(CoreRoutes::THREAD_ID, ['thread' => (string) $threadId]));
+        // Tells draft-keeper.js that this form's text was posted, so its browser copy is dropped (beta.10). The
+        // value is the form's one-time idempotency token, not a secret.
+        $response->headers->setCookie(Cookie::create(
+            self::POSTED_COOKIE,
+            $token,
+            time() + 300,
+            $request->getBasePath() === '' ? '/' : $request->getBasePath(),
+            null,
+            $request->isSecure(),
+            false,
+            false,
+            Cookie::SAMESITE_LAX,
+        ));
+
+        return $response;
     }
 
     /**

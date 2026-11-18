@@ -35,7 +35,7 @@ A metadata-only extension can begin with this extension.json. It declares no exe
   "version": "1.0.0",
   "api": 1,
   "engine": "^1.0",
-  "php": "~8.4.27 || ~8.5.12",
+  "php": "~8.2.35 || ~8.3.36 || ~8.4.27 || ~8.5.12",
   "license": "MIT"
 }
 ```
@@ -48,7 +48,7 @@ A child theme's theme.json can inherit all default templates and assets. Add ove
   "parent": "default",
   "version": "1.0.0",
   "engine": 1,
-  "minimum_php": "8.4.27",
+  "minimum_php": "8.2.35",
   "assets": [],
   "slots": {},
   "upstream": {}

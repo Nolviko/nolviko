@@ -3,7 +3,8 @@
 **A modern, self-hosted forum that runs on ordinary shared hosting.**
 Upload a folder, open your site, follow the installer — no Composer, Node, cron, Redis or shell access needed.
 
-> **Status: public beta (0.1.0-beta.5).** Feature-complete for everyday communities and tested on MySQL,
+> **Status: public beta.** The current version is on the [releases page](https://github.com/Nolviko/nolviko/releases)
+> and at the bottom of every admin page. Feature-complete for everyday communities and tested on MySQL,
 > MariaDB and PostgreSQL. Expect rough edges; keep backups and read the [known limitations](#known-limitations).
 
 ---
@@ -63,9 +64,9 @@ These are **not** part of the default install. Upload them as ZIP files under
 
 | | |
 |---|---|
-| **PHP** | 8.4.27+ (8.4 series) or 8.5.12+ (8.5 series), `memory_limit` 128M or more |
+| **PHP** | 8.2, 8.3, 8.4 or 8.5 (at least 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12), `memory_limit` 128M or more |
 | **PHP extensions** | pdo plus your database driver, intl, mbstring, json, openssl, fileinfo, session, sodium, zip, gd |
-| **Database** | MySQL 8.4, MariaDB 10.11+ or PostgreSQL 16–18 |
+| **Database** | MySQL 8.0+, MariaDB 10.6+ or PostgreSQL 14–18 ([compatibility table](docs/compatibility.md)) |
 | **Web server** | Apache with `.htaccess` (`AllowOverride All`) and mod_rewrite |
 
 The installer checks all of these and explains anything missing.

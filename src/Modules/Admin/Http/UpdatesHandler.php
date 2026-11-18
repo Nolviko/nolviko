@@ -181,7 +181,7 @@ final class UpdatesHandler implements RouteHandler
             ));
         }
         if ($wantsJson) {
-            return $this->json($job, $progress, $prepared, $status, $details ?? [], $codes ?? []);
+            return $this->json($job, $progress, $prepared, $status, $details ?? [], $codes ?? [], $issues ?? []);
         }
         return $this->render(
             $request,
@@ -212,9 +212,20 @@ final class UpdatesHandler implements RouteHandler
         int $status,
         array $details,
         array $codes,
+        array $issues = [],
     ): Response {
+        $issues = array_values(array_filter(
+            array_map(strval(...), $issues),
+            static fn(string $issue): bool => preg_match('/^[a-z0-9_]{1,64}$/D', $issue) === 1,
+        ));
         $grant = is_array($prepared['grant'] ?? null)
             ? $prepared['grant']['id'] . '.' . $prepared['grant']['code'] . '.' . $prepared['grant']['nonce'] : null;
+        $refused = $grant !== null && ($prepared['approved'] ?? false) !== true;
+        if ($refused) {
+            // The safety copy is ready but the release could not be approved for recovery: say so (beta.10).
+            $details[] = 'operations.refused';
+            $codes[] = 'update_recovery_not_approved';
+        }
         $data = [
             'ok' => $status < 400,
             'job' => $job !== null,
@@ -222,7 +233,8 @@ final class UpdatesHandler implements RouteHandler
             'cursor' => $progress['cursor'] ?? ($prepared['progress']['copied'] ?? 0),
             'grant' => $grant !== null && ($prepared['approved'] ?? false) === true ? $grant : null,
             // The safety copy is finished but the release was not approved for recovery: stop, do not loop.
-            'refused' => $grant !== null && ($prepared['approved'] ?? false) !== true,
+            'refused' => $refused,
+            'issues' => $issues,
             'problems' => array_map(fn(string $key): string => $this->translator->translate($key), $details),
             'codes' => $codes,
         ];

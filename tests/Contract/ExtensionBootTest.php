@@ -28,7 +28,7 @@ final class ExtensionBootTest extends TestCase
         try {
             $files->write('extensions/acme/broken/extension.json', json_encode([
                 'id' => 'acme/broken', 'name' => 'Broken fixture', 'version' => '1.0.0', 'api' => 1,
-                'engine' => '^1', 'php' => '^8.4', 'license' => 'MIT', 'providers' => ['src/Provider.php'],
+                'engine' => '^1', 'php' => '^8.2', 'license' => 'MIT', 'providers' => ['src/Provider.php'],
             ], JSON_THROW_ON_ERROR));
             $files->write('extensions/acme/broken/src/Provider.php', '<?php throw new Exception("fixture_failure");');
             $manager = ExtensionBootstrap::manager($files->path, $files->path . '/storage');

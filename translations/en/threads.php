@@ -11,6 +11,7 @@ return [
     'threads.preview.button' => 'Preview',
     'threads.preview.heading' => 'Preview — not posted yet',
     'threads.draft.saved' => 'Your draft is saved. It is here when you come back.',
+    'threads.draft.local_restored' => 'Your unsent text was restored from this browser. Check it, then send it.',
     'threads.draft.restored' => 'Your saved draft is filled in.',
     'threads.create.title' => 'New thread',
     'threads.create.forum' => 'Forum: {forum}',

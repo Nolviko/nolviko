@@ -40,7 +40,9 @@ final class CsrfGuard implements RouteGuard
         if (!self::sameOrigin($request) || !$this->tokens->isValid(self::token($request))) {
             // An expired logout form (2026-11-14): back to the logout confirmation, which has a fresh form,
             // instead of a dead end. Nothing changes without a valid token.
-            if (($parameters['_route'] ?? null) === CoreRoutes::LOGOUT) {
+            // An expired reply form (beta.10) goes back to the reply page too: after signing in again the member
+            // finds the text there (draft-keeper.js) and sends it with a fresh form.
+            if (in_array($parameters['_route'] ?? null, [CoreRoutes::LOGOUT, CoreRoutes::THREAD_REPLY], true)) {
                 return new Response('', Response::HTTP_SEE_OTHER, [
                     'Location' => $request->getBaseUrl() . $request->getPathInfo(),
                     'Cache-Control' => 'no-store',

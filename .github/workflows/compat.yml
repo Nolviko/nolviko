@@ -1,0 +1,119 @@
+# Beta.10 compatibility matrix (owner plan 2026-11-18): every PHP branch with upstream support, and the database
+# branches the forum accepts. The release ZIP ships production dependencies; nothing here changes what hosts run.
+name: compat
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }} (syntax, platform, boot${{ matrix.tests && ', unit, contract' || '' }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            tests: false # PHPUnit 12 needs 8.3; 8.2 gets syntax, platform and boot checks.
+          - php: '8.3'
+            tests: true
+          - php: '8.4'
+            tests: true
+          - php: '8.5'
+            tests: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: intl, mbstring, pdo_mysql, pdo_pgsql, sodium, zip, fileinfo, gd
+          coverage: none
+          tools: composer:v2
+      - name: Recorded versions
+        run: php -v | head -1 && php -r 'echo "ICU ", INTL_ICU_VERSION, PHP_EOL;'
+      - name: Syntax of every shipped PHP file
+        run: find src config public tools/src -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+      - name: Production dependencies accept this PHP
+        run: composer check-platform-reqs --no-dev
+      - name: Runtime policy and autoload on this PHP
+        run: >
+          php -r 'require "vendor/autoload.php"; require "config/runtime-policy.php";
+          $e = forumRuntimeVersionErrors(PHP_VERSION, gmdate("Y-m-d")); if ($e !== []) { fwrite(STDERR, json_encode($e)); exit(1); }
+          new Nolviko\Core\Routing\RouterFactory(); echo "boot ok", PHP_EOL;'
+      - name: Install development tools
+        if: matrix.tests
+        run: COMPOSER_VENDOR_DIR=/tmp/dev-vendor composer install --no-interaction --no-progress --no-scripts
+      - name: Unit and Contract
+        if: matrix.tests
+        run: |
+          php -d memory_limit=512M /tmp/dev-vendor/bin/phpunit --testsuite Unit --colors=never
+          php -d memory_limit=512M /tmp/dev-vendor/bin/phpunit --testsuite Contract --colors=never
+
+  database:
+    name: ${{ matrix.engine }} ${{ matrix.image }} on PHP ${{ matrix.php }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {engine: mysql, image: 'mysql:8.0', port: 3306, php: '8.3'}
+          - {engine: mysql, image: 'mysql:8.4', port: 3306, php: '8.5'}
+          - {engine: mariadb, image: 'mariadb:10.6', port: 3306, php: '8.3'}
+          - {engine: mariadb, image: 'mariadb:10.11', port: 3306, php: '8.4'}
+          - {engine: mariadb, image: 'mariadb:11.4', port: 3306, php: '8.4'}
+          - {engine: mariadb, image: 'mariadb:11.8', port: 3306, php: '8.5'}
+          - {engine: postgresql, image: 'postgres:14', port: 5432, php: '8.3'}
+          - {engine: postgresql, image: 'postgres:15', port: 5432, php: '8.4'}
+          - {engine: postgresql, image: 'postgres:16', port: 5432, php: '8.4'}
+          - {engine: postgresql, image: 'postgres:17', port: 5432, php: '8.4'}
+          - {engine: postgresql, image: 'postgres:18', port: 5432, php: '8.5'}
+    services:
+      db:
+        image: ${{ matrix.image }}
+        ports: ['${{ matrix.port }}:${{ matrix.port }}']
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root
+          MYSQL_DATABASE: forum_test
+          MYSQL_USER: forum
+          MYSQL_PASSWORD: ci-forum
+          MARIADB_ROOT_PASSWORD: ci-root
+          MARIADB_DATABASE: forum_test
+          MARIADB_USER: forum
+          MARIADB_PASSWORD: ci-forum
+          POSTGRES_DB: forum_test
+          POSTGRES_USER: forum
+          POSTGRES_PASSWORD: ci-forum
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: intl, mbstring, pdo_mysql, pdo_pgsql, sodium, zip, fileinfo, gd
+          coverage: none
+          tools: composer:v2
+      - name: Install development tools
+        run: COMPOSER_VENDOR_DIR=/tmp/dev-vendor composer install --no-interaction --no-progress --no-scripts
+      - name: Wait for the database
+        run: |
+          for i in $(seq 1 60); do
+            php -r '$d = getenv("E") === "postgresql" ? "pgsql:host=127.0.0.1;port=5432;dbname=forum_test" : "mysql:host=127.0.0.1;port=3306;dbname=forum_test";
+              try { new PDO($d, "forum", "ci-forum"); exit(0); } catch (Throwable) { exit(1); }' && exit 0
+            sleep 2
+          done
+          exit 1
+        env:
+          E: ${{ matrix.engine }}
+      - name: Integration suite
+        run: php -d memory_limit=512M /tmp/dev-vendor/bin/phpunit --testsuite Integration --colors=never
+        env:
+          FORUM_TEST_DB_HOST: 127.0.0.1
+          FORUM_TEST_DB_DRIVER: ${{ matrix.engine }}
+          FORUM_TEST_DB_NAME: forum_test
+          FORUM_TEST_DB_USER: forum
+          FORUM_TEST_DB_PASSWORD: ci-forum

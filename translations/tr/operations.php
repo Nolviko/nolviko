@@ -73,6 +73,7 @@ return [
     'operations.progress_migrate' => 'Veritabanı güncelleniyor…',
     'operations.progress_check' => 'Yeni sürüm kontrol ediliyor…',
     'operations.progress_finish' => 'Bitiriliyor…',
+    'operations.progress_retry' => 'Bağlantı koptu. Güncelleme kontrol ediliyor ve yeniden deneniyor…',
     'operations.progress_cancelled' => 'Güncelleme başlatılmadı.',
     'operations.progress_done' => 'Güncelleme tamamlandı. Sayfa yenileniyor…',
     'operations.progress_failed' => 'Güncelleme durdu. Hiçbir şey kaybolmadı: devam etmek için "Güncellemeye devam et" '

@@ -49,6 +49,20 @@
 </form>{% endif %}
 {% endif %}</section>
 {% else %}<p class="admin-empty">{{ t('admin.extensions.empty') }}</p>{% endfor %}
+{% if official|default([]) is not empty %}
+<h2>{{ t('admin.extensions.catalog_heading') }}</h2>
+<p class="hint">{{ t('admin.extensions.catalog_hint') }}</p>
+{% for package in official %}<section class="panel panel-pad">
+<p><strong>{{ package.name }}</strong> <span class="meta">{{ package.version }}</span><br>{{ package.about }}
+<a href="{{ ('https://github.com/' ~ package.repository ~ '/releases/tag/' ~ package.tag)|safe_url }}" rel="noopener noreferrer">{{ t('admin.updates.release_notes') }}</a></p>
+<form method="post" action="{{ action|safe_url }}" data-admin-progress>
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ actions.install_official }}"><input type="hidden" name="id" value="{{ package.id }}">
+<input type="hidden" name="confirm" value="{{ '1' }}">
+<button type="submit">{{ t('admin.extensions.catalog_install') }}</button>
+<span class="hint" data-submit-status hidden>{{ t('admin.extensions.uploading') }}</span>
+</form></section>{% endfor %}
+{% endif %}
 {% if fresh %}
 <h2>{{ t('admin.extensions.upload_heading') }}</h2>
 <form method="post" action="{{ action|safe_url }}" enctype="multipart/form-data" data-admin-progress data-dropzone>

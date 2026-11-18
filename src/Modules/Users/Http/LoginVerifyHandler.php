@@ -78,7 +78,7 @@ final class LoginVerifyHandler implements RouteHandler
         $this->auth->login($user, $pending['remember'], $request);
         $this->secondFactor->signedIn($user->id);
 
-        return InstallerPage::redirect($this->urls->generate(CoreRoutes::HOME));
+        return InstallerPage::redirect(ReturnPath::of($request) ?? $this->urls->generate(CoreRoutes::HOME));
     }
 
     /**

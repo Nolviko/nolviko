@@ -38,29 +38,54 @@ function forumRuntimeErrors(
 }
 
 /**
- * Accept only plain upstream 8.4/8.5 patch versions at or above the security floor and inside branch support.
+ * Branch => [lowest tested patch release, last day of upstream security support (UTC)]. Owner plan 2026-11-18
+ * (ADR-001 amendment): every PHP branch with upstream active or security support, 8.2 to 8.5.
+ *
+ * @return array<string, array{0: string, 1: string}>
+ */
+function forumRuntimePhpBranches(): array
+{
+    return [
+        '8.2' => ['8.2.35', '2026-12-31'],
+        '8.3' => ['8.3.36', '2027-12-31'],
+        '8.4' => ['8.4.27', '2028-12-31'],
+        '8.5' => ['8.5.12', '2029-12-31'],
+    ];
+}
+
+/**
+ * Accept only plain upstream patch versions of a supported branch at or above its tested floor. The end of a
+ * branch's upstream support is a warning (forumRuntimeVersionWarnings), never a reason to take a running forum
+ * offline on a calendar date.
  *
  * @return list<string>
  */
 function forumRuntimeVersionErrors(string $version, string $today): array
 {
-    // Branch => [minimum patch release, last day of upstream security support (UTC)].
-    $branches = [
-        '8.4' => ['8.4.27', '2028-12-31'],
-        '8.5' => ['8.5.12', '2029-12-31'],
-    ];
+    $branches = forumRuntimePhpBranches();
 
-    if (preg_match('/^(8\.[45])\.(0|[1-9][0-9]*)$/D', $version, $match) !== 1) {
+    if (preg_match('/^(8\.[2-5])\.(0|[1-9][0-9]*)$/D', $version, $match) !== 1) {
         return ['php_version_unsupported'];
     }
 
-    [$minimum, $supportEnds] = $branches[$match[1]];
-
-    if (version_compare($version, $minimum, '<') || $today > $supportEnds) {
+    if (version_compare($version, $branches[$match[1]][0], '<')) {
         return ['php_version_unsupported'];
     }
 
     return [];
+}
+
+/**
+ * A supported branch past its upstream security support: shown to the administrator, the forum keeps running.
+ *
+ * @return list<string>
+ */
+function forumRuntimeVersionWarnings(string $version, string $today): array
+{
+    $branch = preg_match('/^(8\.[2-5])\./', $version, $match) === 1 ? $match[1] : null;
+    $supportEnds = $branch === null ? null : (forumRuntimePhpBranches()[$branch][1] ?? null);
+
+    return $supportEnds !== null && $today > $supportEnds ? ['php_version_end_of_life'] : [];
 }
 
 /**

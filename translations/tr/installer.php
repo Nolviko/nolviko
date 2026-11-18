@@ -53,6 +53,7 @@ return [
     'installer.database.password' => 'Veritabanı parolası',
     'installer.database.submit' => 'Kontrol et ve kaydet',
     'installer.migrate.heading' => 'Veritabanı tabloları',
+    'installer.migrate.auto' => 'Otomatik olarak devam ediliyor…',
     'installer.migrate.pending' => '{count, plural, one {# veritabanı güncellemesi bekliyor.} other {# veritabanı '
         . 'güncellemesi bekliyor.}}',
     'installer.migrate.submit' => 'Tabloları oluştur',
@@ -71,6 +72,13 @@ return [
     'installer.status.warning' => 'Uyarı',
     'installer.status.failed' => 'Başarısız',
     'installer.check.php_version' => 'PHP {version} destekleniyor.',
+    'installer.check.php_end_of_life' => 'PHP {version} artık PHP projesinden güvenlik güncellemesi almıyor. Forum '
+        . 'çalışır, ancak barındırma firmanızdan daha yeni bir PHP sürümü isteyin.',
+    'installer.check.extension_missing' => 'Gerekli PHP eklentisi {extension} yüklü değil. Şunun için gerekiyor: '
+        . '{feature, select, database {veritabanı bağlantısı} languages {diller, tarihler ve sayılar} text '
+        . '{metin işleme} packages {güncellemeler ve eklenti/tema kurulumu} security {parolalar, anahtarlar ve '
+        . 'güvenli bağlantılar} uploads {yüklemeler, avatarlar ve görseller} sign_in {oturum açma} other '
+        . '{forum}}. Barındırma firmanızdan etkinleştirmesini isteyin.',
     'installer.check.extension' => 'Gerekli PHP eklentisi {extension} yüklü.',
     'installer.check.memory_limit' => 'PHP bellek sınırı: {limit}.',
     'installer.check.storage_writable' => 'Depolama dizinine web sunucusu tarafından yazılabiliyor.',

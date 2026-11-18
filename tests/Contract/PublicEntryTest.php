@@ -124,7 +124,9 @@ final class PublicEntryTest extends TestCase
             'timeout' => 5,
         ]]);
         $body = file_get_contents('http://127.0.0.1:' . $this->port . $path, false, $context);
-        $responseHeaders = http_get_last_response_headers() ?? [];
+        // PHP 8.4+ has the function; 8.2/8.3 fill $http_response_header (beta.10 matrix).
+        $responseHeaders = (function_exists('http_get_last_response_headers') ? http_get_last_response_headers()
+            : ($http_response_header ?? null)) ?? [];
 
         if ($body === false || $responseHeaders === []) {
             throw new RuntimeException('request_failed:' . $method . ' ' . $path);

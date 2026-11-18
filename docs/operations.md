@@ -116,7 +116,7 @@ No upstream PHP is included or executed. M09 adds no runtime or development pack
 
 ## Private storage for signed activation
 
-Signed automatic activation requires owner-configured private storage outside the application folder, on the same filesystem. The frozen controller and swap state must survive replacement of the live application. Default installations using application-local storage retain the manual update path. Preflight rejects this configuration before accepting an automatic update, and recovery preparation applies the same boundary. Never move a private directory into public, source, vendor or template trees to bypass the checks.
+Since 0.1.0-beta.8, `storage/` inside the application folder (protected by its deny-all `.htaccess`, at 700 or 755) is accepted for signed activation too; the paragraphs below describe the original design. Signed automatic activation requires owner-configured private storage outside the application folder, on the same filesystem. The frozen controller and swap state must survive replacement of the live application. Default installations using application-local storage retain the manual update path. Preflight rejects this configuration before accepting an automatic update, and recovery preparation applies the same boundary. Never move a private directory into public, source, vendor or template trees to bypass the checks.
 
 The actual M09-to-beta fixture uses the unchanged accepted M09 archive and an external private directory. The first updater-enabled baseline still requires manual installation; a fixture's development baseline version is not a published historical release.
 

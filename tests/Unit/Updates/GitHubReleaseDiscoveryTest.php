@@ -79,7 +79,7 @@ final class GitHubReleaseDiscoveryTest extends TestCase
         self::assertSame([1], array_column($this->check($service)->releases, 'id'));
         $preview = $this->check($service, 'prerelease');
         self::assertSame('cached', $preview->status);
-        self::assertSame([2], array_column($preview->releases, 'id'));
+        self::assertSame([2, 1], array_column($preview->releases, 'id'), 'betas also see stable releases');
         self::assertCount(1, $client->requests);
     }
 

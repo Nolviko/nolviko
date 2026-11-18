@@ -38,6 +38,7 @@ const labels=JSON.parse(output.dataset.stages);
 const actions=JSON.parse(output.dataset.actions);
 const step=document.getElementById('next-step');
 let nextAction=null;
+try{const kept=JSON.parse(window.localStorage.getItem('nolviko-update-grant')||'null');if(kept&&kept.until>Date.now()&&typeof kept.grant==='string'){key.value=kept.grant;}}catch{}
 let sequence=0;
 let currentKey='';
 async function send(action, reconcile=true){

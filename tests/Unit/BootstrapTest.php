@@ -82,6 +82,11 @@ final class BootstrapTest extends TestCase
     public static function versions(): array
     {
         return [
+            ['8.1.33', false],
+            ['8.2.34', false],
+            ['8.2.35', true],
+            ['8.3.35', false],
+            ['8.3.36', true],
             ['8.4.26', false],
             ['8.4.27', true],
             ['8.5.11', false],
@@ -103,10 +108,13 @@ final class BootstrapTest extends TestCase
     {
         $extensions = self::extensions();
 
-        self::assertContains(
+        // Past upstream support the forum keeps running and warns (beta.10).
+        self::assertNotContains(
             'php_version_unsupported',
             \forumRuntimeErrors('8.4.27', $extensions, '128M', '2029-01-01'),
         );
+        self::assertSame(['php_version_end_of_life'], \forumRuntimeVersionWarnings('8.2.35', '2027-01-01'));
+        self::assertSame([], \forumRuntimeVersionWarnings('8.2.35', '2026-12-31'));
         self::assertContains(
             'extension_missing:pdo_pgsql',
             \forumRuntimeErrors('8.4.27', $extensions, '128M', self::TODAY, 'postgresql'),

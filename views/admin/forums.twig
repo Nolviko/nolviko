@@ -8,6 +8,22 @@
 {% if error %}
 <p role="alert">{{ error }}</p>
 {% endif %}
+{% set visibility_labels = {inherit: t('admin.forums.visibility_inherit'), public: t('admin.forums.visibility_public'), members: t('admin.forums.visibility_members'), hidden: t('admin.forums.visibility_hidden'), custom: t('admin.forums.visibility_custom')} %}
+{% if visibility %}
+<section class="panel panel-pad" aria-labelledby="site-visibility">
+<h2 id="site-visibility">{{ t('admin.forums.site_visibility') }}</h2>
+<p class="hint">{{ t('admin.forums.site_visibility_hint') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="site-visibility-choice">{{ t('admin.forums.visibility') }}</label>
+<select id="site-visibility-choice" name="visibility">
+{% if visibility.site == 'custom' %}<option value="" selected>{{ visibility_labels.custom }}</option>{% endif %}
+{% for choice in visibility.site_choices %}<option value="{{ choice }}"{% if choice == visibility.site %} selected{% endif %}>{{ choice == 'hidden' ? t('admin.forums.visibility_site_hidden') : visibility_labels[choice] }}</option>{% endfor %}
+</select></p>
+<p><button type="submit" name="action" value="{{ visibility.action }}">{{ t('admin.forums.save') }}</button></p>
+</form>
+</section>
+{% endif %}
 <div class="grid2">
 <section class="panel panel-pad" aria-labelledby="new-category">
 <h2 id="new-category">{{ t('admin.forums.new_category') }}</h2>
@@ -19,6 +35,8 @@
 <input id="category-title" name="title" required maxlength="100" dir="auto"></p>
 <p><label for="category-slug">{{ t('admin.forums.slug_optional') }}</label>
 <input id="category-slug" name="slug" maxlength="100"></p>
+{% if visibility %}<p><label for="category-visibility">{{ t('admin.forums.visibility') }}</label>
+<select id="category-visibility" name="visibility">{% for choice in visibility.forum_choices %}<option value="{{ choice }}">{{ visibility_labels[choice] }}</option>{% endfor %}</select></p>{% endif %}
 <p><button type="submit" name="action" value="{{ choices.create }}">{{ t('admin.forums.create_category') }}</button></p>
 </form>
 </section>
@@ -38,6 +56,8 @@
 {% if categories is empty %}<span class="hint">{{ t('admin.forums.no_categories') }}</span>{% endif %}</p>
 <p><label for="forum-slug">{{ t('admin.forums.slug_optional') }}</label>
 <input id="forum-slug" name="slug" maxlength="100"></p>
+{% if visibility %}<p><label for="forum-visibility">{{ t('admin.forums.visibility') }}</label>
+<select id="forum-visibility" name="visibility">{% for choice in visibility.forum_choices %}<option value="{{ choice }}">{{ visibility_labels[choice] }}</option>{% endfor %}</select></p>{% endif %}
 <p><button type="submit" name="action" value="{{ choices.create }}">{{ t('admin.forums.create_forum') }}</button></p>
 </form>
 </section>
@@ -73,6 +93,7 @@
 {% endif %}
 <button class="btn-d" type="submit" name="action" value="{{ choices.delete }}">{{ t('admin.forums.delete') }}</button>
 </form>
+{% if row.guest_sees|default('') %}<p class="meta">{{ t('admin.forums.guest_sees', {result: row.guest_sees}) }}</p>{% endif %}
 <details class="forum-edit"><summary>{{ t('admin.forums.edit') }}</summary>
 <form method="post" action="{{ action|safe_url }}" class="forum-edit-form">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
@@ -86,6 +107,11 @@
 {% if row.is_forum|default(false) %}<input type="hidden" name="kind" value="{{ 'forum' }}">
 <p><label class="row"><input type="checkbox" name="questions" value="1"{% if row.questions|default(false) %} checked{% endif %} aria-describedby="edit-questions-{{ row.id }}-hint"> {{ t('admin.forums.questions') }}</label>
 <span id="edit-questions-{{ row.id }}-hint" class="meta">{{ t('admin.forums.questions_hint') }}</span></p>{% endif %}
+{% if visibility %}<p><label for="edit-visibility-{{ row.id }}">{{ t('admin.forums.visibility') }}</label>
+<select id="edit-visibility-{{ row.id }}" name="visibility">
+{% if row.visibility == 'custom' %}<option value="" selected>{{ visibility_labels.custom }}</option>{% endif %}
+{% for choice in visibility.forum_choices %}<option value="{{ choice }}"{% if choice == row.visibility %} selected{% endif %}>{{ visibility_labels[choice] }}</option>{% endfor %}
+</select></p>{% endif %}
 <p><button type="submit" name="action" value="{{ choices.edit }}">{{ t('admin.forums.save') }}</button></p>
 </form>
 </details>

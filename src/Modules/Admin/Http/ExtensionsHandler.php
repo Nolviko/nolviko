@@ -48,7 +48,7 @@ final readonly class ExtensionsHandler implements RouteHandler
      * One-step install of a package file (upload or panel update): stage, switch an enabled older version off,
      * install, enable with its migrations. Returns the extension ID.
      */
-    private function installPackage(ExtensionArchive $archive, string $path): string
+    private function installPackage(ExtensionArchive $archive, string $path, bool $enable = true): string
     {
         $token = $archive->stage($path);
         $id = $archive->stagedId($token);
@@ -57,9 +57,41 @@ final readonly class ExtensionsHandler implements RouteHandler
         }
 
         $archive->install($token);
-        $this->manager->enable($id, $this->migrations->apply(...));
+        // Beta.10: a package installed from the official catalog is not switched on by itself; turning a new
+        // extension on stays the administrator's own decision.
+        if ($enable) {
+            $this->manager->enable($id, $this->migrations->apply(...));
+        }
 
         return $id;
+    }
+
+    /**
+     * Official extensions that are not installed yet, with their newest release (beta.10 catalog).
+     *
+     * @param array<string, mixed> $installed Extension ID => manifest.
+     * @return list<array{id: string, name: string, about: string, version: string, repository: string, tag: string}>
+     */
+    private function officialCatalog(array $installed): array
+    {
+        $rows = [];
+        foreach (PackageUpdates::OFFICIAL_EXTENSIONS as $id => $repository) {
+            $release = isset($installed[$id]) || $this->updates === null ? null
+                : $this->updates->available($repository, '0.0.0', PackageUpdates::extensionAsset($id));
+            if ($release !== null) {
+                $rows[] = ['id' => $id, 'name' => $this->translator->translate(match ($id) {
+                    'nolviko/totp' => 'admin.extensions.catalog_name_totp',
+                    'nolviko/google' => 'admin.extensions.catalog_name_google',
+                    default => 'admin.extensions.catalog_name_seo',
+                }), 'about' => $this->translator->translate(match ($id) {
+                    'nolviko/totp' => 'admin.extensions.catalog_about_totp',
+                    'nolviko/google' => 'admin.extensions.catalog_about_google',
+                    default => 'admin.extensions.catalog_about_seo',
+                }), 'version' => $release['version'], 'repository' => $repository, 'tag' => $release['tag']];
+            }
+        }
+
+        return $rows;
     }
 
     /** @return array{repository: string, version: string, tag: string, asset: string, bytes: int}|null */
@@ -97,7 +129,7 @@ final readonly class ExtensionsHandler implements RouteHandler
                 $action = $text('action');
                 if (
                     !in_array($action, ['enable', 'disable', 'safe', 'resume', 'upload', 'update', 'rollback',
-                        'disable_all'], true)
+                        'disable_all', 'install_official'], true)
                 ) {
                     throw new ExtensionFailure('extension_action_invalid');
                 }
@@ -166,6 +198,35 @@ final readonly class ExtensionsHandler implements RouteHandler
                         return InstallerPage::redirect(
                             $this->urls->generate(CoreRoutes::ADMIN_EXTENSIONS) . '?installed=' . rawurlencode($id),
                         );
+                    case 'install_official':
+                        // Official catalog (beta.10): download the newest release of an official extension that is
+                        // not installed yet, verify and install it; it is enabled with its own button.
+                        $id = $text('id');
+                        $installedNow = $this->manager->catalog->discover()['manifests'];
+                        $spec = PackageUpdates::OFFICIAL_EXTENSIONS[$id] ?? null;
+                        $release = $spec === null || isset($installedNow[$id]) || $this->updates === null ? null
+                            : $this->updates->available($spec, '0.0.0', PackageUpdates::extensionAsset($id));
+                        $repository = $release === null ? null : PackageUpdates::repository($release['repository']);
+                        if ($release === null || $repository === null || $this->downloader === null) {
+                            throw new ExtensionFailure('extension_update_unavailable');
+                        }
+                        try {
+                            $file = $this->downloader->download(
+                                $repository,
+                                $release['tag'],
+                                $release['asset'],
+                                $release['bytes'],
+                                4194304,
+                            );
+                        } catch (Throwable) {
+                            throw new ExtensionFailure('extension_update_download_failed');
+                        }
+                        try {
+                            $this->installPackage($archive, $file, false);
+                        } finally {
+                            @unlink($file);
+                        }
+                        break;
                     case 'rollback':
                         // Restore the kept older copy (2026-11-17): off, swap back, on again with its migrations
                         // (expand-only, so the older code runs on the newer schema).
@@ -205,6 +266,7 @@ final readonly class ExtensionsHandler implements RouteHandler
                     'previous' => $kept[$manifest->id] ?? null, 'update' => $this->updateFor($manifest)];
             }
 
+            $official = $this->officialCatalog($catalog['manifests']);
             $diagnostics = $this->manager->diagnostics();
         } catch (ExtensionFailure $failure) {
             $status = 422;
@@ -230,9 +292,10 @@ final readonly class ExtensionsHandler implements RouteHandler
             'csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token(),
             'fresh' => $this->admin->isFresh(), 'safe' => $this->manager->state->safe(),
             'extensions' => $rows, 'diagnostics' => $diagnostics, 'error' => $error, 'installed' => $installed,
+            'official' => $official ?? [],
             'actions' => ['safe' => 'safe', 'resume' => 'resume', 'disable_all' => 'disable_all',
                 'enable' => 'enable', 'disable' => 'disable', 'upload' => 'upload', 'update' => 'update',
-                'rollback' => 'rollback'],
+                'rollback' => 'rollback', 'install_official' => 'install_official'],
         ]), $status, ['Cache-Control' => 'no-store, private']);
     }
 }

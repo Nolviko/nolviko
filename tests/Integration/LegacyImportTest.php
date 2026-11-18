@@ -99,9 +99,13 @@ final class LegacyImportTest extends TestCase
     protected function tearDown(): void
     {
         if (isset($this->db)) {
-            $this->sourceDb->close();
+            if (isset($this->sourceDb)) {
+                $this->sourceDb->close();
+            }
             TestDatabase::release($this->db);
-            $this->files->remove();
+            if (isset($this->files)) {
+                $this->files->remove();
+            }
         }
     }
 

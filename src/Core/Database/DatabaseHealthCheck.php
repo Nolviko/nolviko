@@ -11,16 +11,21 @@ use Doctrine\DBAL\Exception as DbalException;
 /**
  * Connects through DBAL and verifies the selected backend is one the forum supports (installer, M01.13/14).
  *
- * MySQL 8.4 and MariaDB 10.11 or newer (owner decision 2026-11-02, the lowest MariaDB LTS still supported).
- * The driver must match the server family (`database_family_invalid:mariadb|mysql`). PostgreSQL 16 or newer
- * (2026-11-14): UTF-8 server and client encoding and the UTC session time zone (PostgresSession).
+ * Beta.10 (owner plan 2026-11-18, "the database the host gives"): MySQL 8.0 or newer (8.x and 9.x), MariaDB 10.6
+ * or newer, PostgreSQL 14 or newer. The version is detected; a branch that runs is not a claim that its vendor
+ * still ships security fixes (docs/compatibility.md keeps that apart). The driver must match the server family
+ * (`database_family_invalid:mariadb|mysql`). PostgreSQL: UTF-8 server and client encoding and the UTC session
+ * time zone (PostgresSession).
  */
 final class DatabaseHealthCheck
 {
-    public const MYSQL_SERIES = '8.4.';
+    /** The lowest MySQL release accepted, and the first major that is not (beta.10). */
+    public const MYSQL_MINIMUM = '8.0.0';
+
+    public const MYSQL_BELOW = '10.0.0';
 
     /** The lowest PostgreSQL release accepted (`server_version_num`). */
-    public const POSTGRES_MINIMUM = 160000;
+    public const POSTGRES_MINIMUM = 140000;
 
     private const POSTGRES_FACTS = "SELECT current_setting('server_version') AS version, "
         . "current_setting('server_version_num') AS version_num, current_setting('server_encoding') AS "
@@ -36,8 +41,8 @@ final class DatabaseHealthCheck
         '08006' => 'database_unreachable',
     ];
 
-    /** The lowest MariaDB release accepted (10.11 LTS). */
-    public const MARIADB_MINIMUM = '10.11.0';
+    /** The lowest MariaDB release accepted (10.6 LTS, beta.10). */
+    public const MARIADB_MINIMUM = '10.6.0';
 
     private const MYSQL_FACTS = 'SELECT VERSION() AS version, @@character_set_client AS charset_client, '
         . '@@character_set_connection AS charset_connection, @@character_set_results AS charset_results, '
@@ -113,7 +118,8 @@ final class DatabaseHealthCheck
         $number = self::versionNumber($mariadb ? (string) preg_replace('/^5\.5\.5-/', '', $version) : $version);
         $supported = $mariadb
             ? $number !== 'unknown' && version_compare($number, self::MARIADB_MINIMUM, '>=')
-            : str_starts_with($version, self::MYSQL_SERIES);
+            : $number !== 'unknown' && version_compare($number, self::MYSQL_MINIMUM, '>=')
+                && version_compare($number, self::MYSQL_BELOW, '<');
 
         if (!$supported) {
             $diagnostics[] = 'database_version_unsupported:' . $number;

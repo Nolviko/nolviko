@@ -78,8 +78,8 @@ final class UpdatePolicyTest extends TestCase
     public function testSignedUploadResumesAfterCheckedCheckpointWithoutExecutingTargetCode(): void
     {
         $metadata = json_encode(['format' => 1, 'version' => '1.1.0', 'extension_api' => '1.0.0',
-            'theme_api' => 1, 'php' => '>=8.4.27 <8.6',
-            'databases' => ['mysql' => '>=8.4 <9', 'mariadb' => '>=10.11 <12', 'postgresql' => '>=16 <19'],
+            'theme_api' => 1, 'php' => '>=8.2.35 <8.6',
+            'databases' => ['mysql' => '>=8.0 <10', 'mariadb' => '>=10.6 <13', 'postgresql' => '>=14 <19'],
             'extensions' => ['intl', 'zip'], 'packages' => []], JSON_THROW_ON_ERROR);
         $entries = ['config/release-compatibility.json' => $metadata,
             'src/Core/Updates/SiteAccessLock.php' => '<?php throw new RuntimeException("must_not_execute");'];
@@ -154,8 +154,8 @@ final class UpdatePolicyTest extends TestCase
     public function testServerFactsGateAndChangedInstalledFilesOrPendingMigrationsRefuseUpdate(): void
     {
         $metadata = ReleaseCompatibility::parse(json_encode(['format' => 1, 'version' => '1.1.0',
-            'extension_api' => '1.0.0', 'theme_api' => 1, 'php' => '>=8.4.27 <8.6',
-            'databases' => ['mysql' => '>=8.4 <9', 'mariadb' => '>=10.11 <12', 'postgresql' => '>=16 <19'],
+            'extension_api' => '1.0.0', 'theme_api' => 1, 'php' => '>=8.2.35 <8.6',
+            'databases' => ['mysql' => '>=8.0 <10', 'mariadb' => '>=10.6 <13', 'postgresql' => '>=14 <19'],
             'extensions' => ['intl', 'zip'], 'packages' => []], JSON_THROW_ON_ERROR));
         $manifest = ReleaseSigningFixture::verify(ReleaseSigningFixture::body());
         $preflight = new UpdatePreflight(

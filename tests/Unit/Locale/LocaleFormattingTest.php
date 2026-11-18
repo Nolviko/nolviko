@@ -111,7 +111,11 @@ final class LocaleFormattingTest extends TestCase
         $text = TranslatorFactory::create($catalogs->path, $locale)->translate('demo.replies', ['count' => $count]);
         $catalogs->remove();
 
-        self::assertSame($expected, $text);
+        // The plural form is what matters; whether Arabic counts use Arabic-Indic or Latin digits depends on the
+        // ICU/CLDR version the host's intl was built with (beta.10 matrix: Debian's newer ICU uses Latin digits).
+        $latin = strtr($expected, ['٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5',
+            '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9']);
+        self::assertContains($text, array_unique([$expected, $latin]));
     }
 
     public function testTwigFiltersUseTheRequestZoneAndRefuseMutableDates(): void

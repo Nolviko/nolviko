@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "homepage": "https://nolviko.com",
   "require": {
-    "php": "~8.4.27 || ~8.5.12",
+    "php": "~8.2.35 || ~8.3.36 || ~8.4.27 || ~8.5.12",
     "ext-fileinfo": "*",
     "ext-intl": "*",
     "ext-json": "*",
@@ -64,7 +64,7 @@
     "sort-packages": true,
     "optimize-autoloader": true,
     "platform": {
-      "php": "8.4.27"
+      "php": "8.3.36"
     },
     "process-timeout": 0
   }

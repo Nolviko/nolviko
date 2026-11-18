@@ -72,6 +72,12 @@ final class PrerequisiteCheck
                     'version' => $version,
                 ]),
         ];
+        // Beta.10: a branch past its upstream security support still installs and runs; the owner is told.
+        if (\forumRuntimeVersionWarnings($version, ($this->clock)()) !== []) {
+            $results[] = new PrerequisiteResult(PrerequisiteResult::WARNING, 'installer.check.php_end_of_life', [
+                'version' => $version,
+            ]);
+        }
         // Before installation no database type is chosen: a host with only pdo_pgsql passes with PostgreSQL.
         $chosen = $this->databaseDriver ?? (!in_array('pdo_mysql', $extensions, true)
             && in_array('pdo_pgsql', $extensions, true) ? 'postgresql' : 'mysql');
@@ -82,8 +88,10 @@ final class PrerequisiteCheck
         foreach (\forumRuntimeExtensionErrors([], $driver) as $required) {
             $extension = substr($required, strlen('extension_missing:'));
             $results[] = in_array($required, $missing, true)
-                ? new PrerequisiteResult(PrerequisiteResult::FAILED, 'diagnostics.extension_missing', [
+                // Beta.10: say what the missing extension is for, so the owner can ask the host precisely.
+                ? new PrerequisiteResult(PrerequisiteResult::FAILED, 'installer.check.extension_missing', [
                     'extension' => $extension,
+                    'feature' => self::feature($extension),
                 ])
                 : new PrerequisiteResult(PrerequisiteResult::PASSED, 'installer.check.extension', [
                     'extension' => $extension,
@@ -98,6 +106,21 @@ final class PrerequisiteCheck
             : new PrerequisiteResult(PrerequisiteResult::FAILED, 'diagnostics.' . $memoryErrors[0]);
 
         return $results;
+    }
+
+    /** What a required extension is used for (ICU select key in installer.check.extension_missing). */
+    private static function feature(string $extension): string
+    {
+        return match (strtolower($extension)) {
+            'pdo', 'pdo_mysql', 'pdo_pgsql' => 'database',
+            'intl' => 'languages',
+            'mbstring', 'json' => 'text',
+            'zip' => 'packages',
+            'openssl', 'sodium' => 'security',
+            'fileinfo', 'gd' => 'uploads',
+            'session' => 'sign_in',
+            default => 'other',
+        };
     }
 
     private function storageResult(): PrerequisiteResult

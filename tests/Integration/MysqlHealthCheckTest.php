@@ -45,7 +45,7 @@ final class MysqlHealthCheckTest extends TestCase
             self::assertStringContainsStringIgnoringCase('mariadb', $facts['version']);
             self::assertTrue(version_compare($facts['version'], DatabaseHealthCheck::MARIADB_MINIMUM, '>='));
         } else {
-            self::assertStringStartsWith(DatabaseHealthCheck::MYSQL_SERIES, $facts['version']);
+            self::assertTrue(version_compare($facts['version'], DatabaseHealthCheck::MYSQL_MINIMUM, '>='));
         }
         self::assertSame('utf8mb4', $facts['charset_connection']);
         self::assertSame('+00:00', $facts['time_zone']);

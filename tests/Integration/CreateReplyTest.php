@@ -342,7 +342,11 @@ final class CreateReplyTest extends TestCase
             $second->getStatusCode(),
         ]);
         self::assertSame(2, $this->postCount());
-        self::assertSame('/login', $guest->headers->get('Location'));
+        self::assertSame(
+            '/login?return=%2Fthreads%2F1%2Freply',
+            $guest->headers->get('Location'),
+            'back to the reply after signing in',
+        );
         self::assertSame(Response::HTTP_FORBIDDEN, $locked->getStatusCode());
         self::assertStringContainsString('This thread is locked.', (string) $locked->getContent());
         self::assertStringNotContainsString('<textarea', (string) $locked->getContent());

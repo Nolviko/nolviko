@@ -119,6 +119,7 @@ use Nolviko\Modules\Admin\Infrastructure\DbalAuditLog;
 use Nolviko\Modules\Admin\Infrastructure\DbalMemberList;
 use Nolviko\Modules\Admin\Infrastructure\DbalUpdateOverview;
 use Nolviko\Modules\Admin\Infrastructure\ForumAdmin;
+use Nolviko\Modules\Admin\Infrastructure\ForumGuestVisibility;
 use Nolviko\Modules\Admin\Infrastructure\ForumModeratorAssignments;
 use Nolviko\Modules\Admin\Infrastructure\GroupAdministration;
 use Nolviko\Modules\Admin\Infrastructure\MemberIdentity;
@@ -2248,6 +2249,8 @@ final class CoreServiceProvider implements ServiceProvider
                     AdminSession $admin,
                     CsrfTokens $csrf,
                     Router $router,
+                    PermissionCatalog $catalog,
+                    PermissionResolver $resolver,
                 ): ForumManagementHandler => new ForumManagementHandler(
                     $translator,
                     $views,
@@ -2258,6 +2261,8 @@ final class CoreServiceProvider implements ServiceProvider
                     $csrf,
                     $router,
                     $act,
+                    new ForumGuestVisibility($connection, new DbalPermissionRuleStore($connection, $catalog)),
+                    $resolver,
                 ),
                 [
                     MessageTranslator::class,
@@ -2268,6 +2273,8 @@ final class CoreServiceProvider implements ServiceProvider
                     AdminSession::class,
                     CsrfTokens::class,
                     Router::class,
+                    PermissionCatalog::class,
+                    PermissionResolver::class,
                 ],
             );
         }

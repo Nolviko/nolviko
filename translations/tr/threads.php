@@ -7,6 +7,7 @@ return [
     'threads.preview.button' => 'Önizle',
     'threads.preview.heading' => 'Önizleme — henüz gönderilmedi',
     'threads.draft.saved' => 'Taslağınız kaydedildi. Geri döndüğünüzde burada olacak.',
+    'threads.draft.local_restored' => 'Gönderilmemiş metniniz bu tarayıcıdan geri getirildi. Kontrol edip gönderin.',
     'threads.draft.restored' => 'Kayıtlı taslağınız forma yüklendi.',
     'threads.create.title' => 'Yeni konu',
     'threads.create.forum' => 'Forum: {forum}',

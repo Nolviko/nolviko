@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Admin\Http;
 
+use Closure;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
@@ -12,10 +13,13 @@ use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Admin\Infrastructure\ForumAdmin;
+use Nolviko\Modules\Admin\Infrastructure\ForumGuestVisibility;
 use Nolviko\Modules\Forums\Domain\Forum;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Domain\ForumRuleViolation;
 use Nolviko\Modules\Forums\Domain\ForumType;
+use Nolviko\Modules\Permissions\Domain\ForumVisibility;
+use Nolviko\Modules\Permissions\Domain\PermissionResolver;
 use Nolviko\Modules\Threads\Domain\CreateThread;
 use Nolviko\Modules\Users\Http\RequestSubject;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,6 +48,9 @@ final class ForumManagementHandler implements RouteHandler
 
     public const EDIT = 'edit';
 
+    /** Site-wide default visibility for guests (beta.10). */
+    public const SITE_VISIBILITY = 'site_visibility';
+
     private const ID = '/^[1-9][0-9]{0,17}$/D';
 
     public function __construct(
@@ -56,6 +63,8 @@ final class ForumManagementHandler implements RouteHandler
         private readonly CsrfTokens $csrf,
         private readonly UrlGenerator $urls,
         private readonly bool $action,
+        private readonly ?ForumGuestVisibility $visibility = null,
+        private readonly ?PermissionResolver $resolver = null,
     ) {
     }
 
@@ -74,25 +83,36 @@ final class ForumManagementHandler implements RouteHandler
         try {
             match ($text('action')) {
                 // 2026-11-09: an empty address is made from the title (as for thread addresses).
-                self::CREATE => $this->admin->create(
-                    $actor,
-                    ForumType::tryFrom($text('type')) ?? ForumType::Forum,
-                    $text('title'),
-                    trim($text('slug')) !== '' ? $text('slug') : (CreateThread::slug($text('title')) ?: 'forum'),
-                    $id('parent'),
-                ),
+                self::CREATE => $this->together(function () use ($actor, $text, $id): void {
+                    $created = $this->admin->create(
+                        $actor,
+                        ForumType::tryFrom($text('type')) ?? ForumType::Forum,
+                        $text('title'),
+                        trim($text('slug')) !== '' ? $text('slug') : (CreateThread::slug($text('title')) ?: 'forum'),
+                        $id('parent'),
+                    );
+                    $this->visibility?->apply($created->id, $text('visibility'));
+                }),
+                self::SITE_VISIBILITY => $this->visibility?->apply(null, $text('visibility')),
                 self::MOVE => $this->admin->moveUnder($actor, $forum, $id('parent')),
                 self::UP => $this->admin->shift($actor, $forum, -1),
                 self::DOWN => $this->admin->shift($actor, $forum, 1),
-                self::EDIT => $this->admin->update(
-                    $actor,
-                    $forum,
-                    $text('title'),
-                    $text('slug'),
-                    $text('description'),
-                    // Only forums carry the switch; a category's form has no such field.
-                    $text('kind') === 'forum' ? $text('questions') === '1' : null,
-                ),
+                self::EDIT => $this->together(function () use ($actor, $forum, $text): void {
+                    $this->admin->update(
+                        $actor,
+                        $forum,
+                        $text('title'),
+                        $text('slug'),
+                        $text('description'),
+                        // Only forums carry the switch; a category's form has no such field.
+                        $text('kind') === 'forum' ? $text('questions') === '1' : null,
+                    );
+                    // Unchanged or "custom" keeps every existing rule of the forum.
+                    $current = $this->visibility?->presets([$forum])[$forum] ?? null;
+                    if ($text('visibility') !== '' && $text('visibility') !== $current) {
+                        $this->visibility?->apply($forum, $text('visibility'));
+                    }
+                }),
                 self::LOCK => $this->admin->setLocked($actor, $forum, true),
                 self::UNLOCK => $this->admin->setLocked($actor, $forum, false),
                 self::DELETE => $this->session->isFresh()
@@ -111,9 +131,36 @@ final class ForumManagementHandler implements RouteHandler
         return InstallerPage::redirect($this->urls->generate(CoreRoutes::ADMIN_FORUMS));
     }
 
+    /** Forum change and its visibility rules in one transaction (beta.10). */
+    private function together(Closure $work): void
+    {
+        if ($this->visibility === null) {
+            $work();
+
+            return;
+        }
+        $this->visibility->transaction($work);
+    }
+
+    /** What a guest gets for one forum: the whole forum, its name only, or nothing. */
+    private function guestSees(int $forumId): string
+    {
+        $guest = $this->resolver?->guest();
+        if ($guest === null) {
+            return '';
+        }
+        if (!$guest->allows(ForumVisibility::VIEW, $forumId)) {
+            return $this->translator->translate('admin.forums.guest_nothing');
+        }
+
+        return $this->translator->translate($guest->allows(ForumVisibility::READ, $forumId)
+            ? 'admin.forums.guest_all' : 'admin.forums.guest_name');
+    }
+
     private function page(?string $error, int $status): Response
     {
         $forums = $this->forums->all();
+        $presets = $this->visibility?->presets(array_map(static fn(Forum $forum): int => $forum->id, $forums)) ?? [];
         $parents = [['value' => '', 'label' => $this->translator->translate('admin.forums.root')]];
         $categories = [];
         $hosts = [];
@@ -146,6 +193,8 @@ final class ForumManagementHandler implements RouteHandler
                 'description' => $forum->description ?? '',
                 'is_forum' => $forum->type === ForumType::Forum,
                 'questions' => $forum->questions,
+                'visibility' => $presets[$forum->id] ?? '',
+                'guest_sees' => $this->guestSees($forum->id),
             ];
         }
 
@@ -175,6 +224,12 @@ final class ForumManagementHandler implements RouteHandler
                 'lock' => self::LOCK,
                 'unlock' => self::UNLOCK,
                 'delete' => self::DELETE,
+            ],
+            'visibility' => $this->visibility === null ? null : [
+                'site' => $presets[0] ?? ForumGuestVisibility::PUBLIC,
+                'forum_choices' => ForumGuestVisibility::FORUM_CHOICES,
+                'site_choices' => ForumGuestVisibility::SITE_CHOICES,
+                'action' => self::SITE_VISIBILITY,
             ],
             'error' => $error,
             'fresh' => $this->session->isFresh(),

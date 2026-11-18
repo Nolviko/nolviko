@@ -28,7 +28,7 @@ final readonly class ThemeManifest
             throw new TemplateException('theme_manifest_invalid:' . $id);
         }
         $data += ['parent' => null, 'version' => '1.0.0', 'engine' => self::ENGINE,
-            'minimum_php' => '8.4.27', 'assets' => [], 'slots' => [], 'upstream' => []];
+            'minimum_php' => '8.2.35', 'assets' => [], 'slots' => [], 'upstream' => []];
         if (
             ($data['parent'] !== null && (!is_string($data['parent'])
                 || preg_match(ThemeChain::ID_PATTERN, $data['parent']) !== 1))
@@ -40,7 +40,8 @@ final readonly class ThemeManifest
             // Optional GitHub repository for update checks in the panel (2026-11-17).
             || (isset($data['repository']) && (!is_string($data['repository'])
                 || preg_match(PackageUpdates::REPOSITORY_PATTERN, $data['repository']) !== 1))
-            || preg_match('/^8\.[45]\.[0-9]{1,3}$/D', $data['minimum_php']) !== 1
+            // PHP 8.2-8.5 (beta.10, owner plan 2026-11-18).
+            || preg_match('/^8\.[2-5]\.[0-9]{1,3}$/D', $data['minimum_php']) !== 1
         ) {
             throw new TemplateException('theme_manifest_invalid:' . $id);
         }

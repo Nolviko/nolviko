@@ -335,7 +335,8 @@ final class GitHubReleaseDiscovery
     ): ReleaseDiscoveryResult {
         $filtered = array_values(array_filter(
             $catalog,
-            static fn(DiscoveredRelease $release): bool => $release->prerelease === ($channel === 'prerelease'),
+            // The prerelease channel follows stable releases too (beta.10): a beta site must see 1.0 when it ships.
+            static fn(DiscoveredRelease $release): bool => $channel === 'prerelease' || !$release->prerelease,
         ));
 
         return new ReleaseDiscoveryResult(

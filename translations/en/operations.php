@@ -72,6 +72,7 @@ return [
     'operations.progress_migrate' => 'Updating the database…',
     'operations.progress_check' => 'Checking the new version…',
     'operations.progress_finish' => 'Finishing…',
+    'operations.progress_retry' => 'The connection dropped. Checking the update and trying again…',
     'operations.progress_cancelled' => 'The update was not started.',
     'operations.progress_done' => 'The update is complete. Reloading…',
     'operations.progress_failed' => 'The update stopped. Nothing is lost: press "Continue the update" to carry on.',

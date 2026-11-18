@@ -20,13 +20,15 @@
 <section class="card post-preview" aria-labelledby="post-preview-heading"><h2 id="post-preview-heading">{{ t('threads.preview.heading') }}</h2><div class="post-body" dir="auto">{{ preview }}</div></section>
 {% endif %}
 {% if action is not null %}
-<form method="post" action="{{ action|safe_url }}">
+<p role="status" data-draft-restored hidden>{{ t('threads.draft.local_restored') }}</p>
+<form method="post" action="{{ action|safe_url }}" data-draft-keeper="{{ action }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <input type="hidden" name="{{ token_field }}" value="{{ token }}">
 <p><label for="reply-content">{{ t('threads.reply.content') }}</label>
 {% include 'components/editor_toolbar.twig' with {target: 'reply-content', image_upload: csrf_token|default('') and site.post_images|default('off') == 'on' ? {url: path('gallery.attach'), token: csrf_token, max: site.images_per_post|default('5')} : null} only %}
 <textarea dir="auto" id="reply-content" data-mentions{% if thread_id|default(null) %} data-thread="{{ thread_id }}"{% endif %} name="content" rows="10" required maxlength="{{ max_content }}">{{ content }}</textarea></p>
 <script src="{{ asset('quote.js') }}" defer></script>
+<script src="{{ asset('draft-keeper.js') }}" defer></script>
 <p><button type="submit">{{ t('threads.reply.submit') }}</button>
 {% if preview_intent|default(null) %}<button class="btn-s" type="submit" name="intent" value="{{ preview_intent }}">{{ t('threads.preview.button') }}</button>{% endif %}
 {% if draft_intent %}<button class="btn-s" type="submit" name="intent" value="{{ draft_intent }}">{{ t('threads.draft.save') }}</button>{% endif %}</p>

@@ -73,6 +73,7 @@ final readonly class ThemesHandler implements RouteHandler
         $status = 200;
         $draft = null;
         $themes = [];
+        $official = [];
         $warnings = [];
         $tokensInput = null;
         $selectedTheme = null;
@@ -90,6 +91,16 @@ final readonly class ThemesHandler implements RouteHandler
                 ],
                 (new ThemeCatalog($this->builds->root . '/themes'))->all(),
             );
+            // Official themes not installed yet (beta.10 catalog).
+            $installedThemes = array_column($themes, 'id');
+            foreach (PackageUpdates::OFFICIAL_THEMES as $id => $spec) {
+                $release = in_array($id, $installedThemes, true) || $this->updates === null ? null
+                    : $this->updates->available($spec, '0.0.0', PackageUpdates::themeAsset($id));
+                if ($release !== null) {
+                    $official[] = ['id' => $id, 'version' => $release['version'], 'repository' => $spec,
+                        'tag' => $release['tag']];
+                }
+            }
             $draft = $this->builds->draft($owner);
             if ($draft !== null) {
                 $warnings = $this->builds->get($draft['build'])['warnings'];
@@ -106,7 +117,8 @@ final readonly class ThemesHandler implements RouteHandler
                     throw new TemplateException('theme_admin_denied');
                 }
                 $action = $text('action');
-                $actions = ['draft', 'preview', 'stop', 'publish', 'import', 'update', 'export', 'rollback'];
+                $actions = ['draft', 'preview', 'stop', 'publish', 'import', 'update', 'export', 'rollback',
+                    'install_official'];
                 if (!in_array($action, $actions, true)) {
                     throw new TemplateException('theme_action_invalid');
                 }
@@ -149,6 +161,35 @@ final readonly class ThemesHandler implements RouteHandler
                             throw new TemplateException('theme_package_invalid');
                         }
                         $this->refreshActive($this->archive->import($upload->getPathname()), $owner);
+                        break;
+                    case 'install_official':
+                        // Official catalog (beta.10): import the newest official theme that is not installed yet.
+                        // It is not published; previewing and publishing it stay the administrator's decisions.
+                        $theme = $text('theme');
+                        $spec = PackageUpdates::OFFICIAL_THEMES[$theme] ?? null;
+                        $present = in_array($theme, array_column($themes, 'id'), true);
+                        $release = $spec === null || $present || $this->updates === null ? null
+                            : $this->updates->available($spec, '0.0.0', PackageUpdates::themeAsset($theme));
+                        $repository = $release === null ? null : PackageUpdates::repository($release['repository']);
+                        if ($release === null || $repository === null || $this->downloader === null) {
+                            throw new TemplateException('theme_update_unavailable');
+                        }
+                        try {
+                            $file = $this->downloader->download(
+                                $repository,
+                                $release['tag'],
+                                $release['asset'],
+                                $release['bytes'],
+                                4194304,
+                            );
+                        } catch (Throwable) {
+                            throw new TemplateException('theme_update_download_failed');
+                        }
+                        try {
+                            $this->archive->import($file);
+                        } finally {
+                            @unlink($file);
+                        }
                         break;
                     case 'update':
                         // Panel update (2026-11-17): the theme's own repository, after the administrator confirmed.
@@ -219,7 +260,9 @@ final readonly class ThemesHandler implements RouteHandler
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),
             'csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token(),
             'actions' => ['draft' => 'draft', 'preview' => 'preview', 'stop' => 'stop', 'publish' => 'publish',
-                'import' => 'import', 'update' => 'update', 'export' => 'export', 'rollback' => 'rollback'],
+                'import' => 'import', 'update' => 'update', 'export' => 'export', 'rollback' => 'rollback',
+                'install_official' => 'install_official'],
+            'official' => $official,
         ]), $status, ['Cache-Control' => 'no-store, private']);
     }
 

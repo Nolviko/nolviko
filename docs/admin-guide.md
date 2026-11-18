@@ -2,7 +2,7 @@
 
 ## Install and protect the forum
 
-Upload the complete runtime ZIP to a private staging directory first. Preserve its hidden access-control files. Use a supported PHP version with the installer-required extensions and a dedicated database account on MySQL 8.4, MariaDB 10.11 or newer, or PostgreSQL 16 or newer (with pdo_pgsql); the installer asks for the database type and detects MySQL and MariaDB by itself. Open the browser installer over HTTPS where the host offers it (HTTPS is required only when the board is set to require it), follow its checks, create the first administrator, and verify that installation is locked afterwards. Never publish configuration, storage, database exports or recovery codes.
+Upload the complete runtime ZIP to a private staging directory first. Preserve its hidden access-control files. Use a supported PHP version with the installer-required extensions and a dedicated database account on MySQL 8.0 or newer, MariaDB 10.6 or newer, or PostgreSQL 14 or newer (with pdo_pgsql); see compatibility.md; the installer asks for the database type and detects MySQL and MariaDB by itself. Open the browser installer over HTTPS where the host offers it (HTTPS is required only when the board is set to require it), follow its checks, create the first administrator, and verify that installation is locked afterwards. Never publish configuration, storage, database exports or recovery codes.
 
 Keep a separately restorable database and file backup before updates or imports (for PostgreSQL, for example `pg_dump` from the hosting panel). A ZIP of application files alone cannot restore member content. Test restoration on an isolated copy. Shared hosting does not require Composer, Node, Redis, cron or shell access.
 
@@ -30,7 +30,9 @@ Thread addresses carry the title: `/threads/{title}-{id}`, with `/page-{n}` for 
 
 ## Updates and imports
 
-Follow operations.md for signed updates, frozen recovery and source-specific imports. Automatic activation requires external private storage on the same filesystem; default application-local storage uses manual updates. The local beta candidate is not an official published release. A local candidate signature is not a production publisher trust anchor. Do not enable unattended updates using development keys.
+**Updating Nolviko:** Admin > Updates > Update now. Enter your password in the popup; the forum downloads the newest signed release, checks it, backs up the database, closes the site for a moment, replaces the files, updates the database and opens again. Keep the page open until it says it is done. If it stops (closed tab, lost connection), open Admin > Updates again and press Continue the update; while the site is closed for the update, the recovery page (`/update-recovery.php`) carries on with the code shown under "If this page closes during the update". `storage/` may stay inside the forum folder at 700 or 755. The installed version is shown at the bottom of every admin page. Extensions and themes update with their own "Update to X" buttons on Admin > Extensions and Admin > Themes.
+
+Manual update (no JavaScript, or a host that blocks outgoing HTTPS): take a database and file backup, upload the new release ZIP over the forum folder keeping `config/local.php` and `storage/`, then open the forum. Follow operations.md for frozen recovery details and source-specific imports.
 
 Imported forums and accounts begin in quarantine. Review source coverage and count/hash reports, permissions, privacy and attachment ownership before opening imported material. Importing does not grant source administrator roles.
 
