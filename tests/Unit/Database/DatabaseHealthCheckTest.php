@@ -10,6 +10,7 @@ use Nolviko\Core\Database\ConnectionFactory;
 use Nolviko\Core\Database\DatabaseHealthCheck;
 use Nolviko\Core\Database\DatabaseHealthException;
 use Nolviko\Core\Database\MysqlSession;
+use Nolviko\Core\Database\PostgresRestrictViolation;
 use Nolviko\Core\Database\PostgresSession;
 use Nolviko\Core\Runtime\DiagnosticMessage;
 use PDO;
@@ -177,8 +178,10 @@ final class DatabaseHealthCheckTest extends TestCase
         );
         $postgres = ConnectionFactory::create(self::config('postgresql'));
         $middlewares = $postgres->getConfiguration()->getMiddlewares();
-        self::assertCount(1, $middlewares);
+        self::assertCount(2, $middlewares);
         self::assertInstanceOf(PostgresSession::class, $middlewares[0]);
+        // PostgreSQL 18 reports RESTRICT violations as 23001 (beta.10 CI matrix).
+        self::assertInstanceOf(PostgresRestrictViolation::class, $middlewares[1]);
         self::assertSame(
             [PDO::ATTR_TIMEOUT => ConnectionFactory::CONNECT_TIMEOUT_SECONDS],
             $postgres->getParams()['driverOptions'] ?? null,
