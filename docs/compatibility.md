@@ -27,7 +27,13 @@ Memory limit 128M or more; every request is built to finish within a 30-second l
 | MariaDB | 10.6 or newer | 10.6 LTS until 2026-07; 10.11, 11.4, 11.8 LTS later | 10.6.28 | Integration 357/357 pass |
 | MariaDB | | | 10.11, 11.4, 11.8 | CI (compat.yml) |
 | PostgreSQL | 14 or newer | 14 until 2026-11; 15–18 later | 14.25 | Integration 357 pass (12 legacy-import tests need a MySQL source and are skipped in this setup) |
-| PostgreSQL | | | 15, 16, 17, 18 | CI (compat.yml); 16 also in the local release checks |
+| PostgreSQL | | | 15, 16, 17 | CI (compat.yml); 16 also in the local release checks |
+| PostgreSQL | | | 18.7 | Integration 357 pass after the fix below |
+
+**PostgreSQL 18 note:** PostgreSQL 18 reports a blocked delete (`ON DELETE RESTRICT`) with a new error code. In
+0.1.0-beta.10, deleting a section that still has subsections or threads on PostgreSQL 18 shows a general error
+instead of the "remove its subsections/threads first" message; nothing is deleted. Fixed after beta.10
+(`PostgresRestrictViolation`).
 
 The covered behaviour includes a fresh schema, upgrades, indexes, sorting and keyset pagination, backup and restore,
 Turkish text and emoji, time zones, transactions, MySQL/MariaDB collations and PostgreSQL sequences (the Integration

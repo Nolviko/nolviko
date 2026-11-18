@@ -69,6 +69,8 @@ final class ConnectionFactory
             $parameters['driverOptions'] = [PDO::ATTR_TIMEOUT => self::CONNECT_TIMEOUT_SECONDS];
             // Innermost: it reads column types from the PDO statement right below it.
             array_unshift($middlewares, new PostgresSession());
+            // PostgreSQL 18 reports RESTRICT violations as 23001 (beta.10 CI matrix).
+            $middlewares[] = new PostgresRestrictViolation();
         }
 
         $configuration->setMiddlewares($middlewares);

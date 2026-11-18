@@ -58,7 +58,9 @@ final class NativeSessionTest extends TestCase
         $result = $this->request([['set', 'k', 1]]);
         $source = (string) file_get_contents(dirname(__DIR__, 2) . '/src/Core/Session/NativeSession.php');
 
-        self::assertSame(['32', '4'], [
+        // The forum leaves these deprecated settings alone: whatever this PHP's php.ini says (32/4 built in, 26/5 in
+        // php.ini-production, as on GitHub's runners) is what the session uses (beta.10 CI matrix).
+        self::assertSame([ini_get('session.sid_length'), ini_get('session.sid_bits_per_character')], [
             $result['ini']['session.sid_length'],
             $result['ini']['session.sid_bits_per_character'],
         ]);
