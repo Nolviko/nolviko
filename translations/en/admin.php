@@ -475,6 +475,9 @@ return [
     'admin.extensions.uploading' => 'Installing…',
     'admin.extensions.installed_notice' => '{name} {version} is installed and enabled.',
     'admin.extensions.reauth' => 'Confirm your password to manage extensions',
+    'admin.extensions.remove' => 'Remove',
+    'admin.extensions.remove_confirm' => 'Delete the files of this extension and the sign-in details it stored. '
+        . 'What it added to the forum stays.',
     'admin.extensions.restore' => 'Go back to version {version}',
     'admin.footer.version' => 'Nolviko {version}',
     'admin.updates.package_available' => 'Version {version} is available.',

@@ -95,6 +95,23 @@ final readonly class ExtensionMigrations
         }
     }
 
+    /**
+     * "Remove" (2026-11-20, ADR-038): deletes the rows of the own tables the manifest lists under `remove.clear`
+     * (stored credentials, for example). The tables stay; nothing outside the extension's prefix is touched.
+     */
+    public function clear(ExtensionManifest $manifest): void
+    {
+        $schema = $this->connection->createSchemaManager();
+        foreach ($manifest->clearedOnRemove() as $table) {
+            if (!str_starts_with($table, $manifest->tablePrefix())) {
+                throw new ExtensionFailure('extension_namespace_invalid');
+            }
+            if ($schema->tablesExist([$table])) {
+                $this->connection->executeStatement('DELETE FROM ' . $this->connection->quoteIdentifier($table));
+            }
+        }
+    }
+
     private function sameColumn(Column $actual, Column $expected): bool
     {
         return $actual->getType()::class === $expected->getType()::class

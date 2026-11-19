@@ -34,7 +34,7 @@ final readonly class ExtensionManifest
 
         $allowed = ['id', 'name', 'version', 'api', 'engine', 'php', 'license', 'depends_on', 'conflicts',
             'providers', 'routes', 'permissions', 'migrations', 'events', 'subscribes', 'ui_slots',
-            'translations', 'packages', 'repository'];
+            'translations', 'packages', 'repository', 'remove'];
         if (!is_array($data) || array_is_list($data) || array_diff(array_keys($data), $allowed) !== []) {
             throw new ExtensionFailure('extension_manifest_invalid');
         }
@@ -46,6 +46,22 @@ final readonly class ExtensionManifest
             && (!is_string($repository) || preg_match(PackageUpdates::REPOSITORY_PATTERN, $repository) !== 1)
         ) {
             throw new ExtensionFailure('extension_manifest_invalid');
+        }
+
+        // What "Remove" clears besides the files (2026-11-20, API 1.3, ADR-038): rows of some of the extension's own
+        // tables, e.g. stored credentials. Everything else it created stays.
+        $remove = $data['remove'] ?? ['clear' => []];
+        if (
+            !is_array($remove) || array_keys($remove) !== ['clear'] || !is_array($remove['clear'])
+            || !array_is_list($remove['clear']) || count($remove['clear']) > 8
+        ) {
+            throw new ExtensionFailure('extension_manifest_invalid');
+        }
+
+        foreach ($remove['clear'] as $local) {
+            if (!is_string($local) || preg_match('/^[a-z][a-z0-9_]{0,25}$/D', $local) !== 1) {
+                throw new ExtensionFailure('extension_manifest_invalid');
+            }
         }
 
         foreach (['id', 'name', 'version', 'engine', 'php', 'license'] as $key) {
@@ -167,6 +183,12 @@ final readonly class ExtensionManifest
         }
 
         return 'ext_' . substr(hash('sha256', $this->id), 0, 32) . '_' . $local;
+    }
+
+    /** @return list<string> Full names of the own tables whose rows "Remove" deletes. */
+    public function clearedOnRemove(): array
+    {
+        return array_map($this->table(...), $this->data['remove']['clear'] ?? []);
     }
 
     public function prefix(): string

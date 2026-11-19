@@ -467,6 +467,9 @@ return [
     'admin.extensions.uploading' => 'Kuruluyor…',
     'admin.extensions.installed_notice' => '{name} {version} kuruldu ve etkinleştirildi.',
     'admin.extensions.reauth' => 'Eklentileri yönetmek için parolanızı doğrulayın',
+    'admin.extensions.remove' => 'Kaldır',
+    'admin.extensions.remove_confirm' => 'Bu eklentinin dosyalarını ve sakladığı giriş bilgilerini sil. '
+        . 'Foruma eklediği içerik kalır.',
     'admin.extensions.restore' => '{version} sürümüne geri dön',
     'admin.footer.version' => 'Nolviko {version}',
     'admin.updates.package_available' => '{version} sürümü yayımlandı.',

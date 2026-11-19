@@ -41,6 +41,12 @@
 <p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
 <button type="submit">{% if extension.enabled %}{{ t('admin.extensions.disable') }}{% else %}{{ t('admin.extensions.enable') }}{% endif %}</button>
 </form>
+{% if not extension.enabled %}<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ actions.remove }}"><input type="hidden" name="id" value="{{ extension.id }}">
+<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.remove_confirm') }}</label></p>
+<button type="submit" class="btn-s">{{ t('admin.extensions.remove') }}</button>
+</form>{% endif %}
 {% if extension.previous|default(null) %}<form method="post" action="{{ action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <input type="hidden" name="action" value="{{ actions.rollback }}"><input type="hidden" name="token" value="{{ extension.previous.token }}">

@@ -322,6 +322,57 @@ final class ExtensionLifecycleTest extends TestCase
         $archive->install($token);
     }
 
+    /** ADR-038 (2026-11-20): "Remove" deletes a disabled extension's files and kept copies; enabled ones stay. */
+    public function testRemoveDeletesFilesOfADisabledExtensionAfterClearingItsListedTables(): void
+    {
+        $this->write(['remove' => ['clear' => ['sources']]]);
+        $this->files->write('extensions/acme/hello/src/Note.txt', 'kept until removal');
+        $this->files->write('extensions/acme/other/extension.json', self::json(['id' => 'acme/other']));
+        $this->files->write('private/previous-' . str_repeat('a', 32) . '/extension.json', self::json());
+        $this->manager->enable('acme/hello', static fn() => null);
+        $archive = new ExtensionArchive($this->manager);
+        $cleared = [];
+        $clear = static function (ExtensionManifest $manifest) use (&$cleared): void {
+            $cleared = $manifest->clearedOnRemove();
+        };
+        try {
+            $archive->remove('acme/hello', $clear);
+            self::fail('an enabled extension was removed');
+        } catch (ExtensionFailure $failure) {
+            self::assertSame('extension_remove_requires_disable', $failure->getMessage());
+            self::assertFileExists($this->files->path . '/extensions/acme/hello/extension.json');
+            self::assertSame([], $cleared);
+        }
+
+        $this->manager->disable('acme/hello');
+        $archive->remove('acme/hello', $clear);
+        $manifest = ExtensionManifest::parse(self::json(['remove' => ['clear' => ['sources']]]));
+        self::assertSame([$manifest->table('sources')], $cleared);
+        self::assertDirectoryDoesNotExist($this->files->path . '/extensions/acme/hello');
+        self::assertDirectoryDoesNotExist($this->files->path . '/private/previous-' . str_repeat('a', 32));
+        self::assertFileExists($this->files->path . '/extensions/acme/other/extension.json');
+        self::assertArrayNotHasKey('acme/hello', $this->manager->catalog->discover()['manifests']);
+        self::assertSame([], glob($this->files->path . '/private/removed-*') ?: []);
+        $this->expectExceptionMessage('extension_missing');
+        $archive->remove('acme/hello', $clear);
+    }
+
+    public function testRemoveListAcceptsOnlyOwnTableNames(): void
+    {
+        foreach (
+            [['clear' => ['../users']], ['clear' => 'sources'], ['drop' => ['sources']],
+            ['clear' => array_fill(0, 9, 'a')]] as $invalid
+        ) {
+            try {
+                ExtensionManifest::parse(self::json(['remove' => $invalid]));
+                self::fail('accepted ' . json_encode($invalid));
+            } catch (ExtensionFailure $failure) {
+                self::assertSame('extension_manifest_invalid', $failure->getMessage());
+            }
+        }
+        self::assertSame([], ExtensionManifest::parse(self::json())->clearedOnRemove());
+    }
+
     /** 2026-11-19: leaving safe mode forgets the old boot failure, so the panel stops reporting it. */
     public function testLeavingSafeModeForgetsTheEarlierBootFailure(): void
     {

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Nolviko\Core\Extensions;
 
+use Closure;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use ZipArchive;
 
 /** Trusted PHP packages still undergo bounded ZIP validation; staging never executes uploaded code. */
@@ -135,6 +139,73 @@ final readonly class ExtensionArchive
                 throw new ExtensionFailure('extension_state_write_failed');
             }
         });
+    }
+
+    /**
+     * "Remove" (2026-11-20, ADR-038): a disabled extension's files and the copies kept for "go back" are deleted;
+     * `$clear` first deletes the rows its manifest lists under `remove.clear` (ExtensionMigrations::clear). Its other
+     * tables and anything it wrote through core services stay. An enabled extension is refused.
+     *
+     * @param Closure(ExtensionManifest): void $clear
+     */
+    public function remove(string $id, Closure $clear): void
+    {
+        $this->manager->state->locked(function () use ($id, $clear): void {
+            $manifest = $this->manager->catalog->discover()['manifests'][$id] ?? null;
+            if (!$manifest instanceof ExtensionManifest) {
+                throw new ExtensionFailure('extension_missing');
+            }
+            if (isset($this->manager->state->enabled()[$id])) {
+                throw new ExtensionFailure('extension_remove_requires_disable');
+            }
+
+            $target = $this->manager->catalog->directory . '/' . $manifest->id;
+            if (is_link($target) || is_link(dirname($target)) || !is_dir($target)) {
+                throw new ExtensionFailure('extension_path_invalid');
+            }
+
+            $clear($manifest);
+            // Out of the catalog in one rename, then deleted; a half-deleted folder is never discovered.
+            $trash = $this->manager->state->directory . '/removed-' . bin2hex(random_bytes(16));
+            if (!rename($target, $trash)) {
+                throw new ExtensionFailure('extension_state_write_failed');
+            }
+            self::delete($trash);
+            $vendor = dirname($target);
+            if (is_dir($vendor) && (scandir($vendor) ?: []) === ['.', '..']) {
+                rmdir($vendor);
+            }
+            foreach (glob($this->manager->state->directory . '/previous-*', GLOB_ONLYDIR) ?: [] as $copy) {
+                $json = $copy . '/extension.json';
+                if (is_link($copy) || !is_file($json)) {
+                    continue;
+                }
+                try {
+                    $kept = ExtensionManifest::parse((string) file_get_contents($json));
+                } catch (ExtensionFailure) {
+                    continue;
+                }
+                if ($kept->id === $id) {
+                    self::delete($copy);
+                }
+            }
+        });
+    }
+
+    private static function delete(string $directory): void
+    {
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
+        );
+        foreach ($items as $item) {
+            if ($item->isDir() && !$item->isLink()) {
+                rmdir($item->getPathname());
+            } else {
+                unlink($item->getPathname());
+            }
+        }
+        rmdir($directory);
     }
 
     /**

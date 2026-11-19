@@ -129,7 +129,7 @@ final readonly class ExtensionsHandler implements RouteHandler
                 $action = $text('action');
                 if (
                     !in_array($action, ['enable', 'disable', 'safe', 'resume', 'upload', 'update', 'rollback',
-                        'disable_all', 'install_official'], true)
+                        'disable_all', 'install_official', 'remove'], true)
                 ) {
                     throw new ExtensionFailure('extension_action_invalid');
                 }
@@ -227,6 +227,11 @@ final readonly class ExtensionsHandler implements RouteHandler
                             @unlink($file);
                         }
                         break;
+                    case 'remove':
+                        // ADR-038 (2026-11-20): a disabled extension's files go; rows its manifest lists under
+                        // remove.clear (credentials) are deleted; everything else it created stays.
+                        $archive->remove($text('id'), $this->migrations->clear(...));
+                        break;
                     case 'rollback':
                         // Restore the kept older copy (2026-11-17): off, swap back, on again with its migrations
                         // (expand-only, so the older code runs on the newer schema).
@@ -295,7 +300,7 @@ final readonly class ExtensionsHandler implements RouteHandler
             'official' => $official ?? [],
             'actions' => ['safe' => 'safe', 'resume' => 'resume', 'disable_all' => 'disable_all',
                 'enable' => 'enable', 'disable' => 'disable', 'upload' => 'upload', 'update' => 'update',
-                'rollback' => 'rollback', 'install_official' => 'install_official'],
+                'rollback' => 'rollback', 'install_official' => 'install_official', 'remove' => 'remove'],
         ]), $status, ['Cache-Control' => 'no-store, private']);
     }
 }

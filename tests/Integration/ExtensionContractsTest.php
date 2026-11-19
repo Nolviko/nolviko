@@ -72,6 +72,17 @@ final class ExtensionContractsTest extends TestCase
         $this->migrations = new ExtensionMigrations($this->connection, $this->catalog);
     }
 
+    /** The fixture's manifest with extra keys. */
+    private function catalogWith(array $extra): ExtensionManifest
+    {
+        $this->files->write('extensions/acme/hello/extension.json', json_encode([
+            'id' => 'acme/hello', 'name' => 'Hello', 'api' => 1, 'version' => '1.0.0',
+            'engine' => '^1', 'php' => '^8.4', 'license' => 'MIT', 'migrations' => ['0001_records'],
+        ] + $extra, JSON_THROW_ON_ERROR));
+
+        return $this->catalog->discover()['manifests']['acme/hello'];
+    }
+
     protected function tearDown(): void
     {
         if (isset($this->files)) {
@@ -97,6 +108,22 @@ final class ExtensionContractsTest extends TestCase
         $this->files->write('extensions/acme/hello/migrations/0001_records.json', '{}');
         $this->expectExceptionMessage('extension_migration_changed');
         $this->migrations->apply($this->manifest);
+    }
+
+    /** ADR-038 (2026-11-20): "Remove" deletes the rows of the listed own tables only; the tables stay. */
+    public function testRemoveClearsOnlyTheListedOwnTables(): void
+    {
+        $this->migrations->apply($this->manifest);
+        $this->connection->insert(self::TABLE, ['id' => 1, 'value' => 7]);
+        $users = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM users');
+        $this->migrations->clear($this->manifest);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM ' . self::TABLE));
+
+        $listed = $this->catalogWith(['remove' => ['clear' => ['records', 'missing']]]);
+        $this->migrations->clear($listed);
+        self::assertTrue($this->connection->createSchemaManager()->tablesExist([self::TABLE]));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM ' . self::TABLE));
+        self::assertSame($users, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM users'));
     }
 
     public function testFailedCheckpointCanResumeWithoutDestructiveRollback(): void
