@@ -127,6 +127,14 @@ final class CompositionRoot
                 array_map(static fn(string $id): Lazy => new Lazy($id), array_keys($identities)),
             );
             $container = $services->build();
+            if (!$wasSafe && $manager->state->enabled() !== [] && $manager->state->hasBootFailure()) {
+                // The extensions booted: an older failure is resolved.
+                try {
+                    $manager->state->clearFailure();
+                } catch (ExtensionFailure) {
+                    // A marker that cannot be removed only keeps the old notice; it never stops the forum.
+                }
+            }
             // Extension hooks reach their own services lazily through ExtensionContext::lazy() (2026-11-15).
             $registry->resolver = static fn(string $id): mixed => $container->get($id);
 

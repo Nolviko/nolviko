@@ -74,6 +74,7 @@ final readonly class ExtensionManager
         $this->state->locked(function (): void {
             $this->assertEnabled();
             $this->state->setSafe(false);
+            $this->state->clearFailure();
         });
     }
 

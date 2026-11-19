@@ -322,6 +322,21 @@ final class ExtensionLifecycleTest extends TestCase
         $archive->install($token);
     }
 
+    /** 2026-11-19: leaving safe mode forgets the old boot failure, so the panel stops reporting it. */
+    public function testLeavingSafeModeForgetsTheEarlierBootFailure(): void
+    {
+        $this->write();
+        $this->manager->enable('acme/hello', static fn() => null);
+        $this->manager->state->rememberFailure();
+        $this->manager->state->setSafe(true);
+        self::assertSame('extension_boot_failed', $this->manager->diagnostics()['previous_boot']);
+        $this->manager->resume();
+        self::assertFalse($this->manager->state->hasBootFailure());
+        self::assertArrayNotHasKey('previous_boot', $this->manager->diagnostics());
+        $this->manager->state->clearFailure();
+        self::assertFalse($this->manager->state->hasBootFailure());
+    }
+
     public function testSafeModeDoesNotExecuteFailingProvider(): void
     {
         $this->write(['providers' => ['src/Provider.php']]);

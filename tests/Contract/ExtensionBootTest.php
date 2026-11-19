@@ -66,6 +66,8 @@ final class ExtensionBootTest extends TestCase
             $files->writeCatalog('translations/en', 'core', ['core.fixture' => 'fixture']);
             $manager = ExtensionBootstrap::manager($files->path, $files->path . '/storage');
             $manager->enable('acme/hello', static fn() => null);
+            // An old failure from an earlier boot (2026-11-19): a boot that succeeds forgets it.
+            $manager->state->rememberFailure();
             $container = CompositionRoot::build(
                 $files->path,
                 $files->path . '/storage',
@@ -81,6 +83,7 @@ final class ExtensionBootTest extends TestCase
             self::assertSame('Hello from the sample extension.', $response->getContent());
             self::assertSame('text/plain; charset=UTF-8', $response->headers->get('Content-Type'));
             self::assertFalse($manager->state->safe());
+            self::assertFalse($manager->state->hasBootFailure());
         } finally {
             $files->remove();
         }

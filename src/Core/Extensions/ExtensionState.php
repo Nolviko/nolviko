@@ -109,6 +109,18 @@ final readonly class ExtensionState
         return is_file($this->directory . '/boot-failed');
     }
 
+    /**
+     * Forgets an earlier boot failure (2026-11-19): on leaving safe mode and after a boot with extensions that
+     * succeeds. Before, the marker stayed for good and Admin > Extensions kept reporting a failure long fixed.
+     */
+    public function clearFailure(): void
+    {
+        $file = $this->directory . '/boot-failed';
+        if (is_file($file) && !is_link($file) && !unlink($file)) {
+            throw new ExtensionFailure('extension_state_write_failed');
+        }
+    }
+
     public function setSafe(bool $safe): void
     {
         $this->prepare();
