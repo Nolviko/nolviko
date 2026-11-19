@@ -2582,15 +2582,16 @@ final class CoreServiceProvider implements ServiceProvider
                 Mailer $mailer,
                 MailComposer $composer,
                 Router $router,
-                Config $config,
+                ?Config $config,
                 MessageTranslator $translator,
             ): PasswordRecovery => new PasswordRecovery(
                 $users,
                 $hasher,
                 new DbalResetTokens($connection),
-                new TemplatedAccountMail($mailer, $composer, $router, $config->appUrl),
+                new TemplatedAccountMail($mailer, $composer, $router, $config?->appUrl),
                 new RateBuckets($connection),
-                queue: new ResetMailQueue($connection, $config->appSecret),
+                // Without a configuration (before installation) there is no secret to derive links from: direct mail.
+                queue: $config === null ? null : new ResetMailQueue($connection, $config->appSecret),
                 locale: $translator->locale(),
             ),
             [

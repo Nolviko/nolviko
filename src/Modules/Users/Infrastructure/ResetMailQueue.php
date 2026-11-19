@@ -18,6 +18,9 @@ final readonly class ResetMailQueue
 {
     public const EVENT = 'account.reset_requested';
 
+    /** How far back the job is dated so it runs before ordinary background work. */
+    public const PRIORITY_DAYS = 7;
+
     public function __construct(private Connection $db, private Secret $secret)
     {
     }
@@ -34,7 +37,16 @@ final readonly class ResetMailQueue
                 'locale' => $locale,
                 'recipient' => $this->recipient($nonce, $user?->email ?? ''),
             ];
-            (new Outbox($this->db))->record(self::EVENT, 'request', 0, $payload, self::EVENT . ':' . $nonce);
+            // Ahead of the backlog (the queue runs oldest first): a member waiting for a reset link should not wait
+            // behind hundreds of notification mails on a site without cron.
+            (new Outbox($this->db))->record(
+                self::EVENT,
+                'request',
+                0,
+                $payload,
+                self::EVENT . ':' . $nonce,
+                $now->modify('-' . self::PRIORITY_DAYS . ' days'),
+            );
         });
     }
 
@@ -44,8 +56,10 @@ final readonly class ResetMailQueue
         $token = $this->token($payload['nonce']);
         $id = (new DbalResetTokens($this->db))->peek($token, new DateTimeImmutable());
         $user = $id === null ? null : (new DbalUserRepository($this->db))->findById($id);
-        if ($user !== null && $user->status === UserStatus::Active
-            && hash_equals($payload['recipient'], $this->recipient($payload['nonce'], $user->email))) {
+        if (
+            $user !== null && $user->status === UserStatus::Active
+            && hash_equals($payload['recipient'], $this->recipient($payload['nonce'], $user->email))
+        ) {
             $mail->passwordReset($user->email, $user->username, $token);
         }
         return true;

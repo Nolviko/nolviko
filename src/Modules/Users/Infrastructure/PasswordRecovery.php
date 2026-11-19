@@ -85,7 +85,11 @@ final class PasswordRecovery
         if ($this->queue !== null) {
             $this->queue->enqueue($recipient, $network, $now, $this->locale);
         } elseif ($recipient !== null) {
-            $this->mail->passwordReset($recipient->email, $recipient->username, $this->tokens->issue($recipient->id, $network, $now));
+            $this->mail->passwordReset(
+                $recipient->email,
+                $recipient->username,
+                $this->tokens->issue($recipient->id, $network, $now),
+            );
         }
 
         return 0;

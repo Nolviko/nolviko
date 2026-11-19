@@ -92,14 +92,17 @@ final class AuthSession
     {
         $userId = $this->session->get(self::USER_KEY);
 
+        $now = time();
+        $last = $this->session->get(self::LAST_ACTIVITY);
+        if (is_int($userId) && $last !== null && (!is_int($last) || $now - $last >= NativeSession::LIFETIME)) {
+            // Idle too long: this sign-in ends. A remember-me cookie may sign the member in again in this same
+            // request (below), so the first page after a long pause is not shown as a guest and its form still works.
+            $this->session->invalidate();
+            $this->checked = null;
+            $userId = null;
+        }
+
         if (is_int($userId)) {
-            $now = time();
-            $last = $this->session->get(self::LAST_ACTIVITY);
-            if ($last !== null && (!is_int($last) || $now - $last >= NativeSession::LIFETIME)) {
-                $this->session->invalidate();
-                $this->checked = null;
-                return null;
-            }
             if ($last !== $now) {
                 $this->session->set(self::LAST_ACTIVITY, $now);
             }

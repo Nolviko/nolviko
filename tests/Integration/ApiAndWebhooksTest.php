@@ -159,8 +159,10 @@ final class ApiAndWebhooksTest extends TestCase
                 : [['ip' => '93.184.215.14']],
         );
 
-        foreach (['http://hooks.example/x', 'https://127.0.0.1/x', 'https://localhost/x', 'https://[::1]/x',
-            'https://224.0.0.1/x', 'https://[ff02::1]/x'] as $bad) {
+        foreach (
+            ['http://hooks.example/x', 'https://127.0.0.1/x', 'https://localhost/x', 'https://[::1]/x',
+            'https://224.0.0.1/x', 'https://[ff02::1]/x'] as $bad
+        ) {
             try {
                 $hooks->add($bad, ['post.created']);
                 self::fail('refused: ' . $bad);
@@ -184,8 +186,10 @@ final class ApiAndWebhooksTest extends TestCase
         self::assertSame('https://hooks.example/hook', $url);
         self::assertSame('sha256=' . hash_hmac('sha256', $body, $secret), $headers['X-Nolviko-Signature']);
         self::assertSame('Hello', json_decode($body, true)['thread']['title']);
-        self::assertSame(200, (int) $this->connection->fetchOne('SELECT last_status FROM webhooks WHERE url = ?',
-            ['https://hooks.example/hook']));
+        self::assertSame(200, (int) $this->connection->fetchOne(
+            'SELECT last_status FROM webhooks WHERE url = ?',
+            ['https://hooks.example/hook']
+        ));
 
         $pinged = [];
         $indexNow = new IndexNow(

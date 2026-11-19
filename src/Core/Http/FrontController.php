@@ -71,8 +71,10 @@ final class FrontController
 
         $response->send();
 
-        if ($request?->attributes->get('_defer_visitor_tasks') === true
-            && !function_exists('fastcgi_finish_request') && !function_exists('litespeed_finish_request')) {
+        if (
+            $request?->attributes->get('_defer_visitor_tasks') === true
+            && !function_exists('fastcgi_finish_request') && !function_exists('litespeed_finish_request')
+        ) {
             return;
         }
 

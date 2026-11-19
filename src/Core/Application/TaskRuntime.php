@@ -183,13 +183,19 @@ final class TaskRuntime
                 => $notifications->fanout(...),
             'community.mail' => $mail->deliver(...)];
         $handlers[ResetMailQueue::EVENT] = static function (OutboxLease $lease) use (
-            $db, $config, $root, $storage, $mailer, $router
+            $db,
+            $config,
+            $root,
+            $storage,
+            $mailer,
+            $router
         ): bool {
             $payload = json_decode($lease->payload, true, 4, JSON_THROW_ON_ERROR);
             $translator = TranslatorFactory::create($root . '/translations', $payload['locale']);
             $composer = new MailComposer(TwigFactory::create($root, $storage, $translator), $translator);
             return (new ResetMailQueue($db, $config->appSecret))->deliver(
-                $lease, new TemplatedAccountMail($mailer, $composer, $router, $config->appUrl)
+                $lease,
+                new TemplatedAccountMail($mailer, $composer, $router, $config->appUrl)
             );
         };
         if ($sitemaps !== null) {

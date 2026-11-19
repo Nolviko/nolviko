@@ -27,7 +27,9 @@ final class Webhooks
 
     /**
      * @param Closure(): ForumScope $guestScope
-     * @param Closure(string, string, array<string, string>, string): int|null $send Test seam: URL, body, headers => status.
+     * @param Closure(string, string, array<string, string>, string): int|null $send Test seam: URL, body, headers,
+     *     pinned IP => status.
+     * @param (Closure(string): array<int, array<string, string>>)|null $dnsRecords Test seam for DNS A/AAAA records.
      */
     public function __construct(
         private readonly Connection $db,
@@ -180,9 +182,11 @@ final class Webhooks
     private static function destination(string $url, bool $resolve, ?Closure $dnsRecords = null): ?string
     {
         $parts = parse_url($url);
-        if (!is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https' || !isset($parts['host'])
+        if (
+            !is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https' || !isset($parts['host'])
             || isset($parts['user']) || isset($parts['pass']) || filter_var($url, FILTER_VALIDATE_URL) === false
-            || preg_match('/[[:cntrl:]]/', $url) || str_contains($url, '\\')) {
+            || preg_match('/[[:cntrl:]]/', $url) || str_contains($url, '\\')
+        ) {
             return null;
         }
 
@@ -198,10 +202,12 @@ final class Webhooks
             return $host;
         }
 
-        if ($dnsRecords === null && !function_exists('dns_get_record')) {
-            return null;
+        // dns_get_record() is disabled on some shared hosts: fall back to the IPv4 lookup the forum used before.
+        $records = $dnsRecords !== null ? $dnsRecords($host)
+            : (function_exists('dns_get_record') ? @dns_get_record($host, DNS_A | DNS_AAAA) : false);
+        if ($dnsRecords === null && ($records === false || $records === [])) {
+            $records = array_map(static fn(string $ip): array => ['ip' => $ip], @gethostbynamel($host) ?: []);
         }
-        $records = $dnsRecords === null ? @dns_get_record($host, DNS_A | DNS_AAAA) : $dnsRecords($host);
         $addresses = [];
         foreach ($records ?: [] as $record) {
             $address = $record['ip'] ?? $record['ipv6'] ?? null;
@@ -227,15 +233,30 @@ final class Webhooks
         return strlen($bytes) === 4 ? ord($bytes[0]) < 224 : (ord($bytes[0]) & 0xe0) === 0x20;
     }
 
-    /** @param array<string, string> $headers */
-    private static function post(string $url, string $body, array $headers, string $ip): ?int
+    /**
+     * The request to the pinned address: the URL with its host replaced by the checked IP, the Host header and the
+     * TLS peer name of the original host (the certificate is still verified against it).
+     *
+     * @return array{0: string, 1: string, 2: string}
+     */
+    public static function pinned(string $url, string $ip): array
     {
         $parts = parse_url($url);
         $port = isset($parts['port']) ? ':' . $parts['port'] : '';
         $authority = str_contains($ip, ':') ? '[' . $ip . ']' : $ip;
-        $target = 'https://' . $authority . $port . ($parts['path'] ?? '/')
-            . (isset($parts['query']) ? '?' . $parts['query'] : '');
-        $headers['Host'] = $parts['host'] . $port;
+
+        return [
+            'https://' . $authority . $port . ($parts['path'] ?? '/')
+                . (isset($parts['query']) ? '?' . $parts['query'] : ''),
+            $parts['host'] . $port,
+            trim((string) $parts['host'], '[]'),
+        ];
+    }
+
+    /** @param array<string, string> $headers */
+    private static function post(string $url, string $body, array $headers, string $ip): ?int
+    {
+        [$target, $headers['Host'], $peer] = self::pinned($url, $ip);
         $lines = [];
 
         foreach ($headers as $name => $value) {
@@ -244,7 +265,7 @@ final class Webhooks
 
         $context = stream_context_create(['http' => ['method' => 'POST', 'header' => implode("\r\n", $lines),
             'content' => $body, 'timeout' => self::TIMEOUT, 'follow_location' => 0, 'max_redirects' => 0,
-            'ignore_errors' => true], 'ssl' => ['peer_name' => trim($parts['host'], '[]'),
+            'ignore_errors' => true], 'ssl' => ['peer_name' => $peer,
             'verify_peer' => true, 'verify_peer_name' => true]]);
         $stream = @fopen($target, 'rb', false, $context);
 

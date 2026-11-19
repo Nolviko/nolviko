@@ -64,6 +64,19 @@ final class LoginFlowTest extends TestCase
         self::assertSame([], $this->session->data);
     }
 
+    /** An idle session ends, but a remember-me cookie signs the member in again in the same request. */
+    public function testIdleSessionFallsBackToRememberMeInTheSameRequest(): void
+    {
+        $this->login(['identifier' => 'deniz', 'password' => self::PASSWORD, 'remember' => '1']);
+        $cookie = $this->cookieValues()[AuthSession::REMEMBER_COOKIE] ?? '';
+        self::assertNotSame('', $cookie);
+        $this->session->set('_auth_last_activity', time() - 7200);
+
+        self::assertSame(1, $this->auth()->userId(self::withCookie($cookie)), 'not shown as a guest');
+        self::assertNotSame($cookie, $this->cookieValues()[AuthSession::REMEMBER_COOKIE] ?? '', 'token rotated');
+        self::assertIsInt($this->session->get('_auth_last_activity'));
+    }
+
     public function testUnknownAccountAndWrongPasswordLookTheSame(): void
     {
         $started = hrtime(true);

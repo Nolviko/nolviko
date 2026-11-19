@@ -11,7 +11,9 @@ use Nolviko\Core\Config\Config;
 use Nolviko\Core\Config\MailSettings;
 use Nolviko\Core\Config\Secret;
 use Nolviko\Core\Database\ConnectionFactory;
+use Nolviko\Core\Database\OutboxQueue;
 use Nolviko\Core\Database\RateBuckets;
+use Nolviko\Core\Events\Outbox;
 use Nolviko\Core\Events\OutboxLease;
 use Nolviko\Core\Http\ResponseCookies;
 use Nolviko\Core\Locale\MessageTranslator;
@@ -249,6 +251,20 @@ final class PasswordRecoveryTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM remember_tokens'));
     }
 
+    /** A reset mail queued after ordinary background work still runs first (oldest first, back-dated). */
+    public function testQueuedResetMailRunsBeforeTheBacklog(): void
+    {
+        $this->connection->transactional(static function (Connection $db): void {
+            (new Outbox($db))->record('community.mail', 'notification', 1, ['n' => 1]);
+        });
+        $queue = new ResetMailQueue($this->connection, new Secret(str_repeat('k', 32)));
+        $this->recovery(new DateTimeImmutable('now', new DateTimeZone('UTC')), $queue)
+            ->request('alice@example.com', '192.0.2.9');
+
+        $lease = (new OutboxQueue($this->connection))->claim(['community.mail', ResetMailQueue::EVENT]);
+        self::assertSame(ResetMailQueue::EVENT, $lease?->type, 'the member waiting for a link goes first');
+    }
+
     public function testQueuedRequestsDeliverOnlyWhileTheOriginalTokenIsValid(): void
     {
         $queue = new ResetMailQueue($this->connection, new Secret(str_repeat('k', 32)));
@@ -256,8 +272,10 @@ final class PasswordRecoveryTest extends TestCase
         $recovery->request('alice@example.com', '192.0.2.1');
         $recovery->request('unknown@example.com', '203.0.113.1');
         self::assertCount(0, $this->transport->sent);
-        $jobs = $this->connection->fetchAllAssociative('SELECT id, payload FROM outbox_events WHERE event_type = ? ORDER BY id',
-            [ResetMailQueue::EVENT]);
+        $jobs = $this->connection->fetchAllAssociative(
+            'SELECT id, payload FROM outbox_events WHERE event_type = ? ORDER BY id',
+            [ResetMailQueue::EVENT]
+        );
         self::assertCount(2, $jobs);
         $mail = $this->createMock(AccountMail::class);
         $token = null;
