@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Importers\Infrastructure;
 
+use Closure;
 use Doctrine\DBAL\Connection;
+use Nolviko\Modules\Importers\Domain\ImportAsset;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
-use Nolviko\Modules\Importers\Domain\ImportSource;
 use Nolviko\Modules\Importers\Domain\ImportText;
 use RuntimeException;
 
 /** Private per-owner archives and native poll/media projections, all under the caller's import transaction. */
 final readonly class ImportAuxWriter
 {
-    public function __construct(private Connection $db, private ImportSource $source, private ImportFileStore $files)
+    /** @param Closure(array): ?ImportAsset $asset the original file of an attachment record (ADR-038) */
+    public function __construct(private Connection $db, private Closure $asset, private ImportFileStore $files)
     {
     }
 
@@ -68,7 +70,7 @@ final readonly class ImportAuxWriter
                 return ['target' => '0', 'meta' => ['reason' => 'unowned_source_attachment'],
                     'parent' => (int) $row['post']];
             }
-            $asset = $this->source->asset($row) ?? throw new RuntimeException('import_attachment_missing');
+            $asset = ($this->asset)($row) ?? throw new RuntimeException('import_attachment_missing');
             $stored = $this->files->retain($job, (int) $row['id'], $asset);
             $name = self::text((string) $row['name'], 255);
             $safeName = preg_replace('/[\x00-\x1f\x7f\\\\\/]/u', '_', $name) ?: (string) $row['id'];
@@ -212,7 +214,7 @@ final readonly class ImportAuxWriter
 
     public function verifyAsset(array $row, array $meta): void
     {
-        $asset = $this->source->asset($row) ?? throw new RuntimeException('import_attachment_missing');
+        $asset = ($this->asset)($row) ?? throw new RuntimeException('import_attachment_missing');
         if (!hash_equals($meta['file_hash'] ?? '', $asset->digest())) {
             throw new RuntimeException('import_attachment_changed');
         }

@@ -14,10 +14,12 @@ use Nolviko\Core\Routing\RouterFactory;
 use Nolviko\Modules\Admin\Infrastructure\SystemDiagnostics;
 use Nolviko\Modules\Forums\Infrastructure\DbalForumTree;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
+use Nolviko\Modules\Importers\Domain\ImportRecords;
 use Nolviko\Modules\Importers\Infrastructure\ImportAdministration;
 use Nolviko\Modules\Importers\Infrastructure\ImportFileStore;
 use Nolviko\Modules\Importers\Infrastructure\ImportRunner;
 use Nolviko\Modules\Importers\Infrastructure\ImportSources;
+use Nolviko\Modules\Importers\Infrastructure\ImportTarget;
 use Nolviko\Modules\Importers\Infrastructure\InlineAttachments;
 use Nolviko\Modules\Importers\Infrastructure\LegacyRedirects;
 use Nolviko\Modules\Importers\Infrastructure\PrivateImportFiles;
@@ -453,12 +455,14 @@ final class LegacyImportTest extends TestCase
         $revision = (int) $admin->job($job)['revision'];
         $requests = 0;
         do {
-            $status = $admin->run($job, $revision);
+            // A generous time share, so a slow test machine cannot split the request (one request runs batches
+            // until its time is used up; 5 seconds in production).
+            $status = $admin->run($job, $revision, 60.0);
             $revision = $status['revision'];
             ++$requests;
         } while (!$status['complete'] && $requests < 30);
         self::assertTrue($status['complete']);
-        self::assertSame(1, $requests, 'a small forum needs one request');
+        self::assertSame(1, $requests, 'one request runs many batches');
 
         $report = $admin->report($job);
         $posts = ['processed' => 1, 'verified' => 1, 'skipped' => 0, 'review' => 0];
@@ -557,6 +561,51 @@ final class LegacyImportTest extends TestCase
         );
         $unverified = 'SELECT COUNT(*) FROM import_counts WHERE processed <> verified';
         self::assertSame(0, (int) $this->db->fetchOne($unverified));
+    }
+
+    /**
+     * ADR-038 contract 1 (2026-11-20): the core target refuses malformed records, a changed phase list and a stale
+     * revision, and leaves the job exactly as it was.
+     */
+    public function testImportTargetRefusesMalformedBatchesWithoutWriting(): void
+    {
+        LegacyForumFixture::install($this->sourceDb, 'mybb');
+        $source = new SqlImportSource($this->sourceDb, 'mybb', 'legacy_', 'fixture-mybb');
+        $target = new ImportTarget($this->db);
+        $identity = $source->identity();
+        $phases = $source->phases();
+        $job = $target->begin($identity, $source->coverage(), $phases, 1, true);
+        $next = $target->next($job, $identity, $phases);
+        self::assertSame(['phase' => $phases[0], 'cursor' => '', 'revision' => 0, 'complete' => false], $next);
+        $key = ImportCursor::key([1]);
+        $refused = [
+            ['import_record_invalid', [['id' => 1, '_key' => $key, 'name' => ['nested']]]],
+            ['import_record_invalid', [['id' => 1, '_key' => $key,
+                'name' => str_repeat('x', ImportRecords::TEXT_BYTES + 1)]]],
+            ['import_record_invalid', [['id' => 1, '_key' => $key, 'Name' => 'x']]],
+            ['import_source_order_invalid', [['id' => 1, '_key' => '1', 'name' => 'x']]],
+        ];
+        foreach ($refused as [$code, $records]) {
+            try {
+                $target->apply($job, 0, $identity, $phases, $records);
+                self::fail($code . ' accepted');
+            } catch (RuntimeException $failure) {
+                self::assertSame($code, $failure->getMessage());
+            }
+        }
+        foreach (
+            ['import_source_changed' => [$identity, array_reverse($phases), 0],
+            'import_checkpoint_conflict' => [$identity, $phases, 5]] as $code => [$who, $order, $revision]
+        ) {
+            try {
+                $target->apply($job, $revision, $who, $order, []);
+                self::fail($code . ' accepted');
+            } catch (RuntimeException $failure) {
+                self::assertSame($code, $failure->getMessage());
+            }
+        }
+        self::assertSame($next, $target->next($job, $identity, $phases));
+        self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM import_map'));
     }
 
     private function administration(): ImportAdministration
