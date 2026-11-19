@@ -26,6 +26,7 @@ final class PackageUpdates
         'nolviko/totp' => 'Nolviko/extension-totp',
         'nolviko/google' => 'Nolviko/extension-google-auth',
         'nolviko/seo' => 'Nolviko/extension-seo',
+        'nolviko/importer' => 'Nolviko/extension-importer',
     ];
 
     public const OFFICIAL_THEMES = ['lumen' => 'Nolviko/theme-lumen', 'kolaj' => 'Nolviko/theme-kolaj'];

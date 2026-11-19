@@ -19,6 +19,15 @@ final class ImportRecords
 
     public const FIELDS = 48;
 
+    /** Phases written into users, groups, forums, threads and posts; the others are archives, files and polls. */
+    public const CORE_PHASES = ['categories', 'groups', 'users', 'forums', 'threads', 'posts'];
+
+    /** Neutral inline-attachment markers a source leaves in post bodies: by source attachment ID ... */
+    public const ATTACHMENT = '~\[nolviko-attachment\]([0-9]{1,19})\[/nolviko-attachment\]~';
+
+    /** ... or, where the forum names files per post (phpBB), by the file name as stored. */
+    public const ATTACHMENT_NAME = '~\[nolviko-attachment-name\]([^\r\n]{0,255}?)\[/nolviko-attachment-name\]~';
+
     /** Longest converted text (post, signature, private message) the forum stores, in characters. */
     public const BODY_CHARACTERS = 50000;
 

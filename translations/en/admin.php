@@ -438,6 +438,8 @@ return [
     'admin.extensions.catalog_about_google' => 'Sign up and sign in with a Google account.',
     'admin.extensions.catalog_name_seo' => 'Advanced SEO',
     'admin.extensions.catalog_about_seo' => 'Addresses, titles, descriptions, sitemaps and redirects.',
+    'admin.extensions.catalog_name_importer' => 'Importer',
+    'admin.extensions.catalog_about_importer' => 'Move an SMF, MyBB or phpBB forum to Nolviko; remove it when done.',
     'admin.themes.catalog_heading' => 'Official themes',
     'admin.themes.catalog_hint' => 'Installed with one click from the official release. Preview and publish it when '
         . 'you are ready.',

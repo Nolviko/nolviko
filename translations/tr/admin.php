@@ -430,6 +430,9 @@ return [
     'admin.extensions.catalog_about_google' => 'Google hesabıyla kayıt olma ve giriş yapma.',
     'admin.extensions.catalog_name_seo' => 'Gelişmiş SEO',
     'admin.extensions.catalog_about_seo' => 'Adresler, başlıklar, açıklamalar, site haritaları ve yönlendirmeler.',
+    'admin.extensions.catalog_name_importer' => 'Aktarıcı',
+    'admin.extensions.catalog_about_importer' => "SMF, MyBB veya phpBB forumunu Nolviko'ya taşıyın; "
+        . 'iş bitince kaldırın.',
     'admin.themes.catalog_heading' => 'Resmî temalar',
     'admin.themes.catalog_hint' => 'Resmî sürümden tek tıkla kurulur. Hazır olduğunuzda önizleyip yayımlayın.',
     'admin.themes.catalog_install' => 'Kur',

@@ -8,10 +8,11 @@ use Doctrine\DBAL\Connection;
 use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
+use Nolviko\Modules\Importers\Domain\ImportRecords;
 use RuntimeException;
 
 /**
- * Rewrites the neutral attachment markers a source left in post bodies (contract 1, SourceRecords) into links to the
+ * Rewrites the neutral attachment markers a source left in post bodies (contract 1, ImportRecords) into links to the
  * imported files, after the attachment phase. A marker that names no single imported file of that post stops the job.
  */
 final readonly class InlineAttachments
@@ -22,19 +23,19 @@ final readonly class InlineAttachments
 
     public static function has(string $body): bool
     {
-        return preg_match(SourceRecords::ATTACHMENT, $body) === 1
-            || preg_match(SourceRecords::ATTACHMENT_NAME, $body) === 1;
+        return preg_match(ImportRecords::ATTACHMENT, $body) === 1
+            || preg_match(ImportRecords::ATTACHMENT_NAME, $body) === 1;
     }
 
     public function rewrite(string $job, int $sourcePost, string $body): string
     {
         $body = (string) preg_replace_callback(
-            SourceRecords::ATTACHMENT,
+            ImportRecords::ATTACHMENT,
             fn(array $match): string => $this->link($job, $sourcePost, $match),
             $body
         );
         return (string) preg_replace_callback(
-            SourceRecords::ATTACHMENT_NAME,
+            ImportRecords::ATTACHMENT_NAME,
             fn(array $match): string => $this->link($job, $sourcePost, ['', '', $match[1]], true),
             $body
         );

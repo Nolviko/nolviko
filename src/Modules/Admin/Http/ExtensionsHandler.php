@@ -82,10 +82,12 @@ final readonly class ExtensionsHandler implements RouteHandler
                 $rows[] = ['id' => $id, 'name' => $this->translator->translate(match ($id) {
                     'nolviko/totp' => 'admin.extensions.catalog_name_totp',
                     'nolviko/google' => 'admin.extensions.catalog_name_google',
+                    'nolviko/importer' => 'admin.extensions.catalog_name_importer',
                     default => 'admin.extensions.catalog_name_seo',
                 }), 'about' => $this->translator->translate(match ($id) {
                     'nolviko/totp' => 'admin.extensions.catalog_about_totp',
                     'nolviko/google' => 'admin.extensions.catalog_about_google',
+                    'nolviko/importer' => 'admin.extensions.catalog_about_importer',
                     default => 'admin.extensions.catalog_about_seo',
                 }), 'version' => $release['version'], 'repository' => $repository, 'tag' => $release['tag']];
             }

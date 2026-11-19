@@ -38,7 +38,7 @@ final class ImportWriter
         $slug = 'import-' . $job . '-' . $phase . '-' . $id;
         $meta = [];
         $parent = null;
-        if (!isset(SourceSchema::SPECS[$engine][$phase])) {
+        if (!in_array($phase, ImportRecords::CORE_PHASES, true)) {
             $result = ($this->auxiliary ?? throw new RuntimeException('import_auxiliary_missing'))
                 ->write($job, $phase, $row, $engine);
             $target = $result['target'];

@@ -159,9 +159,9 @@ use Nolviko\Modules\Groups\Infrastructure\DbalUsergroupRepository;
 use Nolviko\Modules\Importers\Http\ImportsHandler;
 use Nolviko\Modules\Importers\Http\LegacyHandler;
 use Nolviko\Modules\Importers\Http\PrivateFileHandler;
-use Nolviko\Modules\Importers\Infrastructure\ImportAdministration;
 use Nolviko\Modules\Importers\Infrastructure\ImportFileStore;
-use Nolviko\Modules\Importers\Infrastructure\ImportSources;
+use Nolviko\Modules\Importers\Infrastructure\ImportJobs;
+use Nolviko\Modules\Importers\Infrastructure\ImportTarget;
 use Nolviko\Modules\Importers\Infrastructure\InlineAttachments;
 use Nolviko\Modules\Importers\Infrastructure\LegacyRedirects;
 use Nolviko\Modules\Importers\Infrastructure\PrivateImportFiles;
@@ -1894,20 +1894,17 @@ final class CoreServiceProvider implements ServiceProvider
             [Connection::class, ImportFileStore::class],
         );
         $services->factory(
-            ImportAdministration::class,
-            static fn(Connection $db, string $root, ?Config $config, ImportFileStore $files,
-                Router $router): ImportAdministration
-                => new ImportAdministration(
-                    $db,
-                    new ImportSources(
-                        $root,
-                        $config?->appSecret ?? throw new RuntimeException('import_unavailable'),
-                        $db
-                    ),
-                    $files,
-                    new InlineAttachments($db, $router, $config?->appUrl ?? '')
-                ),
-            [Connection::class, CompositionRoot::ROOT, CompositionRoot::CONFIG, ImportFileStore::class, Router::class],
+            ImportJobs::class,
+            static fn(Connection $db): ImportJobs => new ImportJobs($db),
+            [Connection::class],
+        );
+        // The core side of imports (ADR-038): the importer extension asks for this service by class and so writes
+        // the forum's tables through the core's own connection, never its guarded one.
+        $services->factory(
+            ImportTarget::class,
+            static fn(Connection $db, ?Config $config, ImportFileStore $files, Router $router): ImportTarget
+                => new ImportTarget($db, $files, new InlineAttachments($db, $router, $config?->appUrl ?? '')),
+            [Connection::class, CompositionRoot::CONFIG, ImportFileStore::class, Router::class],
         );
         $services->factory(
             SystemDiagnostics::class,
@@ -1917,20 +1914,11 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             ImportsHandler::class,
-            static fn(ImportAdministration $imports, RequestSubject $subjects, AdminSession $admin,
-                CsrfTokens $csrf, Connection $db, TemplateRenderer $views, MessageTranslator $translator,
-                Router $router): ImportsHandler => new ImportsHandler(
-                    $imports,
-                    $subjects,
-                    $admin,
-                    $csrf,
-                    new DbalAdminAudit($db),
-                    $views,
-                    $translator,
-                    $router
-                ),
-            [ImportAdministration::class, RequestSubject::class, AdminSession::class, CsrfTokens::class,
-                Connection::class, TemplateRenderer::class, MessageTranslator::class, Router::class],
+            static fn(ImportJobs $jobs, ExtensionManager $extensions, RequestSubject $subjects,
+                TemplateRenderer $views, MessageTranslator $translator, Router $router): ImportsHandler
+                => new ImportsHandler($jobs, $extensions, $subjects, $views, $translator, $router),
+            [ImportJobs::class, ExtensionManager::class, RequestSubject::class, TemplateRenderer::class,
+                MessageTranslator::class, Router::class],
         );
         $services->factory(
             DiagnosticsHandler::class,
