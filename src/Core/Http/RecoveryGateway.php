@@ -16,7 +16,12 @@ use Throwable;
 /** Frozen-runtime transport only. No public route is installed until the trusted dispatcher is configured. */
 final class RecoveryGateway implements RouteHandler
 {
-    private const ACTIONS = ['status', 'resume', 'migrate', 'smoke', 'finish'];
+    /**
+     * Every command RecoveryDispatcher::actions() offers. `backup` was missing (found 2026-11-19 on
+     * community.nolviko.com): the constructor then refused its own configuration and every recovery request
+     * answered 503, so no update could pass the recovery page. RecoveryGatewayFlowTest drives it end to end.
+     */
+    private const ACTIONS = ['status', 'backup', 'resume', 'migrate', 'smoke', 'finish'];
 
     /**
      * @param Closure(Request, int): bool $authorize Requires current admin identity and recent reauthentication.

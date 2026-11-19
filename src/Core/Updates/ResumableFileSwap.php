@@ -36,10 +36,14 @@ final class ResumableFileSwap
         $liveKey = self::key($live);
         $privateKey = self::key($private);
 
+        // Inside the application only under its storage/ (2026-11-19, found by the end-to-end update drill): the
+        // default install keeps storage/ there, and FileSwitchPlan never replaces storage/ (protected paths).
+        $storageKey = $liveKey . '/storage/';
+        $outsideStorage = static fn(string $key): bool => !str_starts_with($key . '/', $storageKey);
         if (
-            str_starts_with($privateKey . '/', $liveKey . '/')
+            (str_starts_with($privateKey . '/', $liveKey . '/') && $outsideStorage($privateKey))
             || str_starts_with($liveKey . '/', $privateKey . '/')
-            || str_starts_with(self::key(__FILE__) . '/', $liveKey . '/')
+            || (str_starts_with(self::key(__FILE__) . '/', $liveKey . '/') && $outsideStorage(self::key(__FILE__)))
         ) {
             throw new RuntimeException('update_switch_control_not_isolated');
         }

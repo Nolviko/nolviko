@@ -7,6 +7,7 @@ namespace Nolviko\Tests\Unit\Updates;
 use Nolviko\Core\Updates\FileSwitchPlan;
 use Nolviko\Core\Updates\ResumableFileSwap;
 use Nolviko\Tests\Support\FileSwitchFixture;
+use Nolviko\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -203,6 +204,22 @@ final class ResumableFileSwapTest extends TestCase
         $this->fixture = new FileSwitchFixture();
         $this->expectExceptionMessage('update_switch_control_not_isolated');
         new ResumableFileSwap(dirname(__DIR__, 3), $this->fixture->private);
+    }
+
+    /** 2026-11-19 (end-to-end drill): the default install keeps its private folders under the forum's storage/. */
+    public function testPrivateFolderUnderTheLiveStorageIsAccepted(): void
+    {
+        $live = new TemporaryDirectory();
+        try {
+            $live->write('storage/updates/.keep', '');
+            $live->write('src/.keep', '');
+            chmod($live->path . '/storage/updates', 0700);
+            new ResumableFileSwap($live->path, $live->path . '/storage/updates');
+            $this->expectExceptionMessage('update_switch_control_not_isolated');
+            new ResumableFileSwap($live->path, $live->path . '/src');
+        } finally {
+            $live->remove();
+        }
     }
 
     public function testOneLargeFileCannotCauseAnUnboundedStep(): void

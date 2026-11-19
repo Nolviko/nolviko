@@ -14,6 +14,8 @@ use Nolviko\Core\Database\UpdateCapture;
 use Nolviko\Core\Database\UpdateJournal;
 use Nolviko\Core\Database\UpdatePreflight;
 use Nolviko\Core\Database\UpdatePreparation;
+use Nolviko\Core\Http\RecoveryGateway;
+use Nolviko\Core\Updates\RecoveryGrantStore;
 use Nolviko\Core\Updates\RecoveryJobContext;
 use Nolviko\Core\Updates\ReleaseCompatibility;
 use Nolviko\Core\Updates\UpdateStage;
@@ -21,6 +23,7 @@ use Nolviko\Tests\Support\ReleaseSigningFixture;
 use Nolviko\Tests\Support\TemporaryDirectory;
 use Nolviko\Tests\Support\TestDatabase;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
 use ZipArchive;
 
 final class UpdatePolicyTest extends TestCase
@@ -146,6 +149,90 @@ final class UpdatePolicyTest extends TestCase
         );
         $switched = $dispatcher->actions()['resume']($job, 1);
         self::assertSame(UpdateStage::FilesSwitched->value, $switched['stage']);
+        self::assertSame($entries['src/Core/Updates/SiteAccessLock.php'], file_get_contents(
+            $this->files->path . '/src/Core/Updates/SiteAccessLock.php',
+        ));
+    }
+
+    /**
+     * 2026-11-19: the recovery gateway refused its own configuration (no `backup` among its commands), so every
+     * request to update-recovery.php answered 503 and no update could pass the recovery page. Drive the signed update
+     * through the gateway, as the browser does, until the files are switched.
+     */
+    public function testSignedUpdateRunsThroughTheRecoveryGateway(): void
+    {
+        $metadata = json_encode(['format' => 1, 'version' => '1.1.0', 'extension_api' => '1.0.0',
+            'theme_api' => 1, 'php' => '>=8.2.35 <8.6',
+            'databases' => ['mysql' => '>=8.0 <10', 'mariadb' => '>=10.6 <13', 'postgresql' => '>=14 <19'],
+            'extensions' => ['intl', 'zip'], 'packages' => []], JSON_THROW_ON_ERROR);
+        $entries = ['config/release-compatibility.json' => $metadata,
+            'src/Core/Updates/SiteAccessLock.php' => '<?php // new release'];
+        $archive = $this->files->path . '/release.zip';
+        $zip = new ZipArchive();
+        self::assertTrue($zip->open($archive, ZipArchive::CREATE | ZipArchive::EXCL));
+        foreach ($entries as $path => $bytes) {
+            $zip->addFromString($path, $bytes);
+            $zip->setCompressionName($path, ZipArchive::CM_STORE);
+        }
+        $zip->close();
+        $body = ReleaseSigningFixture::body(['archive_bytes' => filesize($archive),
+            'archive_sha256' => hash_file('sha256', $archive), 'file_count' => count($entries),
+            'unpacked_bytes' => array_sum(array_map(strlen(...), $entries)), 'issued_at' => time() - 60,
+            'expires_at' => time() + 3600]);
+        $storage = $this->private->path . '/storage';
+        $service = new UpdatePreparation($this->db, $this->files->path, $storage, TestDatabase::driver());
+        $job = $service->receive($archive, $body, ReleaseSigningFixture::sign($body), 1, true);
+        for ($round = 0; !$service->step($job, 1)['ready'] && $round < 20; $round++) {
+            // Staging continues in small steps, as the one-click page does.
+        }
+        mkdir($storage . '/recovery', 0700);
+        mkdir($storage . '/recovery/grants', 0700);
+        self::assertTrue($service->publish($job, 1));
+
+        $origin = 'https://forum.example.test';
+        $grants = new RecoveryGrantStore($storage . '/recovery/grants', $this->files->path . '/public');
+        $grant = $grants->issue($job, 1, 900);
+        $journal = new UpdateJournal($this->db);
+        $dispatcher = new RecoveryDispatcher(
+            $this->db,
+            $journal,
+            $this->files->path,
+            $storage . '/recovery',
+            TestDatabase::driver(),
+            false,
+            null,
+        );
+        $gateway = new RecoveryGateway(
+            $grants,
+            $origin,
+            static fn(Request $request, int $actor): bool => $actor === 1,
+            $dispatcher->actions(),
+        );
+        $sequence = 0;
+        $send = function (string $action) use ($gateway, $grant, $origin, &$sequence): array {
+            $request = Request::create($origin . '/update-recovery.php', 'POST', [], [], [], [
+                'HTTP_ORIGIN' => $origin, 'CONTENT_TYPE' => 'application/json',
+                'HTTP_X_NOLVIKO_RECOVERY_GRANT' => $grant['id'], 'HTTP_X_NOLVIKO_RECOVERY_CODE' => $grant['code'],
+                'HTTP_X_NOLVIKO_RECOVERY_NONCE' => $grant['nonce'],
+                'HTTP_X_NOLVIKO_RECOVERY_SEQUENCE' => (string) $sequence,
+            ], json_encode(['action' => $action], JSON_THROW_ON_ERROR));
+            $response = $gateway->handle($request, []);
+            $data = json_decode((string) $response->getContent(), true, 4, JSON_THROW_ON_ERROR);
+            self::assertSame(200, $response->getStatusCode(), $action . ': ' . $response->getContent());
+            $sequence = $data['next_sequence'];
+
+            return $data;
+        };
+
+        self::assertSame('backup', $send('status')['next_action']);
+        $send('backup');
+        $state = $send('status');
+        for ($round = 0; ($state['next_action'] ?? null) === 'resume' && $round < 50; $round++) {
+            $send('resume');
+            $state = $send('status');
+        }
+        self::assertSame(UpdateStage::FilesSwitched->value, $state['stage']);
+        self::assertSame('migrate', $state['next_action'], 'the new runtime takes over from here');
         self::assertSame($entries['src/Core/Updates/SiteAccessLock.php'], file_get_contents(
             $this->files->path . '/src/Core/Updates/SiteAccessLock.php',
         ));
