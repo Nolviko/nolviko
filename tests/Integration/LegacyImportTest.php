@@ -578,12 +578,14 @@ final class LegacyImportTest extends TestCase
         $next = $target->next($job, $identity, $phases);
         self::assertSame(['phase' => $phases[0], 'cursor' => '', 'revision' => 0, 'complete' => false], $next);
         $key = ImportCursor::key([1]);
+        $hash = str_repeat('a', 64);
         $refused = [
-            ['import_record_invalid', [['id' => 1, '_key' => $key, 'name' => ['nested']]]],
-            ['import_record_invalid', [['id' => 1, '_key' => $key,
+            ['import_record_invalid', [['id' => 1, '_key' => $key, '_hash' => $hash, 'name' => ['nested']]]],
+            ['import_record_invalid', [['id' => 1, '_key' => $key, '_hash' => $hash,
                 'name' => str_repeat('x', ImportRecords::TEXT_BYTES + 1)]]],
-            ['import_record_invalid', [['id' => 1, '_key' => $key, 'Name' => 'x']]],
-            ['import_source_order_invalid', [['id' => 1, '_key' => '1', 'name' => 'x']]],
+            ['import_record_invalid', [['id' => 1, '_key' => $key, '_hash' => $hash, 'Name' => 'x']]],
+            ['import_record_invalid', [['id' => 1, '_key' => $key, 'name' => 'no fingerprint']]],
+            ['import_source_order_invalid', [['id' => 1, '_key' => '1', '_hash' => $hash, 'name' => 'x']]],
         ];
         foreach ($refused as [$code, $records]) {
             try {

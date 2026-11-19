@@ -61,7 +61,11 @@ final class ImportRunner
             $revision,
             $identity,
             $phases,
-            $this->source->rows($next['phase'], $next['cursor'], $limit),
+            SourceRecords::normalize(
+                (string) $identity['engine'],
+                $next['phase'],
+                $this->source->rows($next['phase'], $next['cursor'], $limit),
+            ),
             $this->source->asset(...),
             $milliseconds,
         );

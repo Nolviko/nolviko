@@ -202,7 +202,7 @@ final class ImportTarget
                     } elseif ($moved) {
                         $writer->moved($job, $row['id']);
                     } elseif ($rewriting) {
-                        $writer->inline($job, $row, $run['engine'], $this->inline);
+                        $writer->inline($job, $row, $this->inline);
                     } elseif ($verifying) {
                         $writer->verify($job, $phase, $row);
                         $delta[$phase]['verified'] = ($delta[$phase]['verified'] ?? 0) + 1;

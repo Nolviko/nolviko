@@ -7,6 +7,7 @@ namespace Nolviko\Modules\Importers\Infrastructure;
 use Doctrine\DBAL\Connection;
 use InvalidArgumentException;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
+use Nolviko\Modules\Importers\Domain\ImportRecords;
 use Nolviko\Modules\Importers\Domain\ImportText;
 use Nolviko\Modules\Users\Domain\IdentityNormalizer;
 use Nolviko\Modules\Users\Domain\LegacyPassword;
@@ -96,11 +97,8 @@ final class ImportWriter
                 'created_at' => ImportText::timestamp($row['time']), 'updated_at' => $now]);
             $target = (int) $this->db->lastInsertId();
             $this->db->insert('member_profiles', ['user_id' => $target, 'biography' => '', 'location' => '',
-                'signature' => '', 'imported_signature' => ImportText::body(
-                    (string) ($row['signature'] ?? ''),
-                    $engine,
-                    'UTF-8'
-                ), 'visibility' => 'private', 'allow_messages' => 0, 'show_online' => 0,
+                'signature' => '', 'imported_signature' => ImportRecords::body($row['signature'] ?? ''),
+                'visibility' => 'private', 'allow_messages' => 0, 'show_online' => 0,
                 'email_notifications' => 0]);
             $this->db->insert('usergroup_members', ['user_id' => $target, 'usergroup_id' => 2,
                 'is_primary' => 1, 'created_at' => $now]);
@@ -164,7 +162,8 @@ final class ImportWriter
             $status = self::status($row['visible']);
             $user = $this->mapped($job, 'users', (int) $row['user']);
             $created = ImportText::timestamp($row['time']);
-            $body = ImportText::body((string) $row['body'], $engine, 'UTF-8');
+            // Converted by the source (contract 1); inline attachments are still neutral markers here.
+            $body = ImportRecords::body($row['body']);
             $this->db->insert('posts', ['thread_id' => $threadId, 'user_id' => $user, 'content' => $body,
                 'content_format' => 'bbcode', 'status' => $status, 'created_at' => $created, 'updated_at' => $now]);
             $target = (int) $this->db->lastInsertId();
@@ -235,21 +234,18 @@ final class ImportWriter
         }
     }
 
-    public function inline(string $job, array $source, string $engine, ?InlineAttachments $rewriter): void
+    public function inline(string $job, array $source, ?InlineAttachments $rewriter): void
     {
         $entry = $this->entry($job, 'posts', $source['_key'])
             ?: throw new RuntimeException('import_reference_missing');
         if (!hash_equals($entry['content_hash'], $this->targetHash('posts', $entry['target_id']))) {
             throw new RuntimeException('import_parity_mismatch');
         }
-        $body = ImportText::body((string) $source['body'], $engine, 'UTF-8');
+        $body = ImportRecords::body($source['body']);
         if ($rewriter !== null) {
-            $body = $rewriter->rewrite($job, $source['id'], $body, $engine);
-        } elseif (preg_match('/\[(?:attach|attachment)(?:=|\])/i', $body) === 1) {
+            $body = ImportRecords::body($rewriter->rewrite($job, $source['id'], $body));
+        } elseif (InlineAttachments::has($body)) {
             throw new RuntimeException('import_canonical_url_required');
-        }
-        if (mb_strlen($body, 'UTF-8') > 50000) {
-            throw new RuntimeException('import_body_oversize');
         }
         $this->db->update('posts', ['content' => $body], ['id' => (int) $entry['target_id']]);
         $this->db->update(
@@ -390,8 +386,10 @@ final class ImportWriter
         return $value;
     }
 
+    /** The source's fingerprint of the raw row (contract 1); rows the target makes itself are hashed here. */
     private static function sourceHash(array $row): string
     {
-        return hash('sha256', json_encode($row, JSON_THROW_ON_ERROR));
+        return is_string($row['_hash'] ?? null)
+            ? $row['_hash'] : hash('sha256', json_encode($row, JSON_THROW_ON_ERROR));
     }
 }

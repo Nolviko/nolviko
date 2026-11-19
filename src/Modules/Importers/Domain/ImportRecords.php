@@ -19,6 +19,21 @@ final class ImportRecords
 
     public const FIELDS = 48;
 
+    /** Longest converted text (post, signature, private message) the forum stores, in characters. */
+    public const BODY_CHARACTERS = 50000;
+
+    /** Converted text from a record: valid UTF-8, no NUL byte, within the forum's limit. */
+    public static function body(mixed $value): string
+    {
+        if (!is_string($value) || !mb_check_encoding($value, 'UTF-8') || str_contains($value, "\0")) {
+            throw new RuntimeException('import_text_invalid');
+        }
+        if (mb_strlen($value, 'UTF-8') > self::BODY_CHARACTERS) {
+            throw new RuntimeException('import_body_oversize');
+        }
+        return $value;
+    }
+
     public static function assert(array $row, string $after): void
     {
         $key = $row['_key'] ?? null;
@@ -28,6 +43,10 @@ final class ImportRecords
             || count($row) > self::FIELDS
         ) {
             throw new RuntimeException('import_source_order_invalid');
+        }
+        // The source's own fingerprint of the raw row: how the target notices a source that changed under it.
+        if (!is_string($row['_hash'] ?? null) || preg_match('/^[a-f0-9]{64}$/D', $row['_hash']) !== 1) {
+            throw new RuntimeException('import_record_invalid');
         }
         foreach ($row as $field => $value) {
             if (!is_string($field) || preg_match('/^_?[a-z][a-z0-9_]{0,31}$/D', $field) !== 1) {

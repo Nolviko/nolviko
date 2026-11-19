@@ -8,6 +8,7 @@ use Closure;
 use Doctrine\DBAL\Connection;
 use Nolviko\Modules\Importers\Domain\ImportAsset;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
+use Nolviko\Modules\Importers\Domain\ImportRecords;
 use Nolviko\Modules\Importers\Domain\ImportText;
 use RuntimeException;
 
@@ -29,7 +30,7 @@ final readonly class ImportAuxWriter
                 return ['target' => '0', 'meta' => ['reason' => 'recipient_deleted'], 'parent' => (int) $row['id']];
             }
             $subject = self::text((string) $row['name'], 255);
-            $body = ImportText::body((string) $row['body'], $engine, 'UTF-8');
+            $body = ImportRecords::body($row['body']);
             $created = ImportText::timestamp($row['time']);
             $this->db->insert('private_conversations', ['subject' => mb_substr($subject ?: (string) $row['id'], 0, 160),
                 'imported_subject' => $subject === '' ? null : $subject, 'import_job_id' => $job,
