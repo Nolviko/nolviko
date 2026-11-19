@@ -68,7 +68,18 @@ final class DbalRememberTokens implements RememberTokens
 
         $userId = (int) $row['user_id'];
 
-        if (!hash_equals((string) $row['validator_hash'], hash('sha256', $parts[2]))) {
+        return $this->connection->transactional(function () use ($row, $userId, $parts): ?array {
+            $epoch = $this->connection->fetchOne('SELECT session_epoch FROM users WHERE id = ? FOR UPDATE', [$userId]);
+            if ($epoch === false) {
+                return null;
+            }
+            return $this->rotate($row, $userId, $parts[2], (int) $epoch);
+        });
+    }
+
+    private function rotate(array $row, int $userId, string $validator, int $epoch): ?array
+    {
+        if (!hash_equals((string) $row['validator_hash'], hash('sha256', $validator))) {
             $this->revokeAll($userId);
 
             return null;
@@ -82,7 +93,7 @@ final class DbalRememberTokens implements RememberTokens
             return null;
         }
 
-        return [$userId, $this->issue($userId)];
+        return [$userId, $this->issue($userId), $epoch];
     }
 
     public function revoke(#[SensitiveParameter] string $cookie): void

@@ -46,6 +46,8 @@ final class PasswordResetHandler implements RouteHandler
 
     private function forgotPage(Request $request): Response
     {
+        // A synchronous visitor tick could otherwise expose SMTP latency in this response.
+        $request->attributes->set('_defer_visitor_tasks', true);
         if (!$request->isMethod('POST')) {
             return $this->page('auth/password_forgot.twig', [
                 'sent' => $request->query->get('sent') === '1',

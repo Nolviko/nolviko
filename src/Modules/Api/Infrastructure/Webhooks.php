@@ -27,13 +27,14 @@ final class Webhooks
 
     /**
      * @param Closure(): ForumScope $guestScope
-     * @param Closure(string, string, array<string, string>): int|null $send Test seam: URL, body, headers => status.
+     * @param Closure(string, string, array<string, string>, string): int|null $send Test seam: URL, body, headers => status.
      */
     public function __construct(
         private readonly Connection $db,
         private readonly Closure $guestScope,
         private readonly string $siteUrl,
         private readonly ?Closure $send = null,
+        private readonly ?Closure $dnsRecords = null,
     ) {
     }
 
@@ -121,12 +122,14 @@ final class Webhooks
                 continue;
             }
 
-            $status = self::publicHttps((string) $hook['url'], true) ? ($this->send ?? self::post(...))(
+            $ip = self::destination((string) $hook['url'], true, $this->dnsRecords);
+            $status = $ip !== null ? ($this->send ?? self::post(...))(
                 (string) $hook['url'],
                 $body,
                 ['Content-Type' => 'application/json', 'User-Agent' => 'Nolviko-Webhook/1',
                     'X-Nolviko-Event' => $lease->type,
                     'X-Nolviko-Signature' => 'sha256=' . hash_hmac('sha256', $body, (string) $hook['secret'])],
+                $ip,
             ) : null;
             $ok = $status !== null && $status >= 200 && $status < 300;
             $this->db->executeStatement(
@@ -171,39 +174,68 @@ final class Webhooks
     /** An https URL whose host resolves only to public addresses (resolution skipped when $resolve is false). */
     public static function publicHttps(string $url, bool $resolve): bool
     {
-        $parts = parse_url($url);
+        return self::destination($url, $resolve) !== null;
+    }
 
-        if (
-            !is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https' || !isset($parts['host'])
+    private static function destination(string $url, bool $resolve, ?Closure $dnsRecords = null): ?string
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https' || !isset($parts['host'])
             || isset($parts['user']) || isset($parts['pass']) || filter_var($url, FILTER_VALIDATE_URL) === false
-        ) {
-            return false;
+            || preg_match('/[[:cntrl:]]/', $url) || str_contains($url, '\\')) {
+            return null;
         }
 
         $host = trim($parts['host'], '[]');
-
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
-            return self::publicIp($host);
+            return self::publicIp($host) ? $host : null;
         }
 
+        if (!str_contains($host, '.') || !filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+            return null;
+        }
         if (!$resolve) {
-            return !in_array(strtolower($host), ['localhost'], true) && str_contains($host, '.');
+            return $host;
         }
 
-        $addresses = @gethostbynamel($host);
+        if ($dnsRecords === null && !function_exists('dns_get_record')) {
+            return null;
+        }
+        $records = $dnsRecords === null ? @dns_get_record($host, DNS_A | DNS_AAAA) : $dnsRecords($host);
+        $addresses = [];
+        foreach ($records ?: [] as $record) {
+            $address = $record['ip'] ?? $record['ipv6'] ?? null;
+            if ($address === null) {
+                continue;
+            }
+            if (!self::publicIp($address)) {
+                return null;
+            }
+            $addresses[] = $address;
+        }
 
-        return is_array($addresses) && $addresses !== []
-            && array_filter($addresses, static fn(string $ip): bool => !self::publicIp($ip)) === [];
+        return $addresses[0] ?? null;
     }
 
     private static function publicIp(string $ip): bool
     {
-        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) === false) {
+            return false;
+        }
+        $bytes = inet_pton($ip);
+        // Accept only unicast destinations. Exclude IPv6 transition prefixes outside 2000::/3.
+        return strlen($bytes) === 4 ? ord($bytes[0]) < 224 : (ord($bytes[0]) & 0xe0) === 0x20;
     }
 
     /** @param array<string, string> $headers */
-    private static function post(string $url, string $body, array $headers): ?int
+    private static function post(string $url, string $body, array $headers, string $ip): ?int
     {
+        $parts = parse_url($url);
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $authority = str_contains($ip, ':') ? '[' . $ip . ']' : $ip;
+        $target = 'https://' . $authority . $port . ($parts['path'] ?? '/')
+            . (isset($parts['query']) ? '?' . $parts['query'] : '');
+        $headers['Host'] = $parts['host'] . $port;
         $lines = [];
 
         foreach ($headers as $name => $value) {
@@ -212,8 +244,9 @@ final class Webhooks
 
         $context = stream_context_create(['http' => ['method' => 'POST', 'header' => implode("\r\n", $lines),
             'content' => $body, 'timeout' => self::TIMEOUT, 'follow_location' => 0, 'max_redirects' => 0,
-            'ignore_errors' => true]]);
-        $stream = @fopen($url, 'rb', false, $context);
+            'ignore_errors' => true], 'ssl' => ['peer_name' => trim($parts['host'], '[]'),
+            'verify_peer' => true, 'verify_peer_name' => true]]);
+        $stream = @fopen($target, 'rb', false, $context);
 
         if ($stream === false) {
             return null;

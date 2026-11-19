@@ -6,6 +6,7 @@ namespace Nolviko\Modules\Users\Http;
 
 use Nolviko\Core\Http\ResponseCookies;
 use Nolviko\Core\Session\CsrfTokens;
+use Nolviko\Core\Session\NativeSession;
 use Nolviko\Core\Session\Session;
 use Nolviko\Modules\Users\Domain\RememberTokens;
 use Nolviko\Modules\Users\Domain\SessionEpochs;
@@ -35,6 +36,8 @@ final class AuthSession
 
     private const EPOCH_KEY = '_user_epoch';
 
+    private const LAST_ACTIVITY = '_auth_last_activity';
+
     private ?int $checked = null;
 
     public function __construct(
@@ -52,6 +55,7 @@ final class AuthSession
         $this->csrf->rotate();
         $this->session->remove(self::ELEVATION_KEY);
         $this->session->set(self::USER_KEY, $user->id);
+        $this->session->set(self::LAST_ACTIVITY, time());
         $this->rememberEpoch($user->id);
 
         if ($remember) {
@@ -70,7 +74,11 @@ final class AuthSession
         }
 
         if ($everywhere && is_int($userId)) {
-            $this->remember->revokeAll($userId);
+            if ($this->epochs !== null) {
+                $this->epochs->revokeSessionsAndRememberTokens($userId);
+            } else {
+                $this->remember->revokeAll($userId);
+            }
         }
 
         $this->session->invalidate();
@@ -85,6 +93,17 @@ final class AuthSession
         $userId = $this->session->get(self::USER_KEY);
 
         if (is_int($userId)) {
+            $now = time();
+            $last = $this->session->get(self::LAST_ACTIVITY);
+            if ($last !== null && (!is_int($last) || $now - $last >= NativeSession::LIFETIME)) {
+                $this->session->invalidate();
+                $this->checked = null;
+                return null;
+            }
+            if ($last !== $now) {
+                $this->session->set(self::LAST_ACTIVITY, $now);
+            }
+
             if ($this->epochs === null || $this->checked === $userId) {
                 return $userId;
             }
@@ -116,7 +135,8 @@ final class AuthSession
         }
 
         [$userId, $replacement] = $used;
-        if ($this->epochs !== null && $this->epochs->current($userId) === null) {
+        $epoch = $this->epochs?->current($userId);
+        if ($this->epochs !== null && ($epoch === null || (isset($used[2]) && $used[2] !== $epoch))) {
             $this->remember->revoke($replacement);
             $this->cookies->set($this->rememberCookie('', $request, expired: true));
 
@@ -127,7 +147,11 @@ final class AuthSession
         $this->csrf->rotate();
         $this->session->remove(self::ELEVATION_KEY);
         $this->session->set(self::USER_KEY, $userId);
-        $this->rememberEpoch($userId);
+        $this->session->set(self::LAST_ACTIVITY, time());
+        if ($this->epochs !== null) {
+            $this->session->set(self::EPOCH_KEY, $epoch);
+            $this->checked = $userId;
+        }
         $this->cookies->set($this->rememberCookie($replacement, $request));
 
         return $userId;

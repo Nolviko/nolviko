@@ -10,6 +10,8 @@ namespace Nolviko\Modules\Users\Domain;
  */
 interface SessionEpochs
 {
+    public function revokeSessionsAndRememberTokens(int $userId): void;
+
     /**
      * @return int|null The current epoch, or null when the user does not exist.
      */

@@ -56,6 +56,14 @@ final class LoginFlowTest extends TestCase
         $this->users->create('Deniz', 'deniz@example.com', $this->hasher->hash(self::PASSWORD), UserStatus::Active);
     }
 
+    public function testIdleSessionExpiresEvenWhileItsDataStillExists(): void
+    {
+        $this->login(['identifier' => 'deniz', 'password' => self::PASSWORD]);
+        $this->session->set('_auth_last_activity', time() - 7200);
+        self::assertNull($this->auth()->userId(Request::create('/')));
+        self::assertSame([], $this->session->data);
+    }
+
     public function testUnknownAccountAndWrongPasswordLookTheSame(): void
     {
         $started = hrtime(true);

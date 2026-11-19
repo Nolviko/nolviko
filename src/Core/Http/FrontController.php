@@ -71,6 +71,11 @@ final class FrontController
 
         $response->send();
 
+        if ($request?->attributes->get('_defer_visitor_tasks') === true
+            && !function_exists('fastcgi_finish_request') && !function_exists('litespeed_finish_request')) {
+            return;
+        }
+
         // Not after a server error. 4xx and 503 still tick: a crawler asking for a sitemap that is being built
         // (503) is often the only visitor of a quiet site.
         if ($response->getStatusCode() < 500 || $response->getStatusCode() === 503) {

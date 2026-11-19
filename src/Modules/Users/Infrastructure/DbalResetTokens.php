@@ -27,6 +27,12 @@ final class DbalResetTokens implements ResetTokens
     public function issue(int $userId, ?string $network, DateTimeImmutable $now): string
     {
         $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $this->store($token, $userId, $network, $now);
+        return $token;
+    }
+
+    public function store(#[SensitiveParameter] string $token, int $userId, ?string $network, DateTimeImmutable $now): void
+    {
         $this->connection->insert('password_reset_tokens', [
             'user_id' => $userId,
             'token_hash' => hash('sha256', $token),
@@ -34,8 +40,6 @@ final class DbalResetTokens implements ResetTokens
             'expires_at' => self::stamp($now->modify(self::LIFETIME)),
             'created_at' => self::stamp($now),
         ]);
-
-        return $token;
     }
 
     public function peek(#[SensitiveParameter] string $token, DateTimeImmutable $now): ?int

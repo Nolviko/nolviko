@@ -12,6 +12,7 @@ use Nolviko\Core\Config\MailSettings;
 use Nolviko\Core\Config\Secret;
 use Nolviko\Core\Database\ConnectionFactory;
 use Nolviko\Core\Database\RateBuckets;
+use Nolviko\Core\Events\OutboxLease;
 use Nolviko\Core\Http\ResponseCookies;
 use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Locale\TranslatorFactory;
@@ -23,6 +24,7 @@ use Nolviko\Core\Routing\Router;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Core\View\TwigFactory;
+use Nolviko\Modules\Users\Domain\AccountMail;
 use Nolviko\Modules\Users\Domain\PasswordHasher;
 use Nolviko\Modules\Users\Domain\UserStatus;
 use Nolviko\Modules\Users\Http\AuthSession;
@@ -32,6 +34,7 @@ use Nolviko\Modules\Users\Infrastructure\DbalResetTokens;
 use Nolviko\Modules\Users\Infrastructure\DbalSessionEpochs;
 use Nolviko\Modules\Users\Infrastructure\DbalUserRepository;
 use Nolviko\Modules\Users\Infrastructure\PasswordRecovery;
+use Nolviko\Modules\Users\Infrastructure\ResetMailQueue;
 use Nolviko\Modules\Users\Infrastructure\TemplatedAccountMail;
 use Nolviko\Tests\Support\ArraySession;
 use Nolviko\Tests\Support\CapturingTransport;
@@ -233,6 +236,47 @@ final class PasswordRecoveryTest extends TestCase
         self::assertStringNotContainsString('<script>', (string) $invalid->getContent());
     }
 
+    public function testAllDevicesLogoutRevokesAnotherOpenSession(): void
+    {
+        $request = Request::create('/');
+        $user = (new DbalUserRepository($this->connection))->findById($this->alice);
+        $first = $this->auth(new ArraySession());
+        $second = new ArraySession();
+        $first->login($user, false, $request);
+        $this->auth($second)->login($user, true, $request);
+        $first->logout($request, true);
+        self::assertNull($this->auth($second)->userId($request));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM remember_tokens'));
+    }
+
+    public function testQueuedRequestsDeliverOnlyWhileTheOriginalTokenIsValid(): void
+    {
+        $queue = new ResetMailQueue($this->connection, new Secret(str_repeat('k', 32)));
+        $recovery = $this->recovery($this->now, $queue);
+        $recovery->request('alice@example.com', '192.0.2.1');
+        $recovery->request('unknown@example.com', '203.0.113.1');
+        self::assertCount(0, $this->transport->sent);
+        $jobs = $this->connection->fetchAllAssociative('SELECT id, payload FROM outbox_events WHERE event_type = ? ORDER BY id',
+            [ResetMailQueue::EVENT]);
+        self::assertCount(2, $jobs);
+        $mail = $this->createMock(AccountMail::class);
+        $token = null;
+        $mail->expects(self::once())->method('passwordReset')->willReturnCallback(
+            static function (string $to, string $name, string $value) use (&$token): void {
+                self::assertSame('alice@example.com', $to);
+                $token = $value;
+            }
+        );
+        foreach ($jobs as $job) {
+            $lease = new OutboxLease((int) $job['id'], ResetMailQueue::EVENT, 0, $job['payload'], '', 0, 1);
+            $queue->deliver($lease, $mail);
+        }
+        self::assertIsString($token);
+        self::assertStringNotContainsString($token, $jobs[0]['payload']);
+        self::assertTrue($recovery->reset($token, self::NEW, self::NEW));
+        $queue->deliver(new OutboxLease(1, ResetMailQueue::EVENT, 0, $jobs[0]['payload'], '', 0, 2), $mail);
+    }
+
     private function post(string $token, string $password, string $confirmation): Request
     {
         return Request::create('/password/reset', 'POST', [
@@ -253,7 +297,7 @@ final class PasswordRecoveryTest extends TestCase
         return $match[1];
     }
 
-    private function recovery(DateTimeImmutable $now): PasswordRecovery
+    private function recovery(DateTimeImmutable $now, ?ResetMailQueue $queue = null): PasswordRecovery
     {
         $settings = new MailSettings(fromAddress: 'forum@example.com');
         $mailer = new SymfonyMailer($this->transport, $settings, new NullLogger());
@@ -266,6 +310,7 @@ final class PasswordRecoveryTest extends TestCase
             new TemplatedAccountMail($mailer, $composer, self::router(), self::SITE),
             new RateBuckets($this->connection),
             static fn(): DateTimeImmutable => $now,
+            queue: $queue,
         );
     }
 

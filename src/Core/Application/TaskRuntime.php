@@ -17,10 +17,13 @@ use Nolviko\Core\Events\CooperativeTaskRunner;
 use Nolviko\Core\Events\OutboxLease;
 use Nolviko\Core\Extensions\ExtensionBootstrap;
 use Nolviko\Core\Extensions\ExtensionRegistry;
+use Nolviko\Core\Locale\TranslatorFactory;
+use Nolviko\Core\Mail\MailComposer;
 use Nolviko\Core\Mail\SymfonyMailer;
 use Nolviko\Core\Mail\TransportFactory;
 use Nolviko\Core\Routing\RouterFactory;
 use Nolviko\Core\Updates\SiteAccessLock;
+use Nolviko\Core\View\TwigFactory;
 use Nolviko\Modules\Api\Infrastructure\Webhooks;
 use Nolviko\Modules\Community\Infrastructure\CommunityAccess;
 use Nolviko\Modules\Community\Infrastructure\CommunityInteractions;
@@ -45,6 +48,8 @@ use Nolviko\Modules\Seo\Infrastructure\Sitemaps;
 use Nolviko\Modules\Users\Domain\PasswordHasher;
 use Nolviko\Modules\Users\Infrastructure\AccountPrivacy;
 use Nolviko\Modules\Users\Infrastructure\PersonalDataExport;
+use Nolviko\Modules\Users\Infrastructure\ResetMailQueue;
+use Nolviko\Modules\Users\Infrastructure\TemplatedAccountMail;
 use Psr\Log\NullLogger;
 use RuntimeException;
 
@@ -142,15 +147,13 @@ final class TaskRuntime
         $profiles = new MemberProfiles($db, $access);
         $interactions = new CommunityInteractions($db, $access, $profiles);
         $notifications = new CommunityNotifications($db, $access, $interactions);
+        $mailer = new SymfonyMailer(TransportFactory::create($config->mail, 2), $config->mail, new NullLogger());
+        $router = RouterFactory::create($root, $storage);
         $mail = new CommunityMail(
             $db,
-            new SymfonyMailer(
-                TransportFactory::create($config->mail, 2),
-                $config->mail,
-                new NullLogger()
-            ),
+            $mailer,
             $config->appUrl ?? '',
-            RouterFactory::create($root, $storage),
+            $router,
             new CommunityMailTemplate($root, $storage)
         );
         $media = new PrivateMedia($db, $access, $profiles, new ImageProcessor(), $storage, $public);
@@ -179,6 +182,16 @@ final class TaskRuntime
             'post.approved' => $notifications->fanout(...), 'thread.approved'
                 => $notifications->fanout(...),
             'community.mail' => $mail->deliver(...)];
+        $handlers[ResetMailQueue::EVENT] = static function (OutboxLease $lease) use (
+            $db, $config, $root, $storage, $mailer, $router
+        ): bool {
+            $payload = json_decode($lease->payload, true, 4, JSON_THROW_ON_ERROR);
+            $translator = TranslatorFactory::create($root . '/translations', $payload['locale']);
+            $composer = new MailComposer(TwigFactory::create($root, $storage, $translator), $translator);
+            return (new ResetMailQueue($db, $config->appSecret))->deliver(
+                $lease, new TemplatedAccountMail($mailer, $composer, $router, $config->appUrl)
+            );
+        };
         if ($sitemaps !== null) {
             $handlers['seo.sitemap_requested'] = $sitemaps->build(...);
         }

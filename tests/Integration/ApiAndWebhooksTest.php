@@ -148,14 +148,19 @@ final class ApiAndWebhooksTest extends TestCase
             $this->connection,
             static fn() => $visibility->readable($resolver->guest()),
             'https://forum.example',
-            static function (string $url, string $body, array $headers) use (&$sent): int {
+            static function (string $url, string $body, array $headers, string $ip) use (&$sent): int {
                 $sent[] = [$url, $body, $headers];
+                self::assertSame('93.184.215.14', $ip);
 
                 return 200;
             },
+            static fn(string $host): array => $host === 'dual.example'
+                ? [['ip' => '93.184.215.14'], ['ipv6' => '::1']]
+                : [['ip' => '93.184.215.14']],
         );
 
-        foreach (['http://hooks.example/x', 'https://127.0.0.1/x', 'https://localhost/x'] as $bad) {
+        foreach (['http://hooks.example/x', 'https://127.0.0.1/x', 'https://localhost/x', 'https://[::1]/x',
+            'https://224.0.0.1/x', 'https://[ff02::1]/x'] as $bad) {
             try {
                 $hooks->add($bad, ['post.created']);
                 self::fail('refused: ' . $bad);
@@ -164,7 +169,8 @@ final class ApiAndWebhooksTest extends TestCase
             }
         }
 
-        $secret = $hooks->add('https://93.184.215.14/hook', ['post.created']);
+        $hooks->add('https://dual.example/hook', ['post.created']);
+        $secret = $hooks->add('https://hooks.example/hook', ['post.created']);
         $lease = static fn(int $id, int $post): OutboxLease => new OutboxLease($id, 'post.created', $post, json_encode(
             ['post_id' => $post, 'thread_id' => 0, 'user_id' => $alice, 'status' => 'visible'],
             JSON_THROW_ON_ERROR,
@@ -175,10 +181,11 @@ final class ApiAndWebhooksTest extends TestCase
 
         self::assertCount(1, $sent, 'once per event; nothing from a forum guests cannot read');
         [$url, $body, $headers] = $sent[0];
-        self::assertSame('https://93.184.215.14/hook', $url);
+        self::assertSame('https://hooks.example/hook', $url);
         self::assertSame('sha256=' . hash_hmac('sha256', $body, $secret), $headers['X-Nolviko-Signature']);
         self::assertSame('Hello', json_decode($body, true)['thread']['title']);
-        self::assertSame(200, (int) $this->connection->fetchOne('SELECT last_status FROM webhooks'));
+        self::assertSame(200, (int) $this->connection->fetchOne('SELECT last_status FROM webhooks WHERE url = ?',
+            ['https://hooks.example/hook']));
 
         $pinged = [];
         $indexNow = new IndexNow(

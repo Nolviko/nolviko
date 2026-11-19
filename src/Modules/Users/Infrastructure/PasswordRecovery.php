@@ -44,6 +44,8 @@ final class PasswordRecovery
         private readonly AccountMail $mail,
         private readonly RateBuckets $buckets,
         ?Closure $clock = null,
+        private readonly ?ResetMailQueue $queue = null,
+        private readonly string $locale = 'en',
     ) {
         $this->clock = $clock ?? static fn(): DateTimeImmutable => new DateTimeImmutable(
             'now',
@@ -71,15 +73,19 @@ final class PasswordRecovery
         $address = IdentityRules::email($email);
         $user = $address === null ? null : $this->users->findByEmail($address);
 
-        if ($user === null || $user->status !== UserStatus::Active) {
-            return 0;
+        $recipient = null;
+        if ($user !== null && $user->status === UserStatus::Active) {
+            $accountKey = 'reset.user:' . $user->id;
+            $this->buckets->ensure($accountKey, $now);
+            if ($this->buckets->hit($accountKey, self::ACCOUNT_SECONDS, $now) === 0) {
+                $recipient = $user;
+            }
         }
 
-        $accountKey = 'reset.user:' . $user->id;
-        $this->buckets->ensure($accountKey, $now);
-
-        if ($this->buckets->hit($accountKey, self::ACCOUNT_SECONDS, $now) === 0) {
-            $this->mail->passwordReset($user->email, $user->username, $this->tokens->issue($user->id, $network, $now));
+        if ($this->queue !== null) {
+            $this->queue->enqueue($recipient, $network, $now, $this->locale);
+        } elseif ($recipient !== null) {
+            $this->mail->passwordReset($recipient->email, $recipient->username, $this->tokens->issue($recipient->id, $network, $now));
         }
 
         return 0;

@@ -23,7 +23,7 @@ interface RememberTokens
      * Uses a token once: on success it is replaced by a new one (rotation). A known selector with a wrong
      * validator means the token was stolen and copied: all of that user's tokens are revoked.
      *
-     * @return array{0: int, 1: string}|null User ID and the replacement cookie value, or null.
+     * @return array{0: int, 1: string, 2?: int}|null User ID and the replacement cookie value, or null.
      */
     public function consume(#[SensitiveParameter] string $cookie): ?array;
 

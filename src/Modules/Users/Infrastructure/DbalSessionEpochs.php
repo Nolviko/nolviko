@@ -16,6 +16,14 @@ final class DbalSessionEpochs implements SessionEpochs
     {
     }
 
+    public function revokeSessionsAndRememberTokens(int $userId): void
+    {
+        $this->connection->transactional(static function (Connection $db) use ($userId): void {
+            $db->executeStatement('UPDATE users SET session_epoch = session_epoch + 1 WHERE id = ?', [$userId]);
+            $db->delete('remember_tokens', ['user_id' => $userId]);
+        });
+    }
+
     public function current(int $userId): ?int
     {
         $epoch = $this->connection->fetchOne(

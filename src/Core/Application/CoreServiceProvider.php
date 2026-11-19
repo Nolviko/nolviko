@@ -267,6 +267,7 @@ use Nolviko\Modules\Users\Infrastructure\ExternalIdentities;
 use Nolviko\Modules\Users\Infrastructure\FirstAdminProvisioner;
 use Nolviko\Modules\Users\Infrastructure\PasswordRecovery;
 use Nolviko\Modules\Users\Infrastructure\PersonalDataExport;
+use Nolviko\Modules\Users\Infrastructure\ResetMailQueue;
 use Nolviko\Modules\Users\Infrastructure\TemplatedAccountMail;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -2581,13 +2582,16 @@ final class CoreServiceProvider implements ServiceProvider
                 Mailer $mailer,
                 MailComposer $composer,
                 Router $router,
-                ?Config $config,
+                Config $config,
+                MessageTranslator $translator,
             ): PasswordRecovery => new PasswordRecovery(
                 $users,
                 $hasher,
                 new DbalResetTokens($connection),
-                new TemplatedAccountMail($mailer, $composer, $router, $config?->appUrl),
+                new TemplatedAccountMail($mailer, $composer, $router, $config->appUrl),
                 new RateBuckets($connection),
+                queue: new ResetMailQueue($connection, $config->appSecret),
+                locale: $translator->locale(),
             ),
             [
                 Connection::class,
@@ -2597,6 +2601,7 @@ final class CoreServiceProvider implements ServiceProvider
                 MailComposer::class,
                 Router::class,
                 CompositionRoot::CONFIG,
+                MessageTranslator::class,
             ],
         );
 
