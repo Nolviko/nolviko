@@ -14,8 +14,11 @@ use Nolviko\Core\Routing\RouterFactory;
 use Nolviko\Modules\Admin\Infrastructure\SystemDiagnostics;
 use Nolviko\Modules\Forums\Infrastructure\DbalForumTree;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
+use Nolviko\Modules\Importers\Infrastructure\ImportAdministration;
 use Nolviko\Modules\Importers\Infrastructure\ImportFileStore;
 use Nolviko\Modules\Importers\Infrastructure\ImportRunner;
+use Nolviko\Modules\Importers\Infrastructure\ImportSources;
+use Nolviko\Modules\Importers\Infrastructure\InlineAttachments;
 use Nolviko\Modules\Importers\Infrastructure\LegacyRedirects;
 use Nolviko\Modules\Importers\Infrastructure\PrivateImportFiles;
 use Nolviko\Modules\Importers\Infrastructure\SqlImportSource;
@@ -410,5 +413,171 @@ final class LegacyImportTest extends TestCase
             self::assertSame($status, $runner->read($job));
             self::assertSame(1, (int) $this->db->fetchOne('SELECT COUNT(*) FROM users'));
         }
+    }
+
+    /**
+     * Beta.11: a source added in the panel is checked (forum, prefix, version found automatically), runs to the end
+     * in very few requests, reports per-kind counts outside the checkpoint, exports no member data, and stays
+     * hidden until the owner publishes it.
+     */
+    #[DataProvider('engines')]
+    public function testPanelSourceRunsReportsAndOpensOnlyWhenPublished(string $engine): void
+    {
+        // Only this engine's tables, so finding the forum automatically has exactly one answer (legacy_redirects is
+        // the forum's own table when source and forum share the test database).
+        foreach (
+            $this->sourceDb->fetchFirstColumn("SELECT table_name FROM information_schema.tables "
+            . "WHERE table_schema = DATABASE() AND table_name LIKE 'legacy!_%' ESCAPE '!' "
+            . "AND table_name <> 'legacy_redirects'") as $table
+        ) {
+            $this->sourceDb->executeStatement('DROP TABLE ' . $this->sourceDb->quoteIdentifier((string) $table));
+        }
+        LegacyForumFixture::install($this->sourceDb, $engine);
+        $admin = $this->administration();
+        // "Find automatically": the check names the forum and its prefix by itself.
+        $fields = ['engine' => ''] + $this->sourceFields($engine);
+        $added = $admin->add($fields, 1);
+        self::assertNotNull($added['id'], json_encode($added['preflight'], JSON_THROW_ON_ERROR));
+        self::assertSame($engine, $added['preflight']['engine']);
+        self::assertSame('legacy_', $added['preflight']['prefix']);
+        self::assertIsString($added['preflight']['version']);
+        $sealed = (string) $this->db->fetchOne('SELECT password_sealed FROM import_sources');
+        if ($fields['password'] !== '') {
+            self::assertStringNotContainsString($fields['password'], $sealed);
+            $catalogue = json_encode($admin->sources(), JSON_THROW_ON_ERROR);
+            self::assertStringNotContainsString($fields['password'], $catalogue);
+        }
+
+        $job = $admin->begin((string) $added['id'], 1, true);
+        self::assertSame($job, $admin->begin((string) $added['id'], 1, true));
+        $revision = (int) $admin->job($job)['revision'];
+        $requests = 0;
+        do {
+            $status = $admin->run($job, $revision);
+            $revision = $status['revision'];
+            ++$requests;
+        } while (!$status['complete'] && $requests < 30);
+        self::assertTrue($status['complete']);
+        self::assertSame(1, $requests, 'a small forum needs one request');
+
+        $report = $admin->report($job);
+        $posts = ['processed' => 1, 'verified' => 1, 'skipped' => 0, 'review' => 0];
+        self::assertSame($posts, $report['counts']['posts']);
+        self::assertTrue($report['quarantined']);
+        $stored = json_decode((string) $this->db->fetchOne('SELECT report_json FROM import_jobs'), true);
+        self::assertArrayNotHasKey('counts', $stored);
+        $export = json_encode($admin->export($job), JSON_THROW_ON_ERROR);
+        foreach (['migrated@example.test', 'Private body', 'fixture-password', 'legacy_'] as $private) {
+            self::assertStringNotContainsString($private, $export);
+        }
+
+        $hidden = "SELECT COUNT(*) FROM forum_permissions WHERE permission_key = 'forum.view' AND value = 'never'";
+        self::assertGreaterThan(0, (int) $this->db->fetchOne($hidden));
+        $published = $admin->publish($job, true);
+        self::assertGreaterThan(0, $published['forums']);
+        self::assertSame(0, (int) $this->db->fetchOne($hidden));
+        self::assertSame('active', $this->db->fetchOne('SELECT status FROM users WHERE username = ?', ['Migrated']));
+        self::assertTrue($admin->report($job)['published']);
+        self::assertSame(['forums' => 0, 'members' => 0], $admin->publish($job, true));
+    }
+
+    public function testCheckExplainsWhatIsMissingWithoutSaving(): void
+    {
+        LegacyForumFixture::install($this->sourceDb, 'mybb');
+        $admin = $this->administration();
+        $missing = $admin->add(['prefix' => 'nothing_here_'] + $this->sourceFields('mybb'), 1);
+        self::assertNull($missing['id']);
+        self::assertSame(['import_source_not_found'], $missing['preflight']['problems']);
+        $folder = $admin->add(['attachment_root' => '/no/such/folder'] + $this->sourceFields('mybb'), 1);
+        self::assertNull($folder['id']);
+        self::assertContains('import_attachment_dir_missing', $folder['preflight']['problems']);
+        self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM import_sources'));
+        try {
+            $admin->add(['password' => 'wrong-' . bin2hex(random_bytes(4))] + $this->sourceFields('mybb'), 1);
+            self::fail('a wrong password was accepted');
+        } catch (RuntimeException $failure) {
+            self::assertSame('import_source_unavailable', $failure->getMessage());
+        }
+    }
+
+    /** Coverage reads only the source's own tables: unrelated tables in the same database do not count. */
+    public function testUnrelatedTablesInTheSourceDatabaseDoNotBlockTheStart(): void
+    {
+        LegacyForumFixture::install($this->sourceDb, 'mybb');
+        $created = [];
+        try {
+            for ($table = 0; $table < 520; ++$table) {
+                $created[] = $name = 'zz_unrelated_' . $table;
+                $this->sourceDb->executeStatement('CREATE TABLE IF NOT EXISTS ' . $name . ' (id INT)');
+            }
+            $source = new SqlImportSource($this->sourceDb, 'mybb', 'legacy_', 'fixture-mybb');
+            $job = (new ImportRunner($this->db, $source))->begin(1, true);
+            $json = (string) $this->db->fetchOne('SELECT report_json FROM import_jobs WHERE id = ?', [$job]);
+            $report = json_decode($json, true);
+            foreach ($report['coverage'] as $table) {
+                self::assertStringStartsNotWith('zz_', $table['table']);
+            }
+        } finally {
+            foreach ($created as $name) {
+                $this->sourceDb->executeStatement('DROP TABLE IF EXISTS ' . $name);
+            }
+        }
+    }
+
+    /** Jobs started before beta.11 kept counters in their report; the next batch moves them out and the job ends. */
+    public function testCountersOfAnOlderJobMoveOutOfTheReport(): void
+    {
+        LegacyForumFixture::install($this->sourceDb, 'mybb');
+        $source = new SqlImportSource($this->sourceDb, 'mybb', 'legacy_', 'fixture-mybb');
+        $files = new ImportFileStore($this->files->path . '/storage', $this->files->path . '/public');
+        $runner = new ImportRunner($this->db, $source, $files);
+        $job = $runner->begin(1, true);
+        $status = $runner->read($job);
+        for ($iteration = 0; $iteration < 4; ++$iteration) {
+            $status = $runner->step($job, $status['revision'], 1);
+        }
+        $counts = [];
+        foreach ($this->db->fetchAllAssociative('SELECT entity, processed FROM import_counts') as $row) {
+            $counts[$row['entity']] = (int) $row['processed'];
+        }
+        self::assertNotSame([], $counts);
+        $this->db->executeStatement('DELETE FROM import_counts');
+        $report = json_decode((string) $this->db->fetchOne('SELECT report_json FROM import_jobs'), true);
+        $report['counts'] = $counts;
+        $report['verified_counts'] = [];
+        $this->db->update('import_jobs', ['report_json' => json_encode($report)], ['id' => $job]);
+
+        for ($iteration = 0; !$status['complete'] && $iteration < 150; ++$iteration) {
+            $status = $runner->step($job, $status['revision']);
+        }
+        self::assertTrue($status['complete']);
+        self::assertArrayNotHasKey(
+            'counts',
+            json_decode((string) $this->db->fetchOne('SELECT report_json FROM import_jobs'), true)
+        );
+        $unverified = 'SELECT COUNT(*) FROM import_counts WHERE processed <> verified';
+        self::assertSame(0, (int) $this->db->fetchOne($unverified));
+    }
+
+    private function administration(): ImportAdministration
+    {
+        $secret = new Secret(str_repeat('s', 32));
+        $router = RouterFactory::create(dirname(__DIR__, 2), $this->files->path . '/storage');
+        return new ImportAdministration(
+            $this->db,
+            new ImportSources($this->files->path, $secret, $this->db),
+            new ImportFileStore($this->files->path . '/storage', $this->files->path . '/public'),
+            new InlineAttachments($this->db, $router, 'https://forum.test')
+        );
+    }
+
+    /** @return array<string, string> The panel's fields for the test's source database. */
+    private function sourceFields(string $engine): array
+    {
+        $host = getenv(TestDatabase::driver() === 'postgresql' ? 'FORUM_TEST_SOURCE_DB_HOST' : 'FORUM_TEST_DB_HOST');
+        return ['engine' => $engine, 'host' => (string) $host, 'port' => '3306',
+            'database' => (string) getenv('FORUM_TEST_DB_NAME'), 'username' => (string) getenv('FORUM_TEST_DB_USER'),
+            'password' => (string) getenv('FORUM_TEST_DB_PASSWORD'), 'prefix' => '', 'charset' => 'UTF-8',
+            'attachment_root' => ''];
     }
 }

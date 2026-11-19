@@ -30,8 +30,8 @@ return [
     'operations.collision' => 'An account conflicts with an existing account. Resolve the '
         . 'source identity before retrying.',
     'operations.import_confirm_required' => 'Confirm the frozen source and restricted initial visibility.',
-    'operations.import_files_needed' => 'The original attachment copy is missing or invalid. Ask the '
-        . 'server owner to check it.',
+    'operations.import_files_needed' => 'The original attachment files are missing or cannot be read. Check the '
+        . 'source\'s attachment folder.',
     'operations.import_reload' => 'Reload the saved progress before continuing.',
     'operations.import_changed' => 'Verification found changed or missing records. Keep the source '
         . 'frozen and review the import.',
@@ -111,18 +111,17 @@ return [
         . 'status counts. It excludes credentials, paths, logs and user content.',
     'operations.support_download' => 'Download support summary',
     'operations.task_summary' => 'Task summary',
-    'operations.import_policy' => 'Use a frozen, local read-only copy. Accounts are not approved '
-        . 'automatically; imported forums stay hidden until permissions are '
-        . 'reviewed. Private messages are separate owner archives. Files remain download-only.',
-    'operations.import_setup' => 'The server owner must configure a local source and original '
-        . 'attachment directories. No source password is entered here.',
+    'operations.import_policy' => 'Import from a copy of your old forum (or with the old forum closed). Imported '
+        . 'forums stay hidden and imported members cannot sign in until you publish the import. Private messages '
+        . 'become personal archives. Files remain download-only.',
+    'operations.import_setup' => 'Add the database of your old forum below to start.',
     'operations.source' => 'Source copy',
     'operations.begin' => 'Start or resume import',
     'operations.acknowledge' => 'The source is frozen and I accept restricted visibility until review.',
     'operations.progress' => 'Saved progress',
     'operations.processed' => 'Copied records',
     'operations.verified' => 'Verified records',
-    'operations.continue' => 'Run the next batch',
+    'operations.continue' => 'Continue the import',
     'operations.completed' => 'Import verified. Review accounts and permissions before opening access.',
     'operations.recent' => 'Recent imports',
     'operations.open' => 'Open progress',
@@ -140,4 +139,92 @@ return [
     'operations.note_aggregate' => 'Unattributed or duplicate ballot remains in the original aggregate total.',
     'operations.update_storage' => 'Signed automatic updates require private storage outside the '
         . 'application folder. Default installations can use the manual update path.',
+    'operations.sources' => 'Sources',
+    'operations.source_add' => 'Add a source forum',
+    'operations.source_intro' => 'Enter the database of your old SMF, MyBB or phpBB forum. Nolviko finds the forum, '
+        . 'its version and its table prefix and shows what it holds before anything is copied. The password is '
+        . 'stored encrypted and never shown again.',
+    'operations.engine' => 'Forum software',
+    'operations.engine_auto' => 'Find automatically',
+    'operations.db_host' => 'Database server',
+    'operations.db_port' => 'Port',
+    'operations.db_name' => 'Database name',
+    'operations.db_user' => 'User name',
+    'operations.db_password' => 'Password',
+    'operations.db_prefix' => 'Table prefix (leave empty to find it)',
+    'operations.db_charset' => 'Character set',
+    'operations.attachment_root' => 'Attachment folder on this server (full path; empty if the forum has no '
+        . 'attachments)',
+    'operations.check_source' => 'Check and save',
+    'operations.source_added' => 'The source was checked and saved.',
+    'operations.source_removed' => 'The source was removed. Imports made from it are kept.',
+    'operations.remove_source' => 'Remove',
+    'operations.preflight' => 'Check result',
+    'operations.found' => '{engine} {version}, table prefix "{prefix}", character set {charset}',
+    'operations.estimate' => 'Estimated records',
+    'operations.before_start' => 'Before you start',
+    'operations.before_permissions' => 'Permissions of the old forum are not copied: imported forums stay hidden '
+        . 'until you publish the import, then follow their parent forum and the site default.',
+    'operations.before_passwords' => 'Members keep their old password where its format can be carried over; the '
+        . 'others must use "Forgot password" and are listed in the notes.',
+    'operations.before_links' => 'Old topic and post addresses redirect to the new ones when Nolviko runs at the '
+        . 'old forum\'s address.',
+    'operations.source_fields_invalid' => 'Check the fields: forum software, server, port, database name, user '
+        . 'name, table prefix and folder.',
+    'operations.source_unavailable' => 'Could not connect to the source database. Check the server, user name, '
+        . 'password and database name.',
+    'operations.source_not_found' => 'No SMF, MyBB or phpBB tables were found in this database. Check the database '
+        . 'name and table prefix.',
+    'operations.source_ambiguous' => 'More than one forum was found in this database. Enter the table prefix of the '
+        . 'one to import.',
+    'operations.source_version_unsupported' => 'This version is not supported yet. Supported: SMF 2.1, MyBB 1.8 and '
+        . 'phpBB 3.3.',
+    'operations.source_attachments_required' => 'This forum has attachments: enter the folder that holds the '
+        . 'original files.',
+    'operations.source_attachments_missing' => 'The attachment folder was not found or cannot be read.',
+    'operations.source_charset_differs' => 'The source tables use another character set than the one chosen; the '
+        . 'detected one is used.',
+    'operations.source_writable' => 'Advice: this database account can change the source. Use a copy of the forum '
+        . 'or a read-only account.',
+    'operations.import_not_complete' => 'The import is not finished yet.',
+    'operations.run_auto' => 'The import runs by itself while this page is open. If you close it, it continues from '
+        . 'the saved point when you come back.',
+    'operations.running' => 'Importing… {processed} copied, {verified} verified.',
+    'operations.run_paused' => 'The import paused. Press "Continue the import" to carry on from the saved point.',
+    'operations.run_done' => 'The import is complete. Reloading…',
+    'operations.results' => 'Results',
+    'operations.col_kind' => 'Records',
+    'operations.col_source' => 'Source (estimate)',
+    'operations.col_processed' => 'Copied',
+    'operations.col_verified' => 'Verified',
+    'operations.col_skipped' => 'Skipped',
+    'operations.col_review' => 'To review',
+    'operations.notes_total' => '{count, plural, one {# note in total.} other {# notes in total.}} Page {page} of '
+        . '{pages}.',
+    'operations.notes_previous' => 'Previous notes',
+    'operations.notes_next' => 'Next notes',
+    'operations.download_report' => 'Download the summary (JSON)',
+    'operations.publish_heading' => 'Publish',
+    'operations.publish_intro' => 'Imported forums are hidden and imported members cannot sign in yet. When you '
+        . 'have reviewed the result, open them here.',
+    'operations.activate_members' => 'Let imported members sign in (members who must reset their password stay '
+        . 'suspended)',
+    'operations.confirm_publish' => 'I have reviewed the import and want to open it',
+    'operations.publish' => 'Publish the import',
+    'operations.import_published' => 'The import was published.',
+    'operations.published' => 'Published',
+    'operations.kind_users' => 'Members',
+    'operations.kind_groups' => 'Member groups',
+    'operations.kind_categories' => 'Categories',
+    'operations.kind_forums' => 'Forums',
+    'operations.kind_threads' => 'Topics',
+    'operations.kind_posts' => 'Posts',
+    'operations.kind_attachments' => 'Attachments',
+    'operations.kind_polls' => 'Polls',
+    'operations.kind_poll_options' => 'Poll options',
+    'operations.kind_poll_votes' => 'Poll votes',
+    'operations.kind_private' => 'Private messages',
+    'operations.kind_private_sent' => 'Sent private messages',
+    'operations.kind_private_inbox' => 'Received private messages',
+    'operations.kind_private_files' => 'Private message files',
 ];

@@ -7,6 +7,7 @@ namespace Nolviko\Modules\Importers\Infrastructure;
 use Closure;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use Nolviko\Modules\Importers\Domain\ImportAsset;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
 use Nolviko\Modules\Importers\Domain\ImportSource;
@@ -41,17 +42,29 @@ final class SqlImportSource implements ImportSource
         return SourceSchema::phases($this->engine);
     }
 
+    /** The version the source reports, or null; read even when this adapter does not support it. */
+    public function version(): ?string
+    {
+        try {
+            $version = $this->readonly(function (): mixed {
+                return match ($this->engine) {
+                    'smf' => $this->source->fetchOne('SELECT value FROM ' . $this->table('settings')
+                        . " WHERE variable = 'smfVersion'"),
+                    'phpbb' => $this->source->fetchOne('SELECT config_value FROM ' . $this->table('config')
+                        . " WHERE config_name = 'version'"),
+                    'mybb' => $this->mybbVersion(),
+                };
+            });
+        } catch (TableNotFoundException) {
+            // Not this engine or not this prefix; connection failures still surface.
+            return null;
+        }
+        return is_string($version) && strlen($version) <= 32 ? $version : null;
+    }
+
     public function identity(): array
     {
-        $version = $this->readonly(function (): mixed {
-            return match ($this->engine) {
-                'smf' => $this->source->fetchOne('SELECT value FROM ' . $this->table('settings')
-                    . " WHERE variable = 'smfVersion'"),
-                'phpbb' => $this->source->fetchOne('SELECT config_value FROM ' . $this->table('config')
-                    . " WHERE config_name = 'version'"),
-                'mybb' => $this->mybbVersion(),
-            };
-        });
+        $version = $this->version();
         $pattern = match ($this->engine) {
             'smf' => '/^2\.1\.[0-9]{1,3}$/D',
             'mybb' => '/^1\.8\.[0-9]{1,3}$/D',
@@ -70,7 +83,8 @@ final class SqlImportSource implements ImportSource
         $tables = $this->readonly(fn(): array => $this->source->fetchAllAssociative(
             'SELECT TABLE_NAME AS table_name, TABLE_ROWS AS table_rows FROM '
                 . 'information_schema.tables WHERE table_schema = DATABASE() '
-                . 'ORDER BY table_name LIMIT 513',
+                . "AND table_name LIKE ? ESCAPE '!' ORDER BY table_name LIMIT 513",
+            [self::like($this->prefix)],
         ));
         if (count($tables) > 512) {
             throw new RuntimeException('import_source_schema_budget');
@@ -216,6 +230,12 @@ final class SqlImportSource implements ImportSource
         } finally {
             $this->source->rollBack();
         }
+    }
+
+    /** A LIKE pattern for names that start with the prefix (`_` is a wildcard in LIKE, so it is escaped). */
+    public static function like(string $prefix): string
+    {
+        return strtr($prefix, ['!' => '!!', '_' => '!_', '%' => '!%']) . '%';
     }
 
     private function table(string $name): string

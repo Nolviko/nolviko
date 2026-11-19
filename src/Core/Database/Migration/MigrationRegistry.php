@@ -25,6 +25,7 @@ use Nolviko\Modules\Forums\Infrastructure\ForumsTable;
 use Nolviko\Modules\Forums\Infrastructure\ForumStatisticsTable;
 use Nolviko\Modules\Gallery\Infrastructure\GalleryTables;
 use Nolviko\Modules\Groups\Infrastructure\UsergroupsTable;
+use Nolviko\Modules\Importers\Infrastructure\ImportPanelTables;
 use Nolviko\Modules\Importers\Infrastructure\ImportTables;
 use Nolviko\Modules\Moderation\Infrastructure\BansTable;
 use Nolviko\Modules\Moderation\Infrastructure\QueueIndexes;
@@ -157,6 +158,7 @@ final class MigrationRegistry
             new ForumQuestionMode(),
             new SecondFactorTables(),
             new ExternalIdentityTable(),
+            new ImportPanelTables(),
         ]);
     }
 

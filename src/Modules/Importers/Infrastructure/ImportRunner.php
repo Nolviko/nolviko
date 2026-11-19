@@ -21,7 +21,8 @@ final class ImportRunner
     ) {
     }
 
-    public function begin(int $actor, bool $acknowledgedScope): string
+    /** @param array<string, int|null> $totals The check's estimate of the source's records, shown in the report. */
+    public function begin(int $actor, bool $acknowledgedScope, array $totals = []): string
     {
         if ($actor < 1 || !$acknowledgedScope || $this->db->isTransactionActive()) {
             throw new RuntimeException('import_confirmation_required');
@@ -46,8 +47,8 @@ final class ImportRunner
         $coverage = $this->source->coverage();
         $report = json_encode(
             ['identity' => $identity, 'coverage' => $coverage,
-            'scope' => 'users_content_private_archives_files_polls', 'quarantined' => true, 'counts'
-                => [], 'verified_counts' => []],
+            'scope' => 'users_content_private_archives_files_polls', 'quarantined' => true,
+                'totals' => array_slice($totals, 0, 16)],
             JSON_THROW_ON_ERROR
         );
         if (strlen($report) > 32768) {
@@ -101,12 +102,15 @@ final class ImportRunner
                 $this->files === null ? null : new ImportAuxWriter($this->db, $this->source, $this->files)
             );
             $report = json_decode($run['report_json'], true, 12, JSON_THROW_ON_ERROR);
+            $reportChanged = $this->moveLegacyCounts($job, $report);
+            $delta = [];
             if ($rows === []) {
-                if (
-                    $verifying && (int) ($report['counts'][$phase] ?? 0)
-                    !== (int) ($report['verified_counts'][$phase] ?? 0)
-                ) {
-                    throw new RuntimeException('import_count_mismatch');
+                if ($verifying) {
+                    $tally = $this->db->fetchAssociative('SELECT processed, verified FROM import_counts '
+                        . 'WHERE job_id = ? AND entity = ?', [$job, $phase]);
+                    if ($tally !== false && (int) $tally['processed'] !== (int) $tally['verified']) {
+                        throw new RuntimeException('import_count_mismatch');
+                    }
                 }
                 $run['phase'] = ++$index;
                 $run['cursor_id'] = '';
@@ -131,11 +135,11 @@ final class ImportRunner
                         $writer->inline($job, $row, $run['engine'], $this->inline);
                     } elseif ($verifying) {
                         $writer->verify($job, $phase, $row);
-                        $report['verified_counts'][$phase] = ($report['verified_counts'][$phase] ?? 0) + 1;
+                        $delta[$phase]['verified'] = ($delta[$phase]['verified'] ?? 0) + 1;
                         ++$run['verified'];
                     } else {
                         $writer->write($job, $phase, $row, $run['engine']);
-                        $report['counts'][$phase] = ($report['counts'][$phase] ?? 0) + 1;
+                        $delta[$phase]['processed'] = ($delta[$phase]['processed'] ?? 0) + 1;
                         ++$run['processed'];
                     }
                     $run['cursor_id'] = $row['_key'];
@@ -144,11 +148,17 @@ final class ImportRunner
                     }
                 }
             }
+            foreach ($delta as $entity => $added) {
+                $this->count($job, $entity, $added['processed'] ?? 0, $added['verified'] ?? 0);
+            }
             ++$run['revision'];
-            $this->db->update('import_jobs', ['phase' => $run['phase'], 'cursor_id' => $run['cursor_id'],
+            $update = ['phase' => $run['phase'], 'cursor_id' => $run['cursor_id'],
                 'revision' => $run['revision'], 'processed' => $run['processed'], 'verified' => $run['verified'],
-                'state' => $run['state'], 'report_json' => json_encode($report, JSON_THROW_ON_ERROR),
-                'updated_at' => self::now()], ['id' => $job]);
+                'state' => $run['state'], 'updated_at' => self::now()];
+            if ($reportChanged) {
+                $update['report_json'] = json_encode($report, JSON_THROW_ON_ERROR);
+            }
+            $this->db->update('import_jobs', $update, ['id' => $job]);
             return self::status($run);
         });
     }
@@ -160,6 +170,48 @@ final class ImportRunner
             throw new RuntimeException('import_job_missing');
         }
         return self::status($run);
+    }
+
+    /**
+     * Jobs started before beta.11 kept their counters in the report; they move to import_counts once, so the
+     * report stops growing and can never block a resume.
+     */
+    private function moveLegacyCounts(string $job, array &$report): bool
+    {
+        if (!isset($report['counts']) && !isset($report['verified_counts'])) {
+            return false;
+        }
+        $entities = array_unique([
+            ...array_keys($report['counts'] ?? []),
+            ...array_keys($report['verified_counts'] ?? []),
+        ]);
+        foreach ($entities as $entity) {
+            $this->count(
+                $job,
+                (string) $entity,
+                (int) ($report['counts'][$entity] ?? 0),
+                (int) ($report['verified_counts'][$entity] ?? 0)
+            );
+        }
+        unset($report['counts'], $report['verified_counts']);
+        return true;
+    }
+
+    private function count(string $job, string $entity, int $processed, int $verified): void
+    {
+        if ($processed === 0 && $verified === 0) {
+            // MySQL reports an UPDATE that changes nothing as 0 rows, which would look like a missing row.
+            return;
+        }
+        $changed = $this->db->executeStatement(
+            'UPDATE import_counts SET processed = processed + ?, verified = verified + ? '
+                . 'WHERE job_id = ? AND entity = ?',
+            [$processed, $verified, $job, $entity]
+        );
+        if ($changed === 0) {
+            $this->db->insert('import_counts', ['job_id' => $job, 'entity' => $entity, 'processed' => $processed,
+                'verified' => $verified]);
+        }
     }
 
     private static function status(array $run): array

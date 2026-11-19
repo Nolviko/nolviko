@@ -1901,7 +1901,8 @@ final class CoreServiceProvider implements ServiceProvider
                     $db,
                     new ImportSources(
                         $root,
-                        $config?->appSecret ?? throw new RuntimeException('import_unavailable')
+                        $config?->appSecret ?? throw new RuntimeException('import_unavailable'),
+                        $db
                     ),
                     $files,
                     new InlineAttachments($db, $router, $config?->appUrl ?? '')
