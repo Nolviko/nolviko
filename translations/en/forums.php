@@ -43,4 +43,5 @@ return [
     'forums.index.subforums' => 'Subforums:',
     'forums.index.stat_threads' => 'Threads',
     'forums.index.stat_posts' => 'Posts',
+    'forums.index.mark_all_read' => 'Mark all forums read',
 ];

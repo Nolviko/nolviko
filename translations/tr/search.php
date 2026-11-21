@@ -22,4 +22,11 @@ return [
     'search.filter_until' => 'Bitiş tarihi (UTC)',
     'search.filter_forum_any' => 'Tüm forumlar',
     'search.author_unknown' => 'Bu kullanıcı adıyla bir üye yok.',
+    'search.titles_only' => 'Yalnızca başlıklarda ara',
+    'search.sort' => 'Sıralama',
+    'search.sort_newest' => 'En yeni önce',
+    'search.sort_oldest' => 'En eski önce',
+    'search.sort_relevance' => 'İlgililik',
+    'search.in_thread' => 'Arama yeri:',
+    'search.in_thread_unknown' => 'Tek bir konuda aranıyor',
 ];

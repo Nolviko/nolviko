@@ -39,4 +39,5 @@ return [
     'forums.index.subforums' => 'Alt forumlar:',
     'forums.index.stat_threads' => 'Konular',
     'forums.index.stat_posts' => 'İletiler',
+    'forums.index.mark_all_read' => 'Tüm forumları okundu işaretle',
 ];
