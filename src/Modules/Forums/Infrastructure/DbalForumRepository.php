@@ -27,7 +27,7 @@ final class DbalForumRepository implements ForumRepository
     public const DEFAULT_MAX_DEPTH = 8;
 
     private const COLUMNS = 'id, parent_id, type, title, slug, sort_order, depth, is_locked, description, '
-        . 'is_questions';
+        . 'is_questions, link_url, link_counts, link_clicks, counts_posts, password_hash, guest_posting';
 
     public const MAX_TITLE_LENGTH = 200;
 
@@ -352,6 +352,12 @@ final class DbalForumRepository implements ForumRepository
             (int) $row['is_locked'] === 1,
             isset($row['description']) && $row['description'] !== '' ? (string) $row['description'] : null,
             (int) ($row['is_questions'] ?? 0) === 1,
+            isset($row['link_url']) && $row['link_url'] !== '' ? (string) $row['link_url'] : null,
+            (int) ($row['link_counts'] ?? 0) === 1,
+            (int) ($row['link_clicks'] ?? 0),
+            (int) ($row['counts_posts'] ?? 1) === 1,
+            isset($row['password_hash']) && $row['password_hash'] !== '',
+            (int) ($row['guest_posting'] ?? 0) === 1,
         );
     }
 

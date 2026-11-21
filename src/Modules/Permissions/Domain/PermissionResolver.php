@@ -20,6 +20,8 @@ final class PermissionResolver
         private readonly PermissionCatalog $catalog,
         private readonly PermissionRuleStore $store,
         private readonly ForumTree $forums,
+        /** @var (Closure(): mixed)|null The session's ForumLocks::SESSION_KEY entry; null: nothing unlocked. */
+        private readonly ?Closure $unlocked = null,
     ) {
     }
 
@@ -50,6 +52,10 @@ final class PermissionResolver
             $this->store->load($groupIds, $userId),
             $groupIds,
             $userId,
+            $this->forums instanceof ProtectedForumTree ? new ForumLocks(
+                $this->forums->protectedForums(...),
+                $this->unlocked ?? static fn(): array => [],
+            ) : null,
         );
     }
 }

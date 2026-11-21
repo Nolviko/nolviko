@@ -20,14 +20,17 @@ use Nolviko\Modules\Community\Infrastructure\CommunityTables;
 use Nolviko\Modules\Community\Infrastructure\MemberStandingTables;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationReadsColumn;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationsTable;
+use Nolviko\Modules\Forums\Infrastructure\ForumExtrasColumns;
 use Nolviko\Modules\Forums\Infrastructure\ForumQuestionMode;
 use Nolviko\Modules\Forums\Infrastructure\ForumsTable;
 use Nolviko\Modules\Forums\Infrastructure\ForumStatisticsTable;
+use Nolviko\Modules\Forums\Infrastructure\ForumSubscriptionsTable;
 use Nolviko\Modules\Gallery\Infrastructure\GalleryTables;
 use Nolviko\Modules\Groups\Infrastructure\UsergroupsTable;
 use Nolviko\Modules\Importers\Infrastructure\ImportPanelTables;
 use Nolviko\Modules\Importers\Infrastructure\ImportTables;
 use Nolviko\Modules\Moderation\Infrastructure\BansTable;
+use Nolviko\Modules\Moderation\Infrastructure\ModerationActionsTable;
 use Nolviko\Modules\Moderation\Infrastructure\QueueIndexes;
 use Nolviko\Modules\Moderation\Infrastructure\ReportsTable;
 use Nolviko\Modules\Moderation\Infrastructure\SanctionsTable;
@@ -41,6 +44,7 @@ use Nolviko\Modules\Seo\Infrastructure\SeoTables;
 use Nolviko\Modules\Tasks\Infrastructure\TaskIndexes;
 use Nolviko\Modules\Threads\Infrastructure\DraftsTable;
 use Nolviko\Modules\Threads\Infrastructure\EditWindowUnlimited;
+use Nolviko\Modules\Threads\Infrastructure\GuestPostColumns;
 use Nolviko\Modules\Threads\Infrastructure\ModerationTable;
 use Nolviko\Modules\Threads\Infrastructure\ReadTrackingTable;
 use Nolviko\Modules\Threads\Infrastructure\ThreadRedirectsTable;
@@ -159,6 +163,11 @@ final class MigrationRegistry
             new SecondFactorTables(),
             new ExternalIdentityTable(),
             new ImportPanelTables(),
+            // beta.18 G4 (forum features): 0075-0078.
+            new ForumExtrasColumns(),
+            new ForumSubscriptionsTable(),
+            new GuestPostColumns(),
+            new ModerationActionsTable(),
         ]);
     }
 
