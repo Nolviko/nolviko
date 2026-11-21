@@ -20,6 +20,7 @@ use Nolviko\Modules\Users\Domain\IdentityRules;
 use Nolviko\Modules\Users\Domain\IdentityTaken;
 use Nolviko\Modules\Users\Domain\PasswordHasher;
 use Nolviko\Modules\Users\Domain\PasswordPolicy;
+use Nolviko\Modules\Users\Domain\RegistrationExtras;
 use Nolviko\Modules\Users\Domain\RegistrationRejected;
 use Nolviko\Modules\Users\Domain\RegistrationThrottled;
 use Nolviko\Modules\Users\Domain\User;
@@ -64,6 +65,7 @@ final class AccountRegistration
         private readonly ?AccessBans $bans = null,
         ?Closure $clock = null,
         private readonly RegistrationRules $rules = new RegistrationRules(),
+        private readonly ?RegistrationExtras $extras = null,
     ) {
         $this->clock = $clock ?? static fn(): DateTimeImmutable => new DateTimeImmutable(
             'now',
@@ -74,6 +76,12 @@ final class AccountRegistration
     public function mode(): string
     {
         return $this->rules->mode;
+    }
+
+    /** Sign-up additions of this site (beta.18: terms, reserved names, required fields, questions), if any. */
+    public function extras(): ?RegistrationExtras
+    {
+        return $this->extras;
     }
 
     /**
@@ -89,6 +97,7 @@ final class AccountRegistration
         #[SensitiveParameter]
         string $confirmation,
         ?string $clientIp,
+        array $extra = [],
     ): void {
         if ($this->rules->mode === RegistrationRules::CLOSED) {
             throw new RegistrationRejected(['registration_closed']);
@@ -98,6 +107,7 @@ final class AccountRegistration
         $address = IdentityRules::email($email);
         $diagnostics = [
             ...($name === null ? ['username_invalid'] : []),
+            ...($name !== null && $this->extras?->reserved($name) === true ? ['username_reserved'] : []),
             ...($address === null ? ['email_invalid'] : []),
             ...PasswordPolicy::check($password, [$username, $email]),
             ...($password !== $confirmation ? ['password_mismatch'] : []),
@@ -137,9 +147,10 @@ final class AccountRegistration
         $status = $open ? UserStatus::Active : UserStatus::PendingVerification;
 
         try {
-            $user = $this->connection->transactional(function () use ($name, $address, $hash, $status) {
+            $user = $this->connection->transactional(function () use ($name, $address, $hash, $status, $extra) {
                 $user = $this->users->create($name, $address, $hash, $status);
                 $this->groups->addMember($user->id, BuiltInGroup::Registered->value);
+                $this->extras?->record($user->id, $extra, false);
 
                 return $user;
             });
@@ -178,7 +189,7 @@ final class AccountRegistration
      *     `external_banned`, `identity_taken:username`.
      * @throws RegistrationThrottled
      */
-    public function registerExternal(string $username, string $email, ?string $clientIp): User
+    public function registerExternal(string $username, string $email, ?string $clientIp, array $extra = []): User
     {
         if ($this->rules->mode === RegistrationRules::CLOSED) {
             throw new RegistrationRejected(['registration_closed']);
@@ -188,6 +199,9 @@ final class AccountRegistration
         $address = IdentityRules::email($email);
         if ($name === null || $address === null) {
             throw new RegistrationRejected($name === null ? ['username_invalid'] : ['email_invalid']);
+        }
+        if ($this->extras?->reserved($name) === true) {
+            throw new RegistrationRejected(['username_reserved']);
         }
 
         $now = ($this->clock)();
@@ -209,9 +223,16 @@ final class AccountRegistration
         $status = $this->rules->mode === RegistrationRules::APPROVAL ? UserStatus::PendingApproval : UserStatus::Active;
         $hash = $this->hasher->hash(bin2hex(random_bytes(32)));
         try {
-            return $this->connection->transactional(function () use ($name, $address, $hash, $status): User {
+            return $this->connection->transactional(function () use (
+                $name,
+                $address,
+                $hash,
+                $status,
+                $extra,
+            ): User {
                 $user = $this->users->create($name, $address, $hash, $status);
                 $this->groups->addMember($user->id, BuiltInGroup::Registered->value);
+                $this->extras?->record($user->id, $extra, true);
 
                 return $user;
             });

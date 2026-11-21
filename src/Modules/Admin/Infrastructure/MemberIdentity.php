@@ -8,10 +8,12 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use InvalidArgumentException;
 use Nolviko\Modules\Groups\Domain\BuiltInGroup;
+use Nolviko\Modules\Membership\Infrastructure\MembershipRegistration;
 use Nolviko\Modules\Permissions\Domain\PermissionError;
 use Nolviko\Modules\Permissions\Domain\SubjectPermissions;
 use Nolviko\Modules\Users\Domain\IdentityNormalizer;
 use Nolviko\Modules\Users\Domain\IdentityRules;
+use Throwable;
 
 /**
  * Administrator edits of a member's username and email (V1 gap list). The same rules as registration apply
@@ -61,7 +63,26 @@ final readonly class MemberIdentity
             throw new InvalidArgumentException('member_username_invalid');
         }
 
+        // Reserved usernames (roadmap 07) apply to a rename as well; remove the name from the list to use it.
+        if (MembershipRegistration::matches($this->reservedNames(), $clean)) {
+            throw new InvalidArgumentException('member_username_reserved');
+        }
+
         return $this->change($actor, $userId, 'username', $clean, IdentityNormalizer::username($clean));
+    }
+
+    private function reservedNames(): string
+    {
+        try {
+            $list = $this->db->fetchOne(
+                'SELECT setting_value FROM settings WHERE setting_key = ?',
+                ['membership.reserved_names'],
+            );
+        } catch (Throwable) {
+            return '';
+        }
+
+        return is_string($list) ? $list : '';
     }
 
     /** @return bool False when the email was already that value. */

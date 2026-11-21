@@ -31,6 +31,7 @@
 <input type="hidden" name="{{ register.csrf_field }}" value="{{ register.csrf_token }}">
 <p><label for="external-username">{{ t('auth.external.username') }}</label>
 <input id="external-username" name="username" type="text" required maxlength="32" autocomplete="username" value="{{ register.username }}"></p>
+{% include 'auth/register_extras.twig' with {extras: register.extras|default(null)} %}
 <p><button type="submit">{{ t('auth.external.register_submit') }}</button>
 <a class="btn btn-g" href="{{ login_url|safe_url }}">{{ t('auth.login_verify.cancel') }}</a></p>
 </form>

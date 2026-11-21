@@ -102,8 +102,17 @@ final class RegisterHandler implements RouteHandler
             default => null,
         };
 
-        if ($refused !== null) {
-            return $this->form($field('username'), $field('email'), [$refused], Response::HTTP_UNPROCESSABLE_ENTITY);
+        // Site additions (beta.18): terms, required fields, date of birth and the administrator's question.
+        $extras = $this->registration->extras()?->check($input, false) ?? [];
+
+        if ($refused !== null || $extras !== []) {
+            return $this->form(
+                $field('username'),
+                $field('email'),
+                $refused === null ? $extras : [$refused],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                input: $input,
+            );
         }
 
         try {
@@ -113,11 +122,12 @@ final class RegisterHandler implements RouteHandler
                 $field('password'),
                 $field('password_confirmation'),
                 $request->getClientIp(),
+                $input,
             );
         } catch (RegistrationRejected $rejected) {
             $status = Response::HTTP_UNPROCESSABLE_ENTITY;
 
-            return $this->form($field('username'), $field('email'), $rejected->diagnostics, $status);
+            return $this->form($field('username'), $field('email'), $rejected->diagnostics, $status, input: $input);
         } catch (RegistrationThrottled $throttled) {
             $status = Response::HTTP_TOO_MANY_REQUESTS;
             $response = $this->form($field('username'), $field('email'), ['register_wait'], $status, [
@@ -138,6 +148,7 @@ final class RegisterHandler implements RouteHandler
     /**
      * @param list<string> $diagnostics
      * @param array<string, int> $parameters
+     * @param array<string, mixed> $input The sent form, to fill the site's extra fields in again.
      */
     private function form(
         string $username,
@@ -145,6 +156,7 @@ final class RegisterHandler implements RouteHandler
         array $diagnostics,
         int $status,
         array $parameters = [],
+        array $input = [],
     ): Response {
         $errors = [];
 
@@ -172,7 +184,33 @@ final class RegisterHandler implements RouteHandler
                 : $this->translator->translate($challenge['id'], $challenge['parameters']),
             'challenge_field' => QuestionChallenge::FIELD,
             'challenge_work' => $challenge['work'] ?? null,
+            'extras' => self::extrasView($this->registration->extras()?->form(false), $input),
         ], $status);
+    }
+
+    /**
+     * The site's sign-up additions with the values sent before (no value for the question).
+     *
+     * @param array<string, mixed>|null $extras
+     * @param array<string, mixed> $input
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function extrasView(?array $extras, array $input): ?array
+    {
+        if ($extras === null) {
+            return null;
+        }
+
+        $text = static fn(string $key): string => is_string($input[$key] ?? null) ? $input[$key] : '';
+        $extras['fields'] = array_map(
+            static fn(array $field): array => $field + ['value' => $text('field_' . $field['id'])],
+            $extras['fields'],
+        );
+
+        return $extras + ['terms_lines' => preg_split('/\R/u', (string) ($extras['terms'] ?? '')) ?: [],
+            'accepted' => $text('accept_terms') === '1', 'birth_value' => $text('birth_date'),
+            'hide_year' => $text('birth_hide_year') === '1'];
     }
 
     /**
