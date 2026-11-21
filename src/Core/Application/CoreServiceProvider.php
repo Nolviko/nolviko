@@ -778,13 +778,19 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             PostRenderer::class,
-            static fn(PostRepository $posts, Closure $settings, Router $router): PostRenderer => new PostRenderer(
+            static fn(
+                PostRepository $posts,
+                Closure $settings,
+                Router $router,
+                BbcodeRenderer $renderer,
+            ): PostRenderer => new PostRenderer(
                 $posts,
+                $renderer,
                 censoredWords: static fn(): array => EffectivePostingRules::censored($settings()),
                 mentionUrl: static fn(string $name): string => $router->generate(CoreRoutes::MEMBER_LINK)
                     . '?name=' . rawurlencode($name),
             ),
-            [PostRepository::class, new Lazy(SiteSettings::class), Router::class],
+            [PostRepository::class, new Lazy(SiteSettings::class), Router::class, BbcodeRenderer::class],
         );
         $services->factory(
             ThreadRepository::class,
@@ -1072,6 +1078,7 @@ final class CoreServiceProvider implements ServiceProvider
                 ?Config $config,
                 BeforeHooks $before,
                 PostingRules $rules,
+                BbcodeRenderer $renderer,
             ): CreateThread => new CreateThread(
                 $forums,
                 $visibility,
@@ -1082,6 +1089,7 @@ final class CoreServiceProvider implements ServiceProvider
                     new Outbox($connection),
                     new PostingLock($connection),
                 ),
+                renderer: $renderer,
                 networkSeconds: $config?->postingIpInterval ?? CreateThread::NETWORK_INTERVAL,
                 before: $before,
                 policy: new ContentPolicy(
@@ -1100,6 +1108,7 @@ final class CoreServiceProvider implements ServiceProvider
                 CompositionRoot::CONFIG,
                 BeforeHooks::class,
                 PostingRules::class,
+                BbcodeRenderer::class,
             ],
         );
         $services->factory(
@@ -1112,11 +1121,13 @@ final class CoreServiceProvider implements ServiceProvider
                 ?Config $config,
                 BeforeHooks $before,
                 PostingRules $rules,
+                BbcodeRenderer $renderer,
             ): CreateReply => new CreateReply(
                 $threads,
                 $visibility,
                 $posts,
                 new DbalReplyWriter($connection, new Outbox($connection), new PostingLock($connection)),
+                renderer: $renderer,
                 networkSeconds: $config?->postingIpInterval ?? CreateReply::NETWORK_INTERVAL,
                 before: $before,
                 policy: new ContentPolicy(
@@ -1134,6 +1145,7 @@ final class CoreServiceProvider implements ServiceProvider
                 CompositionRoot::CONFIG,
                 BeforeHooks::class,
                 PostingRules::class,
+                BbcodeRenderer::class,
             ],
         );
         $services->factory(
@@ -1189,11 +1201,13 @@ final class CoreServiceProvider implements ServiceProvider
                 ForumVisibility $visibility,
                 ?Config $config,
                 PostingRules $rules,
+                BbcodeRenderer $renderer,
             ): EditPost => new EditPost(
                 $posts,
                 $threads,
                 $visibility,
                 new DbalPostEditor($connection, $posts, new Outbox($connection)),
+                renderer: $renderer,
                 policy: new ContentPolicy(
                     $rules,
                     $posts,
@@ -1208,6 +1222,7 @@ final class CoreServiceProvider implements ServiceProvider
                 ForumVisibility::class,
                 CompositionRoot::CONFIG,
                 PostingRules::class,
+                BbcodeRenderer::class,
             ],
         );
         $services->factory(
