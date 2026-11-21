@@ -20,6 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * POST `/forums/{forum}/read` (M03.12, CSRF-checked by the kernel guard): marks every thread of a forum the member
  * can read as read, then returns to the forum. Guests go to the login; a forum they cannot see is a 404.
+ * POST `/forums/read` (beta.18, roadmap 12) marks every forum read with one board-wide cutoff and returns to the
+ * board index.
  */
 final class ForumReadHandler implements RouteHandler
 {
@@ -38,6 +40,12 @@ final class ForumReadHandler implements RouteHandler
 
         if ($userId === null) {
             return InstallerPage::redirect($this->urls->generate(CoreRoutes::LOGIN));
+        }
+
+        if (($parameters['_route'] ?? null) === CoreRoutes::FORUMS_READ_ALL) {
+            $this->reads->markAll($userId, new DateTimeImmutable('now', new DateTimeZone('UTC')));
+
+            return InstallerPage::redirect($this->urls->generate(CoreRoutes::HOME));
         }
 
         $forumId = (int) ($parameters['forum'] ?? 0);

@@ -20,6 +20,9 @@ use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use Nolviko\Modules\Search\Domain\PostSearch;
 use Nolviko\Modules\Search\Domain\SearchFilters;
 use Nolviko\Modules\Search\Domain\SearchQuery;
+use Nolviko\Modules\Threads\Domain\ThreadRepository;
+use Nolviko\Modules\Threads\Domain\ThreadStatus;
+use Nolviko\Modules\Threads\Http\ThreadPageHandler;
 use Nolviko\Modules\Users\Domain\UserRepository;
 use Nolviko\Modules\Users\Http\RequestSubject;
 use Symfony\Component\HttpFoundation\Request;
@@ -40,6 +43,7 @@ final class SearchHandler implements RouteHandler
         private readonly ?ForumRepository $forums = null,
         private readonly ?UserRepository $users = null,
         private readonly int $intervalSeconds = 1,
+        private readonly ?ThreadRepository $threads = null,
     ) {
     }
 
@@ -72,6 +76,12 @@ final class SearchHandler implements RouteHandler
 
         try {
             $filters = SearchFilters::parse($input);
+
+            // An order this engine cannot give falls back to newest first (beta.18, roadmap 26).
+            if (!in_array($filters->sort, $this->search->sorts(), true)) {
+                $filters = new SearchFilters($filters->forum, $filters->author, $filters->from, $filters->until,
+                    $filters->thread, $filters->titles);
+            }
         } catch (InvalidArgumentException) {
             $invalidFilters = true;
         }
@@ -117,7 +127,11 @@ final class SearchHandler implements RouteHandler
                             'excerpt' => $row['excerpt'],
                             'author' => $row['author_name'],
                             'date' => new DateTimeImmutable($row['created_at'], new DateTimeZone('UTC')),
-                            'url' => $this->urls->generate(CoreRoutes::POST_SHOW, ['post' => $row['id']]),
+                            // A thread result opens the thread; a post result goes through the permalink, which
+                            // answers with the post's page and anchor.
+                            'url' => ($row['kind'] ?? 'post') === 'thread'
+                                ? ThreadPageHandler::url($this->urls, (int) $row['id'], 1, $row['slug'] ?? null)
+                                : $this->urls->generate(CoreRoutes::POST_SHOW, ['post' => (string) $row['id']]),
                         ];
                     }
 
@@ -136,11 +150,23 @@ final class SearchHandler implements RouteHandler
 
         $shownAuthor = $authorName;
         $forumOptions = [];
+        $inThread = null;
 
         // Form helpers only: without them the page falls back to the plain number field and still works.
         try {
             if ($shownAuthor === '' && isset($filters->query()['author']) && $this->users !== null) {
                 $shownAuthor = $this->users->findById((int) $filters->query()['author'])?->username ?? '';
+            }
+
+            // Search inside a thread (beta.18, roadmap 09): its title and address only when the reader may see it.
+            $scoped = $filters->thread === null ? null : $this->threads?->find($filters->thread);
+
+            if (
+                $scoped !== null && $scoped->status === ThreadStatus::Visible && $scoped->movedToThreadId === null
+                && $this->visibility->readable($this->subjects->of($request))->contains($scoped->forumId)
+            ) {
+                $inThread = ['id' => $scoped->id, 'title' => $scoped->title,
+                    'url' => ThreadPageHandler::url($this->urls, $scoped->id, 1, $scoped->slug)];
             }
 
             if ($this->forums !== null) {
@@ -155,6 +181,8 @@ final class SearchHandler implements RouteHandler
 
         $response = new Response($this->views->render('search/index.twig', [
             'forum_options' => $forumOptions,
+            'in_thread' => $inThread,
+            'sorts' => $this->search->sorts(),
             'author_name' => $shownAuthor,
             'title' => $this->translator->translate('search.title'),
             'action' => $this->urls->generate(CoreRoutes::SEARCH),

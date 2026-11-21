@@ -2706,6 +2706,7 @@ final class CoreServiceProvider implements ServiceProvider
                 ForumRepository $forums,
                 UserRepository $users,
                 Closure $settings,
+                ThreadRepository $threads,
             ): SearchHandler => new SearchHandler(
                 $translator,
                 $views,
@@ -2717,10 +2718,11 @@ final class CoreServiceProvider implements ServiceProvider
                 $forums,
                 $users,
                 (int) ($settings()->peek('limits.search_seconds') ?? SiteSettings::DEFAULTS['limits.search_seconds']),
+                $threads,
             ),
             [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class,
                 ForumVisibility::class, Connection::class, Router::class, ForumRepository::class,
-                UserRepository::class, new Lazy(SiteSettings::class)],
+                UserRepository::class, new Lazy(SiteSettings::class), ThreadRepository::class],
         );
         $services->factory(
             PrivacyHandler::class,

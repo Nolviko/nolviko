@@ -17,6 +17,7 @@ use Nolviko\Modules\Admin\Infrastructure\AdminSavedFiltersTable;
 use Nolviko\Modules\Admin\Infrastructure\ForumModeratorsTable;
 use Nolviko\Modules\Api\Infrastructure\WebhookTables;
 use Nolviko\Modules\Community\Infrastructure\CommunityTables;
+use Nolviko\Modules\Community\Infrastructure\MemberDirectoryIndex;
 use Nolviko\Modules\Community\Infrastructure\MemberStandingTables;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationReadsColumn;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationsTable;
@@ -37,13 +38,16 @@ use Nolviko\Modules\Posts\Infrastructure\PostsRenderedHtmlColumn;
 use Nolviko\Modules\Posts\Infrastructure\PostsTable;
 use Nolviko\Modules\Posts\Infrastructure\RepliesTable;
 use Nolviko\Modules\Search\Infrastructure\SearchIndex;
+use Nolviko\Modules\Search\Infrastructure\TitleSearchIndex;
 use Nolviko\Modules\Seo\Infrastructure\SeoTables;
 use Nolviko\Modules\Tasks\Infrastructure\TaskIndexes;
 use Nolviko\Modules\Threads\Infrastructure\DraftsTable;
 use Nolviko\Modules\Threads\Infrastructure\EditWindowUnlimited;
+use Nolviko\Modules\Threads\Infrastructure\MemberReadCutoffTable;
 use Nolviko\Modules\Threads\Infrastructure\ModerationTable;
 use Nolviko\Modules\Threads\Infrastructure\ReadTrackingTable;
 use Nolviko\Modules\Threads\Infrastructure\ThreadRedirectsTable;
+use Nolviko\Modules\Threads\Infrastructure\ThreadSortIndexes;
 use Nolviko\Modules\Threads\Infrastructure\ThreadsTable;
 use Nolviko\Modules\Threads\Infrastructure\ThreadTaxonomyTables;
 use Nolviko\Modules\Threads\Infrastructure\ThreadViewCounts;
@@ -159,6 +163,11 @@ final class MigrationRegistry
             new SecondFactorTables(),
             new ExternalIdentityTable(),
             new ImportPanelTables(),
+            // beta.18 G2 (roadmap 11, 14, 12, 24).
+            new TitleSearchIndex(),
+            new ThreadSortIndexes(),
+            new MemberReadCutoffTable(),
+            new MemberDirectoryIndex(),
         ]);
     }
 

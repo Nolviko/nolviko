@@ -89,6 +89,67 @@ final class DbalReadTracker implements ReadTracker
         });
     }
 
+    public function markAll(int $userId, DateTimeImmutable $at): void
+    {
+        $stamp = self::stamp($at);
+        $this->connection->transactional(static function (Connection $connection) use ($userId, $stamp): void {
+            $updated = $connection->executeStatement(
+                'UPDATE member_read_cutoffs SET read_cutoff = GREATEST(read_cutoff, ?) WHERE user_id = ?',
+                [$stamp, $userId],
+                [ParameterType::STRING, ParameterType::INTEGER],
+            );
+
+            if ($updated === 0) {
+                $connection->executeStatement(
+                    SqlDialect::insertIgnore(
+                        $connection,
+                        'INSERT INTO member_read_cutoffs (user_id, read_cutoff) VALUES (?, ?)',
+                    ),
+                    [$userId, $stamp],
+                    [ParameterType::INTEGER, ParameterType::STRING],
+                );
+            }
+
+            // Rows at or before the cutoff say nothing the cutoff does not; both deletes walk the primary key.
+            foreach (['thread_reads' => 'read_at', 'forum_reads' => 'read_cutoff'] as $table => $column) {
+                $connection->executeStatement(
+                    'DELETE FROM ' . $table . ' WHERE user_id = ? AND ' . $column . ' <= ?',
+                    [$userId, $stamp],
+                    [ParameterType::INTEGER, ParameterType::STRING],
+                );
+            }
+        });
+    }
+
+    public function firstUnreadPost(int $userId, int $threadId, int $forumId, DateTimeImmutable $now): ?int
+    {
+        // One round trip for the three marks that bound the unread part: the thread row, the forum cutoff and the
+        // board-wide cutoff.
+        $marks = $this->connection->fetchAllNumeric(
+            "SELECT 't', last_read_post_id, read_at FROM thread_reads WHERE user_id = ? AND thread_id = ? "
+                . "UNION ALL SELECT 'f', 0, read_cutoff FROM forum_reads WHERE user_id = ? AND forum_id = ? "
+                . "UNION ALL SELECT 'a', 0, read_cutoff FROM member_read_cutoffs WHERE user_id = ?",
+            [$userId, $threadId, $userId, $forumId, $userId],
+            array_fill(0, 5, ParameterType::INTEGER),
+        );
+        $floor = self::stamp($now->modify(self::WINDOW));
+        $lastRead = 0;
+
+        foreach ($marks as [$kind, $postId, $at]) {
+            $floor = max($floor, self::normal((string) $at));
+            $lastRead = $kind === 't' ? (int) $postId : $lastRead;
+        }
+
+        $post = $this->connection->fetchOne(
+            "SELECT id FROM posts WHERE thread_id = ? AND status = 'visible' AND id > ? AND created_at > ? "
+                . 'AND deleted_at IS NULL ORDER BY id LIMIT 1',
+            [$threadId, $lastRead, $floor],
+            [ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::STRING],
+        );
+
+        return $post === false ? null : (int) $post;
+    }
+
     public function unread(int $userId, int $forumId, array $lastPosts, DateTimeImmutable $now): array
     {
         return $this->unreadAcross(
@@ -105,15 +166,22 @@ final class DbalReadTracker implements ReadTracker
         }
 
         $window = self::stamp($now->modify(self::WINDOW));
+        // Forum 0 is the board-wide "mark all forums read" cutoff (beta.18), read in the same round trip.
         $cutoffs = $this->connection->fetchAllKeyValue(
-            'SELECT forum_id, read_cutoff FROM forum_reads WHERE user_id = ? AND forum_id IN (?)',
-            [$userId, array_values(array_unique(array_map(static fn(array $thread): int => $thread[0], $threads)))],
-            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
+            'SELECT forum_id, read_cutoff FROM forum_reads WHERE user_id = ? AND forum_id IN (?) '
+                . 'UNION ALL SELECT 0, read_cutoff FROM member_read_cutoffs WHERE user_id = ?',
+            [
+                $userId,
+                array_values(array_unique(array_map(static fn(array $thread): int => $thread[0], $threads))),
+                $userId,
+            ],
+            [ParameterType::INTEGER, ArrayParameterType::INTEGER, ParameterType::INTEGER],
         );
+        $window = max($window, isset($cutoffs[0]) ? self::normal((string) $cutoffs[0]) : '');
         $candidates = [];
 
         foreach ($threads as $threadId => [$forumId, $lastPost]) {
-            $cutoff = isset($cutoffs[$forumId]) ? (string) $cutoffs[$forumId] : '';
+            $cutoff = isset($cutoffs[$forumId]) ? self::normal((string) $cutoffs[$forumId]) : '';
             $floor = $cutoff > $window ? $cutoff : $window;
 
             if ($lastPost !== null && self::stamp($lastPost) > $floor) {
@@ -139,6 +207,15 @@ final class DbalReadTracker implements ReadTracker
         }
 
         return $unread;
+    }
+
+    /**
+     * The stored time in the stamp format: PostgreSQL returns DATETIME(6) without trailing zero microseconds, and
+     * the cutoffs are compared as strings.
+     */
+    private static function normal(string $stored): string
+    {
+        return strlen($stored) >= 26 ? $stored : self::stamp(new DateTimeImmutable($stored, new DateTimeZone('UTC')));
     }
 
     private static function stamp(DateTimeImmutable $time): string
