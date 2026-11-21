@@ -35,14 +35,26 @@ final class OutboxQueue
             $now = $this->now();
             $stamp = $now->format('Y-m-d H:i:s.u');
             $slots = implode(', ', array_fill(0, count($types), '?'));
+            $select = 'SELECT id, event_type, aggregate_id, attempts, revision, '
+                . 'CASE WHEN OCTET_LENGTH(payload) <= 16384 THEN payload ELSE NULL END AS payload '
+                . 'FROM outbox_events WHERE event_type IN (' . $slots . ') AND ';
+            // 2026-11-21 benchmark: the former single "pending OR expired running" condition made MySQL scan and sort
+            // the whole table (completed events included) on every claim. Expired leases come first (recovery, few
+            // rows, ix_outbox_events_lease); pending work then walks ix_outbox_events_queue in order and stops at
+            // the first registered type.
             $row = $db->fetchAssociative(
-                'SELECT id, event_type, aggregate_id, attempts, revision, '
-                    . 'CASE WHEN OCTET_LENGTH(payload) <= 16384 THEN payload ELSE NULL END AS payload '
-                    . 'FROM outbox_events WHERE event_type IN (' . $slots . ') AND '
-                    . "((status = 'pending' AND available_at <= ?) OR (status = 'running' AND lease_expires_at <= ?)) "
-                    . 'ORDER BY available_at, id LIMIT 1 FOR UPDATE SKIP LOCKED',
-                [...$types, $stamp, $stamp],
+                $select . "status = 'running' AND lease_expires_at <= ? "
+                    . 'ORDER BY lease_expires_at, id LIMIT 1 FOR UPDATE SKIP LOCKED',
+                [...$types, $stamp],
             );
+
+            if ($row === false) {
+                $row = $db->fetchAssociative(
+                    $select . "status = 'pending' AND available_at <= ? "
+                        . 'ORDER BY available_at, id LIMIT 1 FOR UPDATE SKIP LOCKED',
+                    [...$types, $stamp],
+                );
+            }
 
             if ($row === false) {
                 return null;

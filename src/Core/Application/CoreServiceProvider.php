@@ -1092,6 +1092,8 @@ final class CoreServiceProvider implements ServiceProvider
                 Drafts $drafts,
                 PostRepository $posts,
                 UserRepository $users,
+                ThreadRepository $threads,
+                ?Config $config,
             ): CreateReplyHandler => new CreateReplyHandler(
                 $translator,
                 $views,
@@ -1103,6 +1105,8 @@ final class CoreServiceProvider implements ServiceProvider
                 $drafts,
                 posts: $posts,
                 users: $users,
+                threads: $threads,
+                perPage: $config?->threadsPerPage ?? ThreadPageHandler::DEFAULT_PER_PAGE,
             ),
             [
                 MessageTranslator::class,
@@ -1115,6 +1119,8 @@ final class CoreServiceProvider implements ServiceProvider
                 Drafts::class,
                 PostRepository::class,
                 UserRepository::class,
+                ThreadRepository::class,
+                CompositionRoot::CONFIG,
             ],
         );
         $services->factory(
@@ -1429,8 +1435,11 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             MemberStanding::class,
-            static fn(Connection $db): MemberStanding => new MemberStanding($db),
-            [Connection::class],
+            static fn(Connection $db, CacheFactory $caches): MemberStanding => new MemberStanding(
+                $db,
+                $caches->namespace('standing'),
+            ),
+            [Connection::class, CacheFactory::class],
         );
         $services->factory(
             MemberExtrasAdminHandler::class,

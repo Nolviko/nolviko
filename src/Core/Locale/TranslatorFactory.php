@@ -36,6 +36,25 @@ final class TranslatorFactory
         }
 
         $locale = in_array($requestedLocale, $supported, true) ? $requestedLocale : self::FALLBACK_LOCALE;
+        $files = [];
+
+        // 2026-11-21: domains load on first use (CatalogTranslator) instead of a full Symfony catalogue per request.
+        foreach (array_unique([self::FALLBACK_LOCALE, $locale]) as $catalogLocale) {
+            foreach (self::catalogFiles($translationsDirectory . '/' . $catalogLocale) as $file) {
+                $files[$catalogLocale][basename($file, '.php')] = $file;
+            }
+        }
+
+        return new CatalogTranslator($locale, $files);
+    }
+
+    /**
+     * The previous Symfony-catalogue translator, kept for comparison tests.
+     */
+    public static function createSymfony(string $translationsDirectory, string $requestedLocale): MessageTranslator
+    {
+        $supported = self::supportedLocales($translationsDirectory);
+        $locale = in_array($requestedLocale, $supported, true) ? $requestedLocale : self::FALLBACK_LOCALE;
         $translator = new Translator($locale);
         $translator->setFallbackLocales([self::FALLBACK_LOCALE]);
         $translator->addLoader(self::LOADER, new PhpFileLoader());

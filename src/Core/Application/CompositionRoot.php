@@ -95,6 +95,18 @@ final class CompositionRoot
             $provider->register($services);
         }
 
+        // 2026-11-21 (owner): a safe mode that a failed extension boot entered is retried once the installed code
+        // changed (an update finished); if the extensions fail again it is entered again below. The operator's own
+        // safe mode is never left here.
+        $automatic = $manager->state->automaticSafeCode();
+        if ($automatic !== null && $automatic !== ExtensionBootstrap::codeIdentity($root)) {
+            try {
+                $manager->state->setSafe(false);
+            } catch (ExtensionFailure) {
+                // An unwritable state directory keeps safe mode; the forum still runs core-only.
+            }
+        }
+
         $wasSafe = $manager->state->safe();
         try {
             ExtensionBootstrap::register($manager, $services, $registry);
@@ -146,7 +158,7 @@ final class CompositionRoot
 
             $manager->state->rememberFailure();
             if (!$manager->state->safe()) {
-                $manager->state->setSafe(true);
+                $manager->state->enterAutomaticSafe(ExtensionBootstrap::codeIdentity($root));
             }
 
             return self::build(

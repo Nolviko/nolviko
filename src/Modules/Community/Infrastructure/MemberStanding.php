@@ -9,6 +9,7 @@ use DateTimeZone;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Nolviko\Core\Cache\Cache;
 use Nolviko\Modules\Users\Domain\RegistrationRejected;
 use Throwable;
 
@@ -36,7 +37,10 @@ final readonly class MemberStanding
         'veteran' => ['days', 365],
     ];
 
-    public function __construct(private Connection $db)
+    /** Seconds a member's post count and reputation may lag behind on thread pages (2026-11-21 benchmark). */
+    public const CACHE_SECONDS = 120;
+
+    public function __construct(private Connection $db, private ?Cache $cache = null)
     {
     }
 
@@ -145,6 +149,38 @@ final readonly class MemberStanding
 
         if ($userIds === []) {
             return [];
+        }
+
+        if ($this->cache !== null) {
+            // Counting a member's whole post history on every thread page grows with the member's activity; a
+            // short-lived per-member copy keeps the page cost flat.
+            $result = [];
+            $missing = [];
+
+            foreach ($userIds as $id) {
+                $hit = $this->cache->get('standing.' . $id);
+
+                if (is_array($hit)) {
+                    $result[$id] = $hit;
+                } else {
+                    $missing[] = $id;
+                }
+            }
+
+            if ($missing !== []) {
+                foreach ((new self($this->db))->standing($missing) as $id => $standing) {
+                    $this->cache->set('standing.' . $id, $standing, self::CACHE_SECONDS);
+                    $result[$id] = $standing;
+                }
+            }
+
+            $ordered = [];
+
+            foreach ($userIds as $id) {
+                $ordered[$id] = $result[$id];
+            }
+
+            return $ordered;
         }
 
         $posts = $this->db->fetchAllKeyValue(

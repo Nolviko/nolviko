@@ -24,6 +24,7 @@ use Nolviko\Modules\Threads\Domain\CreateThread;
 use Nolviko\Modules\Threads\Domain\DraftContext;
 use Nolviko\Modules\Threads\Domain\Drafts;
 use Nolviko\Modules\Threads\Domain\Thread;
+use Nolviko\Modules\Threads\Domain\ThreadRepository;
 use Nolviko\Modules\Threads\Domain\ThreadRuleViolation;
 use Nolviko\Modules\Users\Domain\UserRepository;
 use Nolviko\Modules\Users\Http\RequestSubject;
@@ -68,6 +69,8 @@ final class CreateReplyHandler implements RouteHandler
         private readonly ?Closure $clock = null,
         private readonly ?PostRepository $posts = null,
         private readonly ?UserRepository $users = null,
+        private readonly ?ThreadRepository $threads = null,
+        private readonly int $perPage = ThreadPageHandler::DEFAULT_PER_PAGE,
     ) {
     }
 
@@ -152,7 +155,7 @@ final class CreateReplyHandler implements RouteHandler
 
         // The new reply (its permalink finds the right page), or the thread while the reply waits for approval.
         $response = InstallerPage::redirect($created->status === PostStatus::Visible
-            ? $this->urls->generate(CoreRoutes::POST_SHOW, ['post' => (string) $created->postId])
+            ? $this->postLocation($created->postId)
             : $this->urls->generate(CoreRoutes::THREAD_ID, ['thread' => (string) $threadId]));
         // Tells draft-keeper.js that this form's text was posted, so its browser copy is dropped (beta.10). The
         // value is the form's one-time idempotency token, not a secret.
@@ -208,6 +211,28 @@ final class CreateReplyHandler implements RouteHandler
         $name = $author === null ? '' : '=' . str_replace(['[', ']'], '', $author);
 
         return '[quote' . $name . ']' . trim($post->content) . "[/quote]\n";
+    }
+
+    /**
+     * The new reply's page and anchor, computed as PostPermalinkHandler does (2026-11-21 benchmark): the browser no
+     * longer makes a second full request through the permalink. Falls back to the permalink when a lookup is not
+     * available.
+     */
+    private function postLocation(int $postId): string
+    {
+        $permalink = $this->urls->generate(CoreRoutes::POST_SHOW, ['post' => (string) $postId]);
+        $post = $this->posts?->find($postId);
+        $thread = $post === null ? null : $this->threads?->find($post->threadId);
+
+        if ($post === null || $thread === null) {
+            return $permalink;
+        }
+
+        $total = ThreadPageHandler::visibleTotal($thread);
+        $before = $this->posts->visibleBefore($post, $total, $thread->firstPostId, $thread->lastPostId);
+        $page = min(ThreadPageHandler::pageCount($total, $this->perPage), intdiv($before, $this->perPage) + 1);
+
+        return ThreadPageHandler::url($this->urls, $thread->id, $page, $thread->slug) . '#post-' . $post->id;
     }
 
     private function now(): DateTimeImmutable

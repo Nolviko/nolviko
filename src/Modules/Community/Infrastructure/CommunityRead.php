@@ -151,24 +151,27 @@ final class CommunityRead
             $result[(int) $row['post_id']]['reactions'][] = $row;
         }
 
-        $parts = [];
-        $mediaParams = [];
-        $mediaTypes = [];
+        // 2026-11-21 benchmark: one ranked query instead of a UNION of one sub-select per post (same rows: at most
+        // six newest visible files per post; hidden imported files only for their owner or a forum moderator).
+        $moderated = [];
         foreach ($posts as $post) {
-            $parts[] = "(SELECT id, post_id, COALESCE(imported_name, original_name) AS original_name "
-                . 'FROM community_media WHERE post_id = ? AND (user_id IS NOT NULL OR imported_retained = 1) '
-                . "AND deleted_at IS NULL AND (imported_visibility IS NULL OR imported_visibility = 'visible' "
-                . 'OR user_id = ? OR ? = 1) ORDER BY id DESC LIMIT 6)';
-            array_push(
-                $mediaParams,
-                (int) $post['id'],
-                $subject->userId ?? 0,
-                (int) $subject->allows('moderation.post.edit_any', (int) $post['forum_id'])
-            );
-            array_push($mediaTypes, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER);
+            if ($subject->allows('moderation.post.edit_any', (int) $post['forum_id'])) {
+                $moderated[] = (int) $post['id'];
+            }
         }
-        $media = $this->db->fetchAllAssociative('SELECT * FROM (' . implode(' UNION ALL ', $parts)
-            . ') visible_media ORDER BY post_id, id DESC', $mediaParams, $mediaTypes);
+        $media = $this->db->fetchAllAssociative(
+            'SELECT id, post_id, original_name FROM (SELECT id, post_id, '
+                . 'COALESCE(imported_name, original_name) AS original_name, '
+                . 'ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY id DESC) AS position '
+                . 'FROM community_media WHERE post_id IN (?) AND (user_id IS NOT NULL OR imported_retained = 1) '
+                . "AND deleted_at IS NULL AND (imported_visibility IS NULL OR imported_visibility = 'visible' "
+                . 'OR user_id = ?' . ($moderated === [] ? '' : ' OR post_id IN (?)') . ')) visible_media '
+                . 'WHERE position <= 6 ORDER BY post_id, id DESC',
+            [array_map(intval(...), array_column($posts, 'id')), $subject->userId ?? 0,
+                ...($moderated === [] ? [] : [$moderated])],
+            [ArrayParameterType::INTEGER, ParameterType::INTEGER,
+                ...($moderated === [] ? [] : [ArrayParameterType::INTEGER])],
+        );
         foreach ($media as $row) {
             $postId = (int) $row['post_id'];
             if (count($result[$postId]['attachments']) < 5) {

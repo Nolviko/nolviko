@@ -57,9 +57,23 @@ final class ExtensionBootstrap
                 }
             }
         } catch (Throwable $failure) {
-            $manager->state->setSafe(true);
+            $manager->state->enterAutomaticSafe(self::codeIdentity(dirname($manager->catalog->directory)));
             throw new ExtensionFailure('extension_boot_failed', 0, $failure);
         }
+    }
+
+    /**
+     * Identity of the installed code (2026-11-21): changes when a release replaces the files, so an automatic safe
+     * mode can be retried after an update. Root package reference plus Composer's installed list (rewritten by every
+     * release package).
+     */
+    public static function codeIdentity(string $root): string
+    {
+        $installed = $root . '/vendor/composer/installed.php';
+        clearstatcache(true, $installed);
+        $stat = is_file($installed) ? filemtime($installed) . ':' . filesize($installed) : '';
+
+        return hash('sha256', (InstalledVersions::getRootPackage()['reference'] ?? '') . '|' . $stat);
     }
 
     private static function load(string $file): mixed

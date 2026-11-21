@@ -388,6 +388,29 @@ final class ExtensionLifecycleTest extends TestCase
         self::assertFalse($this->manager->state->hasBootFailure());
     }
 
+    /** 2026-11-21: a failed boot enters an automatic safe mode stamped with the code; the operator's is not one. */
+    public function testFailedBootEntersAutomaticSafeModeForThisCode(): void
+    {
+        $this->write(['providers' => ['src/Provider.php']]);
+        $this->files->write('extensions/acme/hello/src/Provider.php', '<?php throw new Exception();');
+        $this->manager->enable('acme/hello', static fn() => null);
+
+        try {
+            ExtensionBootstrap::register($this->manager, new ContainerBuilder(), new ExtensionRegistry());
+            self::fail('The failing provider must stop the boot.');
+        } catch (ExtensionFailure) {
+        }
+
+        $root = dirname($this->manager->catalog->directory);
+        self::assertTrue($this->manager->state->safe());
+        self::assertSame(ExtensionBootstrap::codeIdentity($root), $this->manager->state->automaticSafeCode());
+
+        $this->manager->state->setSafe(true);
+        self::assertNull($this->manager->state->automaticSafeCode());
+        $this->manager->state->rememberFailure();
+        self::assertSame('', $this->manager->state->automaticSafeCode());
+    }
+
     public function testSafeModeDoesNotExecuteFailingProvider(): void
     {
         $this->write(['providers' => ['src/Provider.php']]);

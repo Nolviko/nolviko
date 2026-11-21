@@ -51,6 +51,18 @@ final class RateBuckets
             $this->prune($now);
         }
 
+        // 2026-11-21 benchmark: an existing bucket that pruning cannot reach for at least half an hour needs no
+        // write (each upsert is a committed write; searches and posts made two per request). Pruning deletes only
+        // rows that expired more than PRUNE_GRACE ago, so this row outlives the request.
+        $kept = $this->connection->fetchOne(
+            'SELECT 1 FROM rate_limit_buckets WHERE bucket_key = ? AND expires_at >= ?',
+            [$key, self::stamp($now->modify('-30 minutes'))],
+        );
+
+        if ($kept !== false) {
+            return;
+        }
+
         for ($attempt = 0; $attempt < 3; ++$attempt) {
             try {
                 $this->connection->executeStatement(

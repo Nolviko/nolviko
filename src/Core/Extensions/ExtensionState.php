@@ -121,6 +121,44 @@ final readonly class ExtensionState
         }
     }
 
+    /**
+     * Safe mode entered by a failed extension boot, not by the operator (2026-11-21, owner: the site stayed in safe
+     * mode after every update). The code identity of that boot is kept, so a later boot on different code (an update
+     * finished) retries the extensions once; a new failure enters it again.
+     */
+    public function enterAutomaticSafe(string $code): void
+    {
+        $this->prepare();
+        $path = $this->directory . '/safe-mode';
+        $content = 'auto ' . $code;
+        if (is_link($path)) {
+            throw new ExtensionFailure('extension_state_invalid');
+        }
+
+        if (file_put_contents($path, $content, LOCK_EX) !== strlen($content)) {
+            throw new ExtensionFailure('extension_state_write_failed');
+        }
+    }
+
+    /**
+     * The code identity an automatic safe mode was entered on ('' when unknown), or null for no safe mode or the
+     * operator's own. Before 2026-11-21 both wrote "1"; the boot-failure marker tells an automatic one apart.
+     */
+    public function automaticSafeCode(): ?string
+    {
+        $path = $this->directory . '/safe-mode';
+        if (!is_file($path) || is_link($path)) {
+            return null;
+        }
+
+        $content = (string) file_get_contents($path, false, null, 0, 200);
+        if (str_starts_with($content, 'auto ')) {
+            return substr($content, 5);
+        }
+
+        return trim($content) === '1' && $this->hasBootFailure() ? '' : null;
+    }
+
     public function setSafe(bool $safe): void
     {
         $this->prepare();

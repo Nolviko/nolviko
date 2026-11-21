@@ -32,6 +32,17 @@ final class LocaleFormatter
     public readonly DateTimeZone $timeZone;
 
     /**
+     * ICU formatters are costly to build and reusable (2026-11-21 benchmark: building one per date was a fifth of
+     * a forum page's CPU), so each style/pattern and fraction setting is built once per formatter instance.
+     *
+     * @var array<string, IntlDateFormatter>
+     */
+    private array $dateFormatters = [];
+
+    /** @var array<string, NumberFormatter> */
+    private array $numberFormatters = [];
+
+    /**
      * @param string $locale Catalog form (`tr`, `pt_BR`).
      * @param string $timeZone IANA name; an unknown one is refused (`time_zone_invalid`).
      */
@@ -82,11 +93,18 @@ final class LocaleFormatter
      */
     public function number(int|float $number, ?int $decimals = null): string
     {
-        $formatter = new NumberFormatter($this->locale, NumberFormatter::DECIMAL);
+        $key = $decimals === null ? 'default' : (string) $decimals;
+        $formatter = $this->numberFormatters[$key] ?? null;
 
-        if ($decimals !== null) {
-            $formatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
-            $formatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+        if ($formatter === null) {
+            $formatter = new NumberFormatter($this->locale, NumberFormatter::DECIMAL);
+
+            if ($decimals !== null) {
+                $formatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
+                $formatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+            }
+
+            $this->numberFormatters[$key] = $formatter;
         }
 
         return (string) $formatter->format($number);
@@ -95,7 +113,8 @@ final class LocaleFormatter
     private function format(DateTimeInterface $moment, int $date, int $time, ?string $pattern = null): string
     {
         $local = DateTimeImmutable::createFromInterface($moment)->setTimezone($this->timeZone);
-        $formatter = new IntlDateFormatter(
+        $key = $date . ':' . $time . ':' . ($pattern ?? '');
+        $formatter = $this->dateFormatters[$key] ??= new IntlDateFormatter(
             $this->locale,
             $date,
             $time,
