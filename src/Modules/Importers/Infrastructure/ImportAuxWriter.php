@@ -15,6 +15,9 @@ use RuntimeException;
 /** Private per-owner archives and native poll/media projections, all under the caller's import transaction. */
 final readonly class ImportAuxWriter
 {
+    /** Image types shown inline (the same raster types member uploads may be shown as). */
+    public const IMAGES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
     /** @param Closure(array): ?ImportAsset $asset the original file of an attachment record (ADR-038) */
     public function __construct(private Connection $db, private Closure $asset, private ImportFileStore $files)
     {
@@ -87,7 +90,7 @@ final readonly class ImportAuxWriter
                     'file_key' => $stored['key'], 'original_name' => mb_substr($safeName, 0, 160),
                     'imported_name' => $safeName, 'imported_retained' => $user === null ? 1 : 0,
                     'imported_visibility' => (int) $row['visible'] === 1 ? 'visible' : 'pending',
-                    'mime' => 'application/octet-stream', 'bytes' => $stored['bytes'],
+                    'mime' => $this->mime($stored['key']), 'bytes' => $stored['bytes'],
                     'created_at' => ImportText::timestamp($row['time'])]);
                 $this->db->insert('legacy_redirects', ['job_id' => $job, 'entity' => 'attachments',
                     'source_id' => (int) $row['id'], 'target_id' => $target]);
@@ -219,6 +222,18 @@ final readonly class ImportAuxWriter
         if (!hash_equals($meta['file_hash'] ?? '', $asset->digest())) {
             throw new RuntimeException('import_attachment_changed');
         }
+    }
+
+    /**
+     * The stored file's type when it is a raster image the forum shows inline (beta.18), so imported pictures are
+     * shown instead of offered for download; anything else (also SVG) stays a download.
+     */
+    private function mime(string $key): string
+    {
+        $path = $this->files->path($key);
+        $type = class_exists(\finfo::class) && is_file($path)
+            ? (string) (new \finfo(FILEINFO_MIME_TYPE))->file($path) : '';
+        return in_array($type, self::IMAGES, true) ? $type : 'application/octet-stream';
     }
 
     private function mapped(string $job, string $phase, int|string $source): ?int
