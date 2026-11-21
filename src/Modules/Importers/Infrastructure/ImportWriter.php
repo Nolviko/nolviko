@@ -220,7 +220,7 @@ final class ImportWriter
         }
         $this->db->insert('import_map', ['job_id' => $job, 'entity' => $phase, 'source_id' => $row['_key'],
             'target_id' => $target, 'source_hash' => $sourceHash,
-            'content_hash' => (string) $target === '0' ? null : $this->targetHash($phase, $target),
+            'content_hash' => (string) $target === '0' ? null : $this->targetHash($phase, $target, $meta),
             'meta_json' => json_encode($meta, JSON_THROW_ON_ERROR), 'reason' => $meta['reason'] ?? null,
             'source_parent' => $parent]);
         if ((string) $target !== '0' && in_array($phase, ['users', 'forums', 'threads', 'posts'], true)) {
@@ -248,7 +248,11 @@ final class ImportWriter
         if (
             $entry === false || !hash_equals($entry['source_hash'], self::sourceHash($row))
             || ((string) $entry['target_id'] !== '0'
-                && !hash_equals($entry['content_hash'], $this->targetHash($phase, $entry['target_id'])))
+                && !hash_equals($entry['content_hash'], $this->targetHash(
+                    $phase,
+                    $entry['target_id'],
+                    json_decode($entry['meta_json'], true, 8, JSON_THROW_ON_ERROR)
+                )))
         ) {
             throw new RuntimeException('import_parity_mismatch');
         }
@@ -334,12 +338,13 @@ final class ImportWriter
         }
     }
 
-    private function targetHash(string $phase, int|string $id): string
+    private function targetHash(string $phase, int|string $id, array $meta = []): string
     {
         if (!in_array($phase, ['categories', 'groups', 'users', 'forums', 'threads', 'posts'], true)) {
             return ($this->auxiliary ?? throw new RuntimeException('import_auxiliary_missing'))->hash(
                 $phase,
                 (string) $id,
+                $meta,
             );
         }
         [$table, $columns] = match ($phase) {
