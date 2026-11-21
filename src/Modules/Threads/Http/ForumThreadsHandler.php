@@ -205,6 +205,9 @@ final class ForumThreadsHandler implements RouteHandler
             $item->movedToThreadId === null ? $item->viewCount : null,
             $prefix,
             $avatar,
+            // beta.18 (roadmap 13): the "new" marker leads to the first unread post.
+            $unread && $item->movedToThreadId === null
+                ? $this->urls->generate(CoreRoutes::THREAD_UNREAD, ['thread' => (string) $item->id]) : null,
         );
     }
 }

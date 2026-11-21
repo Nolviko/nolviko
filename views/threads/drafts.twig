@@ -1,0 +1,29 @@
+{# My drafts (beta.18, roadmap 17). Context: title, items (context, kind thread|reply, place|null, url|null, title|null,
+   excerpt, updated), deleted (count after a delete or null), action, csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+{% block head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if deleted is not null %}<p role="status">{{ t('community.drafts_deleted', {count: deleted}) }}</p>{% endif %}
+{% if items is empty %}
+<div class="panel empty"><p>{{ t('community.drafts_empty') }}</p></div>
+{% else %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<ul class="panel list drafts">
+{% for draft in items %}
+<li>
+<label><input type="checkbox" name="drafts[]" value="{{ draft.context }}"> <span class="chip">{{ draft.kind == 'thread' ? t('community.draft_thread') : t('community.draft_reply') }}</span></label>
+<div class="stack">
+<p dir="auto"><strong>{% if draft.title %}<bdi>{{ draft.title }}</bdi>{% elseif draft.place %}<bdi>{{ draft.place }}</bdi>{% else %}{{ t('community.draft_untitled') }}{% endif %}</strong></p>
+<p class="meta">{% if draft.place %}{{ t('community.draft_place') }} <bdi>{{ draft.place }}</bdi>{% else %}{{ t('community.draft_unavailable') }}{% endif %} · <time datetime="{{ draft.updated|date('c') }}">{{ draft.updated|format_datetime }}</time></p>
+<p dir="auto">{{ draft.excerpt }}</p>
+{% if draft.url %}<p><a class="btn btn-s" href="{{ draft.url|safe_url }}">{{ t('community.draft_continue') }}</a></p>{% endif %}
+</div>
+</li>
+{% endfor %}
+</ul>
+<p><button type="submit" class="btn btn-s">{{ t('community.drafts_delete') }}</button></p>
+</form>
+{% endif %}
+{% endblock %}

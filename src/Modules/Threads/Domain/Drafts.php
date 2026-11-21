@@ -24,4 +24,11 @@ interface Drafts
     public function find(int $userId, string $context): ?array;
 
     public function discard(int $userId, string $context): void;
+
+    /**
+     * The member's drafts, newest first (beta.18, roadmap 17): a primary-key range of one member's rows.
+     *
+     * @return list<array{context: string, title: ?string, content: string, updated_at: string}>
+     */
+    public function forMember(int $userId, int $limit): array;
 }

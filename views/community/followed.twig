@@ -1,0 +1,38 @@
+{# Followed threads (beta.18, roadmap 18). Context: title, subscriptions and bookmarks ({items: id, title, replies,
+   url, unread_url, last; older}), forum_subscriptions (list filled by the forum-subscription feature: title, url),
+   removed (count after a bulk removal or null), action, csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+{% block head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if removed is not null %}<p role="status">{{ t('community.followed_removed', {count: removed}) }}</p>{% endif %}
+{% for kind, list in {subscribe: subscriptions, bookmark: bookmarks} %}
+<section class="followed" aria-labelledby="followed-{{ kind }}">
+<h2 id="followed-{{ kind }}">{{ kind == 'subscribe' ? t('community.followed_subscriptions') : t('community.followed_bookmarks') }}</h2>
+{% if list.items is empty %}
+<div class="panel empty"><p>{{ t('community.followed_empty') }}</p></div>
+{% else %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="kind" value="{{ kind }}">
+<ul class="panel list">
+{% for thread in list.items %}
+<li><label><input type="checkbox" name="threads[]" value="{{ thread.id }}"><span class="sr-only">{{ t('community.followed_select', {title: thread.title}) }}</span></label>
+<a href="{{ thread.url|safe_url }}"><bdi>{{ thread.title|censor }}</bdi></a>
+<span class="meta">{{ thread.replies|format_number }} {{ t('forums.show.replies', {count: thread.replies}) }}{% if thread.last %} · <time datetime="{{ thread.last|date('c') }}">{{ thread.last|format_datetime }}</time>{% endif %}</span>
+<a class="btn-s" href="{{ thread.unread_url|safe_url }}">{{ t('threads.show.first_unread') }}</a></li>
+{% endfor %}
+</ul>
+<p><button type="submit" class="btn btn-s">{{ kind == 'subscribe' ? t('community.followed_unsubscribe') : t('community.followed_unbookmark') }}</button></p>
+</form>
+{% if list.older %}<p><a class="btn btn-s" href="{{ list.older|safe_url }}">{{ t('search.older') }}</a></p>{% endif %}
+{% endif %}
+</section>
+{% endfor %}
+{% if forum_subscriptions|default([]) is not empty %}
+<section class="followed" aria-labelledby="followed-forums">
+<h2 id="followed-forums">{{ t('community.followed_forums') }}</h2>
+<ul class="panel list">{% for forum in forum_subscriptions %}<li><a href="{{ forum.url|safe_url }}"><bdi>{{ forum.title }}</bdi></a></li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

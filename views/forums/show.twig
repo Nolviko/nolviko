@@ -31,6 +31,10 @@
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <button class="btn-s" type="submit">{{ t('forums.show.mark_read') }}</button>
 </form>
+<form method="post" action="{{ path('forums.read_all')|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button class="btn-s" type="submit">{{ t('forums.index.mark_all_read') }}</button>
+</form>
 {% endif %}
 {% if new_thread_url is not null %}
 <a class="btn" href="{{ new_thread_url|safe_url }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{{ t('forums.index.new_thread') }}</a>
@@ -53,7 +57,7 @@
 <div class="trow-title">
 {% if thread.unread %}<span class="dot" aria-hidden="true"></span>{% endif %}
 {% if thread.prefix|default(null) %}<span class="{{ thread.prefix.class }}"><bdi>{{ thread.prefix.label }}</bdi></span>{% endif %}<a href="{{ thread.url|safe_url }}">{% if thread.moved %}{{ t('forums.show.moved', {title: thread.title|censor}) }}{% else %}<bdi>{{ thread.title|censor }}</bdi>{% endif %}</a>
-{% if thread.unread %}<span class="chip chip-new thread-unread">{{ t('forums.show.unread') }}</span>{% endif %}
+{% if thread.unread %}{% if thread.unreadUrl|default(null) %}<a class="chip chip-new thread-unread" href="{{ thread.unreadUrl|safe_url }}" title="{{ t('threads.show.first_unread') }}">{{ t('forums.show.unread') }}</a>{% else %}<span class="chip chip-new thread-unread">{{ t('forums.show.unread') }}</span>{% endif %}{% endif %}
 {% if thread.sticky %}<span class="chip chip-amber">{{ t('forums.show.sticky') }}</span>{% endif %}
 {% if thread.locked %}<span class="chip">{{ t('forums.show.locked') }}</span>{% endif %}
 {% if thread.status is not null %}<span class="chip chip-danger">{{ t('threads.show.marker', {status: thread.status}) }}</span>{% endif %}

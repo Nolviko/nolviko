@@ -30,6 +30,7 @@ final readonly class ThreadRowView implements ViewModel
         public ?int $views = null,
         public ?array $prefix = null,
         public ?string $lastPosterAvatar = null,
+        public ?string $unreadUrl = null,
     ) {
     }
 }

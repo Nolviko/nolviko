@@ -6,6 +6,7 @@ namespace Nolviko\Modules\Community\Infrastructure;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Nolviko\Core\Database\SqlDialect;
@@ -16,6 +17,8 @@ use Nolviko\Modules\Users\Domain\RegistrationRejected;
 /** Actor-owned relationships and durable reactions. Lock the actor to serialize duplicate submissions. */
 final class CommunityInteractions
 {
+    private const FOLLOW_TABLES = ['subscribe' => 'thread_subscriptions', 'bookmark' => 'member_bookmarks'];
+
     public function __construct(
         private readonly Connection $db,
         private readonly CommunityAccess $access,
@@ -177,6 +180,52 @@ final class CommunityInteractions
                 . ' ORDER BY t.id DESC LIMIT 26',
             [$actor, $before, $before, ...$params],
             [ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER, ...$types],
+        );
+    }
+
+    /**
+     * Followed threads (beta.18, roadmap 18): the member's subscriptions (`subscribe`) or bookmarks (`bookmark`)
+     * in readable, visible threads, rows follow the thread ID downwards so
+     * the page is a primary-key range of the member's rows. One row more than $limit tells whether more exist.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function followed(SubjectPermissions $subject, string $kind, int $before, int $limit): array
+    {
+        $table = self::FOLLOW_TABLES[$kind] ?? throw new RegistrationRejected(['community_invalid']);
+        $actor = $this->access->actor($subject);
+        [$where, $params, $types] = $this->access->scope($subject, 't.forum_id');
+
+        return $this->db->fetchAllAssociative(
+            'SELECT t.id, t.title, t.slug, t.last_post_at, t.reply_count, f.created_at AS followed_at FROM ' . $table
+                . " f INNER JOIN threads t ON t.id = f.thread_id WHERE f.user_id = ? AND t.status = 'visible' "
+                . 'AND t.deleted_at IS NULL AND t.moved_to_thread_id IS NULL AND (? = 0 OR f.thread_id < ?) AND '
+                . $where . ' ORDER BY f.thread_id DESC LIMIT ' . (max(1, min($limit, 100)) + 1),
+            [$actor, $before, $before, ...$params],
+            [ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER, ...$types],
+        );
+    }
+
+    /**
+     * Removes several of the member's subscriptions or bookmarks at once. Only the member's own rows are deleted,
+     * so no thread access check is needed: removing is allowed even after access to the thread was lost.
+     *
+     * @param list<int> $threadIds
+     */
+    public function unfollow(SubjectPermissions $subject, string $kind, array $threadIds): int
+    {
+        $table = self::FOLLOW_TABLES[$kind] ?? throw new RegistrationRejected(['community_invalid']);
+        $actor = $this->access->actor($subject);
+        $threadIds = array_values(array_unique(array_filter($threadIds, static fn(int $id): bool => $id > 0)));
+
+        if ($threadIds === []) {
+            return 0;
+        }
+
+        return (int) $this->db->executeStatement(
+            'DELETE FROM ' . $table . ' WHERE user_id = ? AND thread_id IN (?)',
+            [$actor, array_slice($threadIds, 0, 200)],
+            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
         );
     }
 

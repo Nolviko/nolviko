@@ -1684,6 +1684,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Router $router,
                 SiteSettings $settings,
                 DiscussionFeed $feed,
+                CsrfTokens $csrf,
             ): ForumIndexHandler => new ForumIndexHandler(
                 $translator,
                 $views,
@@ -1693,6 +1694,7 @@ final class CoreServiceProvider implements ServiceProvider
                 $router,
                 $settings,
                 $feed,
+                $csrf,
             ),
             [
                 MessageTranslator::class,
@@ -1703,6 +1705,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Router::class,
                 SiteSettings::class,
                 DiscussionFeed::class,
+                CsrfTokens::class,
             ],
         );
         $services->factory(

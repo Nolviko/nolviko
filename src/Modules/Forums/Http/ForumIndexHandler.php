@@ -8,6 +8,7 @@ use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
+use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\Settings\SiteSettings;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Forums\Domain\ForumIndex;
@@ -39,6 +40,7 @@ final class ForumIndexHandler implements RouteHandler
         private readonly UrlGenerator $urls,
         private readonly ?SiteSettings $settings = null,
         private readonly ?DiscussionFeed $feed = null,
+        private readonly ?CsrfTokens $csrf = null,
     ) {
     }
 
@@ -64,6 +66,9 @@ final class ForumIndexHandler implements RouteHandler
             'search_url' => $this->urls->generate(CoreRoutes::SEARCH),
             'feed_url' => $this->urls->generate(CoreRoutes::FEED_LATEST),
             'forums' => $this->rows($entries, $subject),
+            // Member tools (beta.18, roadmap 12/17/18): "mark all forums read", drafts and followed threads.
+            'csrf_field' => CsrfTokens::FIELD,
+            'csrf_token' => $subject->userId !== null && $this->csrf !== null ? $this->csrf->token() : null,
         ]);
 
         // Personal (the new-thread links and the scope depend on the reader), so never shared caches.
