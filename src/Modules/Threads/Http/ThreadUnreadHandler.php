@@ -74,12 +74,17 @@ final class ThreadUnreadHandler implements RouteHandler
         $before = $this->posts->visibleBefore($post, $total, $thread->firstPostId, $thread->lastPostId);
         $page = min(ThreadPageHandler::pageCount($total, $this->perPage), intdiv($before, $this->perPage) + 1);
 
-        return self::found(ThreadPageHandler::url($this->urls, $thread->id, $page, $thread->slug) . '#post-' . $post->id);
+        $url = ThreadPageHandler::url($this->urls, $thread->id, $page, $thread->slug);
+
+        return self::found($url . '#post-' . $post->id);
     }
 
     /** 302 and never cached: the target moves with every post the member reads. */
     private static function found(string $location): Response
     {
-        return new Response('', Response::HTTP_FOUND, ['Location' => $location, 'Cache-Control' => 'private, no-store']);
+        return new Response('', Response::HTTP_FOUND, [
+            'Location' => $location,
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 }

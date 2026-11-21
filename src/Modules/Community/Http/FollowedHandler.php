@@ -81,7 +81,10 @@ final class FollowedHandler implements RouteHandler
                         'title' => (string) $row['title'],
                         'replies' => (int) $row['reply_count'],
                         'url' => ThreadPageHandler::url($this->urls, (int) $row['id'], 1, (string) $row['slug']),
-                        'unread_url' => $this->urls->generate(CoreRoutes::THREAD_UNREAD, ['thread' => (string) $row['id']]),
+                        'unread_url' => $this->urls->generate(
+                            CoreRoutes::THREAD_UNREAD,
+                            ['thread' => (string) $row['id']],
+                        ),
                         'last' => $row['last_post_at'] === null ? null
                             : new DateTimeImmutable((string) $row['last_post_at'], new DateTimeZone('UTC')),
                     ], $shown),

@@ -98,9 +98,11 @@ final readonly class SearchFilters
 
     public function query(): array
     {
-        return array_filter(['forum' => $this->forum, 'author' => $this->author,
+        return array_filter(
+            ['forum' => $this->forum, 'author' => $this->author,
             'from' => $this->from, 'until' => $this->until, 'thread' => $this->thread,
             'titles' => $this->titles ? '1' : null, 'sort' => $this->sort === self::NEWEST ? null : $this->sort],
-            static fn(mixed $value): bool => $value !== null);
+            static fn(mixed $value): bool => $value !== null
+        );
     }
 }

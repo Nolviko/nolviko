@@ -113,4 +113,10 @@ return [
     'community.followed_unsubscribe' => 'Unsubscribe from selected',
     'community.followed_unbookmark' => 'Remove selected bookmarks',
     'community.followed_removed' => '{count, plural, one {# item removed.} other {# items removed.}}',
+    'community.directory_search' => 'Username starts with',
+    'community.directory_sort' => 'Sort by',
+    'community.directory_sort_number' => 'Member number',
+    'community.directory_sort_name' => 'Username',
+    'community.directory_sort_joined' => 'Newest members',
+    'community.directory_apply' => 'Search',
 ];

@@ -79,8 +79,14 @@ final class SearchHandler implements RouteHandler
 
             // An order this engine cannot give falls back to newest first (beta.18, roadmap 26).
             if (!in_array($filters->sort, $this->search->sorts(), true)) {
-                $filters = new SearchFilters($filters->forum, $filters->author, $filters->from, $filters->until,
-                    $filters->thread, $filters->titles);
+                $filters = new SearchFilters(
+                    $filters->forum,
+                    $filters->author,
+                    $filters->from,
+                    $filters->until,
+                    $filters->thread,
+                    $filters->titles
+                );
             }
         } catch (InvalidArgumentException) {
             $invalidFilters = true;
