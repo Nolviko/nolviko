@@ -67,6 +67,9 @@ final class PermissionCatalog
             PermissionDefinition::bool('admin.access'),
             // 2026-11-15: members of a group with this rule must set up a second sign-in step (when one exists).
             PermissionDefinition::bool('user.second_factor.required'),
+            // Beta 17 G1: private message box capacity in conversations (0 = unlimited, the default). Read by
+            // PrivateConversations::boxLimit(): any group without a limit leaves the box unlimited.
+            PermissionDefinition::int('pm.max_conversations', 0, 1000000),
         ], $strict);
     }
 

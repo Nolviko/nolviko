@@ -1,9 +1,43 @@
+{# Conversations area (beta 17 G1): the box, one personal folder (folder), drafts (view = drafts) and the folder
+   manager (view = folders). Context: items, older, folders [{id, name}], folder {id, name}|null, drafts
+   [{id, subject, recipients, url, date}], view, notice, error, csrf_field, csrf_token. #}
 {% extends 'layouts/page.twig' %}
 {% block content %}
 <h1>{{ title }}</h1>
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 <div class="actions"><a class="btn" href="{{ new_url|safe_url }}">{{ t('conversations.new') }}</a></div>
+<nav class="tabs" aria-label="{{ t('conversations.areas') }}">
+<ul>
+<li><a href="{{ index_url|safe_url }}"{% if view == 'inbox' and folder is null %} aria-current="page"{% endif %}>{{ t('conversations.inbox') }}</a></li>
+{% for item in folders %}<li><a href="{{ (index_url ~ '?folder=' ~ item.id)|safe_url }}"{% if folder and folder.id == item.id %} aria-current="page"{% endif %}><bdi>{{ item.name }}</bdi></a></li>{% endfor %}
+<li><a href="{{ drafts_url|safe_url }}"{% if view == 'drafts' %} aria-current="page"{% endif %}>{{ t('conversations.drafts') }}</a></li>
+<li><a href="{{ folders_url|safe_url }}"{% if view == 'folders' %} aria-current="page"{% endif %}>{{ t('conversations.folders') }}</a></li>
+</ul>
+</nav>
+{% if view == 'drafts' %}
+<ul class="panel thread-list">{% for item in drafts %}<li class="trow"><div class="trow-main"><p class="trow-title"><a href="{{ item.url|safe_url }}"><bdi>{{ item.subject ?: t('conversations.draft_untitled') }}</bdi></a></p>
+<p class="meta">{% if item.recipients %}<bdi>{{ item.recipients }}</bdi> · {% endif %}<time datetime="{{ item.date|date('c') }}">{{ item.date|format_datetime }}</time></p></div>
+<form method="post" action="{{ index_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="draft_delete"><input type="hidden" name="draft" value="{{ item.id }}"><button class="btn-s">{{ t('conversations.draft_delete') }}</button></form></li>
+{% else %}<li class="empty">{{ t('conversations.drafts_empty') }}</li>{% endfor %}</ul>
+{% elseif view == 'folders' %}
+<section class="card">
+<h2>{{ t('conversations.folders') }}</h2>
+<p>{{ t('conversations.folders_help') }}</p>
+{% for item in folders %}
+<form method="post" action="{{ index_url|safe_url }}" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="folder" value="{{ item.id }}">
+<label for="folder-{{ item.id }}" class="visually-hidden">{{ t('conversations.folder_name') }}</label>
+<input id="folder-{{ item.id }}" name="name" value="{{ item.name }}" required maxlength="60" dir="auto">
+<button name="action" value="folder_rename" class="btn-s">{{ t('conversations.folder_rename') }}</button>
+<button name="action" value="folder_delete" class="btn-s" formnovalidate>{{ t('conversations.folder_delete') }}</button></form>
+{% else %}<p class="empty">{{ t('conversations.folders_empty') }}</p>{% endfor %}
+<form method="post" action="{{ index_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="folder_create">
+<p><label for="folder-new">{{ t('conversations.folder_new') }}</label>
+<input id="folder-new" name="name" required maxlength="60" dir="auto"> <button>{{ t('conversations.folder_create') }}</button></p></form>
+</section>
+{% else %}
+{% if folder %}<h2><bdi>{{ folder.name }}</bdi></h2>{% endif %}
 <ul class="panel thread-list">{% for item in items %}<li class="trow{{ item.unread ? ' t-unread' : '' }}"><span class="av c{{ item.subject|length % 5 + 1 }}" aria-hidden="true">{{ item.subject|first }}</span><div class="trow-main"><p class="trow-title"><a href="{{ item.url|safe_url }}"><bdi>{{ item.subject }}</bdi></a>{% if item.unread %} <span class="chip chip-new">{{ t('conversations.unread') }}</span>{% endif %}</p></div></li>
 {% else %}<li class="empty">{{ t('conversations.empty') }}</li>{% endfor %}</ul>
 {% if older %}<p><a class="btn btn-s" href="{{ older|safe_url }}">{{ t('conversations.older') }}</a></p>{% endif %}
+{% endif %}
 {% endblock %}

@@ -115,12 +115,15 @@
     };
 
     document.querySelectorAll('input[data-autocomplete="members"]').forEach(field => {
+        // Beta 17: data-multiple fields hold a comma-separated list; only the last name is completed.
+        const multiple = field.hasAttribute('data-multiple');
+        const head = () => multiple ? field.value.replace(/[^,;]*$/u, '') : '';
         const choose = name => {
-            field.value = name;
+            field.value = multiple ? head() + (head() === '' ? '' : ' ') + name + ', ' : name;
             field.dispatchEvent(new Event('input', { bubbles: true }));
         };
         field.addEventListener('input', debounce(async () => {
-            const value = field.value.trim();
+            const value = field.value.slice(head().length).trim();
             show(field, value.length >= 2 ? await lookup(value, '') : [], choose, null);
         }, 150));
         field.addEventListener('keydown', keys(choose));
