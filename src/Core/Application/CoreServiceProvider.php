@@ -183,6 +183,7 @@ use Nolviko\Modules\Moderation\Infrastructure\DbalModerationQueue;
 use Nolviko\Modules\Moderation\Infrastructure\DbalReportDecisions;
 use Nolviko\Modules\Moderation\Infrastructure\DbalReportWriter;
 use Nolviko\Modules\Moderation\Infrastructure\DbalUserSanctions;
+use Nolviko\Modules\Permissions\Domain\ForumLocks;
 use Nolviko\Modules\Permissions\Domain\ForumTree;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use Nolviko\Modules\Permissions\Domain\PermissionCatalog;
@@ -807,6 +808,7 @@ final class CoreServiceProvider implements ServiceProvider
                 ForumTree $forums,
                 CacheFactory $caches,
                 PermissionRulesVersion $version,
+                Closure $session,
             ): PermissionResolver => new PermissionResolver(
                 $catalog,
                 new DbalPermissionRuleStore(
@@ -816,9 +818,11 @@ final class CoreServiceProvider implements ServiceProvider
                     $version->current(...),
                 ),
                 $forums,
+                // ADR-041: forums unlocked in this session; reading never starts a session.
+                static fn(): mixed => $session()->get(ForumLocks::SESSION_KEY),
             ),
             [Connection::class, PermissionCatalog::class, ForumTree::class, CacheFactory::class,
-                PermissionRulesVersion::class],
+                PermissionRulesVersion::class, new Lazy(Session::class)],
         );
         $services->factory(
             PermissionCatalog::class,

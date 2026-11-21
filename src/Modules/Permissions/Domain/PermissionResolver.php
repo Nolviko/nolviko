@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Permissions\Domain;
 
+use Closure;
 use Nolviko\Modules\Groups\Domain\BuiltInGroup;
 
 /**
