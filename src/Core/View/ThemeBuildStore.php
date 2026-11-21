@@ -196,6 +196,7 @@ final readonly class ThemeBuildStore
                 throw new TemplateException('theme_publish_incompatible');
             }
             $this->atomic('active.json', ['build' => $expected, 'previous' => $this->pointer()]);
+            $this->remember($build);
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);
@@ -232,9 +233,58 @@ final readonly class ThemeBuildStore
                 throw new TemplateException('theme_publish_incompatible');
             }
             $this->atomic('active.json', ['build' => $previous, 'previous' => $expected]);
+            $this->remember($this->get($previous));
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);
+        }
+    }
+
+    /**
+     * Last published build of each theme (beta.18 roadmap 28): members may choose among these when the site allows
+     * it. A theme appears once an administrator has published it at least once.
+     *
+     * @return array<string, string> Theme ID => build hash.
+     */
+    public function memberThemes(): array
+    {
+        try {
+            $index = $this->read('members.json') ?? [];
+        } catch (Throwable) {
+            return [];
+        }
+
+        return array_filter($index, static fn(mixed $hash, mixed $theme): bool => is_string($theme)
+            && is_string($hash) && preg_match('/^[a-f0-9]{64}$/D', $hash) === 1, ARRAY_FILTER_USE_BOTH);
+    }
+
+    /** The member-chosen theme's last published build, or null (then the site's build is used). */
+    public function memberBuild(string $theme): ?array
+    {
+        $hash = $this->memberThemes()[$theme] ?? null;
+
+        try {
+            $build = $hash === null ? null : $this->get($hash);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $build !== null && $this->compatible($build) ? $build : null;
+    }
+
+    /** @param array<string, mixed> $build */
+    private function remember(array $build): void
+    {
+        if (!is_string($build['theme'] ?? null) || !is_string($build['hash'] ?? null)) {
+            return;
+        }
+
+        try {
+            $index = $this->memberThemes();
+            $index[$build['theme']] = $build['hash'];
+            $this->atomic('members.json', $index);
+        } catch (Throwable) {
+            // The member choice list is a convenience; publishing already succeeded.
         }
     }
 

@@ -669,6 +669,21 @@ return [
     'admin.site.hint.limits_search_seconds' => 'Sunucuyu arama yağmurundan korur (0 kapatır, varsayılan 1).',
     'admin.site.field.limits_message_seconds' => 'Bir üyenin iki özel mesajı arasındaki saniye',
     'admin.site.hint.limits_message_seconds' => 'Mesaj spamını yavaşlatır (0 kapatır, varsayılan 10).',
+    'admin.site.field.membership_reserved_names' => 'Ayrılmış kullanıcı adları',
+    'admin.site.hint.membership_reserved_names' => 'Virgülle ayırın; bu adlarla kimse kayıt olamaz. Sonu * ile biten '
+        . 'ad, onunla başlayan tüm adları ayırır.',
+    'admin.site.field.membership_terms' => 'Üyelik şartları',
+    'admin.site.hint.membership_terms' => 'Kayıtta gösterilir; yeni üyeler kabul etmek zorundadır. Boş bırakılırsa '
+        . 'gösterilmez.',
+    'admin.site.field.membership_questions' => 'Kayıt sorusu',
+    'admin.site.hint.membership_questions' => 'Açık: Yönetim > Kayıt soruları havuzundan rastgele bir soru sorulur (o '
+        . 'dil için soru varsa).',
+    'admin.site.field.membership_birth_date' => 'Kayıtta doğum tarihi',
+    'admin.site.hint.membership_birth_date' => 'Açık: yeni üyeler doğum tarihini girmek zorundadır.',
+    'admin.site.field.membership_birthdays_list' => 'Ana sayfada doğum günleri',
+    'admin.site.hint.membership_birthdays_list' => 'Doğum günü bugün ya da bir hafta içinde olan üyeleri gösterir.',
+    'admin.site.field.membership_member_themes' => 'Üyeler tema seçebilir',
+    'admin.site.hint.membership_member_themes' => 'Açık: üyeler kendi ayarlarında yüklü temalardan birini seçebilir.',
     'admin.site.field.registration_challenge' => 'Kayıtta bot denetimi',
     'admin.site.hint.registration_challenge' => 'İş kanıtı tarayıcıda kendiliğinden çalışır; JavaScript yoksa '
         . 'küçük bir toplama sorusu sorulur.',
@@ -816,4 +831,46 @@ return [
     'admin.dashboard.second_factor_off' => '{count, plural, one {# üyenin} other {# üyenin}} iki adımlı doğrulaması '
         . 'kapalı bir eklentiye ait; eklenti yeniden açılana kadar yalnızca parolayla giriş yapıyorlar.',
     'admin.extensions.settings' => 'Ayarlar',
+    'admin.nav.membership' => 'Üyelik ve gruplar',
+    'admin.membership.title' => 'Üyelik ve gruplar',
+    'admin.membership.intro' => 'Katılma başvuruları, grup liderleri, süreli üyelikler, otomatik terfiler, grup '
+        . 'e-postası ve kayıt soruları. Yerleşik gruplara katılım ve kuralla terfi yapılamaz.',
+    'admin.membership.groups' => 'Özel gruplar',
+    'admin.membership.no_groups' => 'Henüz özel grup yok. Gruplar sayfasından oluşturun.',
+    'admin.membership.members' => '{count} üye',
+    'admin.membership.joinable' => 'Üyeler katılmak için başvurabilir',
+    'admin.membership.description' => 'Kısa açıklama',
+    'admin.membership.leaders' => 'Liderler (başvurulara karar verir)',
+    'admin.membership.username' => 'Kullanıcı adı',
+    'admin.membership.add_leader' => 'Lider ekle',
+    'admin.membership.timed' => 'Süreli üyelikler',
+    'admin.membership.timed_hint' => 'Üyelik seçilen gün kendiliğinden biter (site ziyaret aldıkça arka planda '
+        . 'kontrol edilir).',
+    'admin.membership.until' => '{date} tarihine kadar',
+    'admin.membership.end' => 'Şimdi bitir',
+    'admin.membership.group' => 'Grup',
+    'admin.membership.expires' => 'Bitiş günü',
+    'admin.membership.grant' => 'Ver',
+    'admin.membership.rules' => 'Otomatik terfiler',
+    'admin.membership.rules_hint' => 'Bir kuralın tüm sınırlarına ulaşan üyeler o gruba eklenir. Arka planda küçük '
+        . 'gruplar halinde kontrol edilir; terfi kimseyi çıkarmaz.',
+    'admin.membership.rule' => '{posts} ileti, {days} gün, {reputation} itibar',
+    'admin.membership.min_posts' => 'En az ileti',
+    'admin.membership.min_days' => 'Katılımdan bu yana en az gün',
+    'admin.membership.min_reputation' => 'En az itibar',
+    'admin.membership.add_rule' => 'Kural ekle',
+    'admin.membership.mail' => 'Grup e-postası',
+    'admin.membership.mail_hint' => 'Grubun grup e-postasını kapatmamış etkin üyelerine arka planda küçük gruplar '
+        . 'halinde gönderilir.',
+    'admin.membership.subject' => 'Konu',
+    'admin.membership.body' => 'Mesaj (düz metin)',
+    'admin.membership.send' => 'Kuyruğa al',
+    'admin.membership.job' => '{status}, {sent} gönderildi, {date}',
+    'admin.membership.questions' => 'Kayıt soruları',
+    'admin.membership.questions_hint' => 'Ayar açıkken kayıtta ziyaretçinin dilinden rastgele bir soru sorulur. Kabul '
+        . 'edilen cevapları satır satır ya da | ile ayırın.',
+    'admin.membership.locale' => 'Dil',
+    'admin.membership.question' => 'Soru',
+    'admin.membership.answers' => 'Kabul edilen cevaplar',
+    'admin.membership.add_question' => 'Soru ekle',
 ];

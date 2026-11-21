@@ -1,0 +1,80 @@
+{# Membership (beta.18, G3). Context: title, nav, action, groups (id, name, joinable, description, leaders, members),
+   mail_groups (id, name), timed, rules, mail_jobs, questions, locales, error, notice, fresh, reauth_url, csrf_field,
+   csrf_token. #}
+{% extends 'admin/layout.twig' %}
+
+{% macro hidden(csrf_field, csrf_token) %}<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">{% endmacro %}
+
+{% block admin %}
+{% import _self as m %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('admin.membership.intro') }}</p>
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.site.reauth') }}</a></p>{% endif %}
+
+<h2>{{ t('admin.membership.groups') }}</h2>
+{% if groups is empty %}<p class="hint">{{ t('admin.membership.no_groups') }}</p>{% else %}
+<ul class="panel list">
+{% for group in groups %}<li><b dir="auto">{{ group.name }}</b> <span class="meta">{{ t('admin.membership.members', {count: group.members}) }}</span>
+<form method="post" action="{{ action|safe_url }}">{{ m.hidden(csrf_field, csrf_token) }}<input type="hidden" name="group" value="{{ group.id }}">
+<label><input type="checkbox" name="joinable" value="1"{% if group.joinable %} checked{% endif %}> {{ t('admin.membership.joinable') }}</label>
+<label for="desc-{{ group.id }}">{{ t('admin.membership.description') }}</label>
+<input id="desc-{{ group.id }}" name="description" maxlength="300" value="{{ group.description }}" dir="auto">
+<button class="btn-s" type="submit" name="action" value="group_settings"{% if not fresh %} disabled{% endif %}>{{ t('admin.site.save') }}</button></form>
+<p class="meta">{{ t('admin.membership.leaders') }}</p>
+<ul class="list">{% for leader in group.leaders %}<li><bdi>{{ leader.username }}</bdi>
+<form method="post" action="{{ action|safe_url }}" class="row-end">{{ m.hidden(csrf_field, csrf_token) }}<input type="hidden" name="group" value="{{ group.id }}"><input type="hidden" name="user" value="{{ leader.id }}">
+<button class="btn-s" type="submit" name="action" value="remove_leader"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>{% endfor %}</ul>
+<form method="post" action="{{ action|safe_url }}">{{ m.hidden(csrf_field, csrf_token) }}<input type="hidden" name="group" value="{{ group.id }}">
+<label for="leader-{{ group.id }}">{{ t('admin.membership.username') }}</label>
+<input id="leader-{{ group.id }}" name="username" maxlength="64" required>
+<button class="btn-s" type="submit" name="action" value="add_leader"{% if not fresh %} disabled{% endif %}>{{ t('admin.membership.add_leader') }}</button></form></li>
+{% endfor %}</ul>
+{% endif %}
+
+<h2>{{ t('admin.membership.timed') }}</h2>
+<p class="hint">{{ t('admin.membership.timed_hint') }}</p>
+{% if timed is not empty %}<ul class="panel list">{% for row in timed %}<li><bdi>{{ row.username }}</bdi> · <bdi>{{ row.group }}</bdi> <span class="meta">{{ t('admin.membership.until', {date: row.expires_at}) }}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end">{{ m.hidden(csrf_field, csrf_token) }}<input type="hidden" name="group" value="{{ row.group_id }}"><input type="hidden" name="user" value="{{ row.user_id }}">
+<button class="btn-s" type="submit" name="action" value="end_timed"{% if not fresh %} disabled{% endif %}>{{ t('admin.membership.end') }}</button></form></li>{% endfor %}</ul>{% endif %}
+{% if groups is not empty %}<form method="post" action="{{ action|safe_url }}" class="panel">{{ m.hidden(csrf_field, csrf_token) }}
+<label for="timed-group">{{ t('admin.membership.group') }}</label>
+<select id="timed-group" name="group">{% for group in groups %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}</select>
+<label for="timed-user">{{ t('admin.membership.username') }}</label><input id="timed-user" name="username" maxlength="64" required>
+<label for="timed-expires">{{ t('admin.membership.expires') }}</label><input id="timed-expires" name="expires" type="date" required>
+<button type="submit" name="action" value="grant_timed"{% if not fresh %} disabled{% endif %}>{{ t('admin.membership.grant') }}</button></form>{% endif %}
+
+<h2>{{ t('admin.membership.rules') }}</h2>
+<p class="hint">{{ t('admin.membership.rules_hint') }}</p>
+{% if rules is not empty %}<ul class="panel list">{% for rule in rules %}<li><bdi>{{ rule.group }}</bdi> <span class="meta">{{ t('admin.membership.rule', {posts: rule.min_posts, days: rule.min_days, reputation: rule.min_reputation}) }}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end">{{ m.hidden(csrf_field, csrf_token) }}<input type="hidden" name="id" value="{{ rule.id }}">
+<button class="btn-s" type="submit" name="action" value="delete_rule"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>{% endfor %}</ul>{% endif %}
+{% if groups is not empty %}<form method="post" action="{{ action|safe_url }}" class="panel">{{ m.hidden(csrf_field, csrf_token) }}
+<label for="rule-group">{{ t('admin.membership.group') }}</label>
+<select id="rule-group" name="group">{% for group in groups %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}</select>
+<label for="rule-posts">{{ t('admin.membership.min_posts') }}</label><input id="rule-posts" name="min_posts" type="number" min="0" value="0">
+<label for="rule-days">{{ t('admin.membership.min_days') }}</label><input id="rule-days" name="min_days" type="number" min="0" value="0">
+<label for="rule-rep">{{ t('admin.membership.min_reputation') }}</label><input id="rule-rep" name="min_reputation" type="number" min="0" value="0">
+<button type="submit" name="action" value="add_rule"{% if not fresh %} disabled{% endif %}>{{ t('admin.membership.add_rule') }}</button></form>{% endif %}
+
+<h2>{{ t('admin.membership.mail') }}</h2>
+<p class="hint">{{ t('admin.membership.mail_hint') }}</p>
+<form method="post" action="{{ action|safe_url }}" class="panel">{{ m.hidden(csrf_field, csrf_token) }}
+<label for="mail-group">{{ t('admin.membership.group') }}</label>
+<select id="mail-group" name="group">{% for group in mail_groups %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}</select>
+<label for="mail-subject">{{ t('admin.membership.subject') }}</label><input id="mail-subject" name="subject" maxlength="150" required dir="auto">
+<label for="mail-body">{{ t('admin.membership.body') }}</label><textarea id="mail-body" name="body" rows="8" maxlength="20000" required dir="auto"></textarea>
+<button type="submit" name="action" value="queue_mail"{% if not fresh %} disabled{% endif %}>{{ t('admin.membership.send') }}</button></form>
+{% if mail_jobs is not empty %}<ul class="list">{% for job in mail_jobs %}<li><bdi>{{ job.subject }}</bdi> · <bdi>{{ job.group }}</bdi> <span class="meta">{{ t('admin.membership.job', {status: job.status, sent: job.sent, date: job.created_at}) }}</span></li>{% endfor %}</ul>{% endif %}
+
+<h2>{{ t('admin.membership.questions') }}</h2>
+<p class="hint">{{ t('admin.membership.questions_hint') }}</p>
+{% if questions is not empty %}<ul class="panel list">{% for question in questions %}<li><span class="chip">{{ question.locale }}</span> <bdi>{{ question.question }}</bdi> <span class="meta">{{ question.answers|join(' / ') }}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end">{{ m.hidden(csrf_field, csrf_token) }}<input type="hidden" name="id" value="{{ question.id }}">
+<button class="btn-s" type="submit" name="action" value="delete_question"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>{% endfor %}</ul>{% endif %}
+<form method="post" action="{{ action|safe_url }}" class="panel">{{ m.hidden(csrf_field, csrf_token) }}
+<label for="q-locale">{{ t('admin.membership.locale') }}</label>
+<select id="q-locale" name="locale">{% for locale in locales %}<option value="{{ locale }}">{{ locale }}</option>{% endfor %}</select>
+<label for="q-text">{{ t('admin.membership.question') }}</label><input id="q-text" name="question" maxlength="255" required dir="auto">
+<label for="q-answers">{{ t('admin.membership.answers') }}</label><textarea id="q-answers" name="answers" rows="3" maxlength="1000" required dir="auto"></textarea>
+<button type="submit" name="action" value="add_question"{% if not fresh %} disabled{% endif %}>{{ t('admin.membership.add_question') }}</button></form>
+{% endblock %}

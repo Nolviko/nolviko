@@ -145,7 +145,8 @@ final class MemberOptions
     }
 
     /**
-     * Members whose birthday falls on one of the next `$days` days (today first), whose profile is not private.
+     * Members whose birthday falls on one of the next `$days` days (today first) and whose profile everyone may see,
+     * so one cached list serves guests and members alike.
      *
      * @return list<array{id: int, username: string, day: string, age: ?int}>
      */
@@ -163,7 +164,7 @@ final class MemberOptions
                 'SELECT u.id, u.username, o.birth_date, o.birth_hide_year, o.birth_md FROM member_options o '
                     . 'INNER JOIN users u ON u.id = o.user_id LEFT JOIN member_profiles p ON p.user_id = u.id '
                     . "WHERE o.birth_md IN (?) AND u.status = 'active' "
-                    . "AND (p.user_id IS NULL OR p.visibility <> 'private') ORDER BY u.username LIMIT " . $limit,
+                    . "AND (p.user_id IS NULL OR p.visibility = 'everyone') ORDER BY u.username LIMIT " . $limit,
                 [array_keys($keys)],
                 [ArrayParameterType::INTEGER],
             );

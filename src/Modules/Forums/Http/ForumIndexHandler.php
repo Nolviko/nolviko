@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Forums\Http;
 
+use Closure;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Routing\CoreRoutes;
@@ -39,6 +40,7 @@ final class ForumIndexHandler implements RouteHandler
         private readonly UrlGenerator $urls,
         private readonly ?SiteSettings $settings = null,
         private readonly ?DiscussionFeed $feed = null,
+        private readonly ?Closure $birthdays = null,
     ) {
     }
 
@@ -64,6 +66,12 @@ final class ForumIndexHandler implements RouteHandler
             'search_url' => $this->urls->generate(CoreRoutes::SEARCH),
             'feed_url' => $this->urls->generate(CoreRoutes::FEED_LATEST),
             'forums' => $this->rows($entries, $subject),
+            // beta.18 roadmap 30: cached list of upcoming birthdays (empty when the site setting is off).
+            'birthdays' => array_map(fn(array $row): array => $row + ['url' => $this->urls->generate(
+                CoreRoutes::COMMUNITY,
+                ['section' => 'profile'],
+            ) . '?user=' . $row['id'], 'today' => $row['day'] === gmdate('Y-m-d')], $this->birthdays === null
+                ? [] : ($this->birthdays)()),
         ]);
 
         // Personal (the new-thread links and the scope depend on the reader), so never shared caches.

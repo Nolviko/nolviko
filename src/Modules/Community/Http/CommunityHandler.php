@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Community\Http;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Nolviko\Core\Http\ErrorResponder;
@@ -21,6 +22,7 @@ use Nolviko\Modules\Community\Infrastructure\CommunityRead;
 use Nolviko\Modules\Community\Infrastructure\MemberProfiles;
 use Nolviko\Modules\Community\Infrastructure\MemberStanding;
 use Nolviko\Modules\Community\Infrastructure\PrivateMedia;
+use Nolviko\Modules\Membership\Infrastructure\MemberOptions;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use Nolviko\Modules\Posts\Domain\PostPreview;
 use Nolviko\Modules\Posts\Domain\PostRepository;
@@ -56,6 +58,8 @@ final class CommunityHandler implements RouteHandler
         private readonly ?PostRepository $posts = null,
         private readonly ?ForumVisibility $visibility = null,
         private readonly ?MemberStanding $standing = null,
+        private readonly ?MemberOptions $options = null,
+        private readonly ?Closure $optionChoices = null,
     ) {
     }
 
@@ -91,7 +95,20 @@ final class CommunityHandler implements RouteHandler
                     }
                 }
 
-                $this->actions->run($subject, $posted, $file instanceof UploadedFile ? $file : null);
+                // beta.18 roadmap 27, 28, 30: date and time format, theme and birthday from the settings page.
+                if (($posted['action'] ?? '') === 'options' && $this->options !== null && $actor !== null) {
+                    if (
+                        !$this->csrf->isValid(is_string($posted[CsrfTokens::FIELD] ?? null)
+                        ? $posted[CsrfTokens::FIELD] : '')
+                    ) {
+                        throw new RegistrationRejected(['community_denied']);
+                    }
+
+                    $choices = $this->choices();
+                    $this->options->save($actor, $posted, $choices['themes'], $choices['birthdays']);
+                } else {
+                    $this->actions->run($subject, $posted, $file instanceof UploadedFile ? $file : null);
+                }
 
                 if ($section === 'profile' && ($posted['action'] ?? '') === 'block') {
                     $section = 'settings';
@@ -140,6 +157,10 @@ final class CommunityHandler implements RouteHandler
             'guest_requests' => $this->activity->guestRequests(),
             'may_moderate' => $subject->allows('moderation.profile.manage'),
             'blocks' => $section === 'settings' && $actor !== null ? $this->profiles->blocks($actor) : [],
+            'options' => $section === 'settings' && $actor !== null ? $this->options?->of($actor) : null,
+            'option_choices' => $section === 'settings' && $actor !== null && $this->options !== null
+                ? $this->choices() + ['date_formats' => array_keys(MemberOptions::DATE_FORMATS),
+                    'time_formats' => array_keys(MemberOptions::TIME_FORMATS)] : null,
             'section' => $section, 'actor' => $actor, 'error' => $error, 'user_id' => $user, 'thread_id' => $thread];
 
         try {
@@ -259,5 +280,13 @@ final class CommunityHandler implements RouteHandler
         }
 
         return $response;
+    }
+
+    /** @return array{themes: list<string>, birthdays: bool} */
+    private function choices(): array
+    {
+        $choices = $this->optionChoices === null ? [] : ($this->optionChoices)();
+
+        return ['themes' => $choices['themes'] ?? [], 'birthdays' => (bool) ($choices['birthdays'] ?? false)];
     }
 }

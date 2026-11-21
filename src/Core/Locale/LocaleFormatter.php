@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Core\Locale;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
@@ -42,13 +43,19 @@ final class LocaleFormatter
     /** @var array<string, NumberFormatter> */
     private array $numberFormatters = [];
 
+    /** @var array{date?: ?string, time?: ?string}|null */
+    private ?array $custom = null;
+
     /**
      * @param string $locale Catalog form (`tr`, `pt_BR`).
      * @param string $timeZone IANA name; an unknown one is refused (`time_zone_invalid`).
+     * @param Closure(): array{date: ?string, time: ?string}|null $patterns The member's own date and time patterns
+     *     (beta.18 roadmap 27), read once on first use; null parts keep the language's style.
      */
     public function __construct(
         public readonly string $locale,
         string $timeZone = 'UTC',
+        private readonly ?Closure $patterns = null,
     ) {
         if (!self::isTimeZone($timeZone)) {
             throw new InvalidArgumentException('time_zone_invalid');
@@ -113,6 +120,20 @@ final class LocaleFormatter
     private function format(DateTimeInterface $moment, int $date, int $time, ?string $pattern = null): string
     {
         $local = DateTimeImmutable::createFromInterface($moment)->setTimezone($this->timeZone);
+
+        if ($pattern === null && $this->patterns !== null) {
+            $this->custom ??= ($this->patterns)();
+            $chosenDate = $date !== IntlDateFormatter::NONE ? ($this->custom['date'] ?? null) : null;
+            $chosenTime = $time !== IntlDateFormatter::NONE ? ($this->custom['time'] ?? null) : null;
+
+            if ($chosenDate !== null || $chosenTime !== null) {
+                $pattern = trim(($date !== IntlDateFormatter::NONE ? $chosenDate
+                    ?? $this->stylePattern($date, IntlDateFormatter::NONE) : '') . ' '
+                    . ($time !== IntlDateFormatter::NONE ? $chosenTime
+                    ?? $this->stylePattern(IntlDateFormatter::NONE, $time) : ''));
+            }
+        }
+
         $key = $date . ':' . $time . ':' . ($pattern ?? '');
         $formatter = $this->dateFormatters[$key] ??= new IntlDateFormatter(
             $this->locale,
@@ -124,6 +145,11 @@ final class LocaleFormatter
         );
 
         return (string) $formatter->format($local);
+    }
+
+    private function stylePattern(int $date, int $time): string
+    {
+        return (string) (new IntlDateFormatter($this->locale, $date, $time, $this->timeZone))->getPattern();
     }
 
     private static function style(string $style): int

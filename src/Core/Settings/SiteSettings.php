@@ -30,7 +30,9 @@ final class SiteSettings
     public const DEFAULTS = ['registration.mode' => 'verify', 'registration.challenge' => 'none',
         'home.layout' => 'classic', 'appearance.accent' => 'green', 'gallery.enabled' => 'off',
         'gallery.approval' => 'off', 'api.enabled' => 'on', 'posting.images' => 'off',
-        'seo.indexnow' => 'off', 'limits.search_seconds' => '1', 'limits.message_seconds' => '10'];
+        'seo.indexnow' => 'off', 'limits.search_seconds' => '1', 'limits.message_seconds' => '10',
+        'membership.questions' => 'on', 'membership.birth_date' => 'off', 'membership.birthdays_list' => 'on',
+        'membership.member_themes' => 'off'];
 
     /** Key => [type, limit] (string/email: max length, int: [min, max], enum: options). */
     public const KEYS = [
@@ -75,6 +77,14 @@ final class SiteSettings
         // messages per member; 0 switches the limit off. Empty means the built-in default.
         'limits.search_seconds' => ['int', [0, 60]],
         'limits.message_seconds' => ['int', [0, 600]],
+        // beta.18 roadmap 07, 10, 28, 30, 31: membership options. Reserved names are comma separated, `name*` is a
+        // prefix; terms are plain text with line breaks shown once at registration.
+        'membership.reserved_names' => ['string', 2000],
+        'membership.terms' => ['text', 8000],
+        'membership.questions' => ['enum', ['on', 'off']],
+        'membership.birth_date' => ['enum', ['off', 'on']],
+        'membership.birthdays_list' => ['enum', ['on', 'off']],
+        'membership.member_themes' => ['enum', ['off', 'on']],
     ];
 
     private const CACHE_KEY = 'site-settings-v1';
@@ -291,6 +301,8 @@ final class SiteSettings
         $valid = match ($type) {
             'string' => mb_check_encoding($value, 'UTF-8') && mb_strlen($value) <= $limit
                 && preg_match('/[\x00-\x1F\x7F]/', $value) !== 1,
+            'text' => mb_check_encoding($value, 'UTF-8') && mb_strlen($value) <= $limit
+                && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value) !== 1,
             'email' => strlen($value) <= $limit && filter_var($value, FILTER_VALIDATE_EMAIL) !== false,
             'int' => preg_match('/^[0-9]{1,6}$/D', $value) === 1 && (int) $value >= $limit[0]
                 && (int) $value <= $limit[1],
