@@ -285,11 +285,14 @@ final class TaskRuntime
             };
         }
 
+        // Member notices (and the webhooks and IndexNow pings riding on them) can pile up after busy hours or an
+        // import; the sitemap, password-reset mail, account deletion and exports must not wait behind them.
         $result = (new CooperativeTaskRunner(
             $db,
             new OutboxQueue($db),
             $handlers,
-            $allowed
+            $allowed,
+            ['thread.created', 'post.created', 'post.approved', 'thread.approved'],
         ))->run($limit, $milliseconds);
         $exports->garbageCollect();
         $sitemaps?->collect();

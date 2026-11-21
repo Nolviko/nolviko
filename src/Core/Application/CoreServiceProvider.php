@@ -20,9 +20,9 @@ use Nolviko\Core\Database\ConnectionFactory;
 use Nolviko\Core\Database\ExtensionMigrations;
 use Nolviko\Core\Database\Migration\MigrationRegistry;
 use Nolviko\Core\Database\Migration\SchemaInstaller;
+use Nolviko\Core\Database\PermissionRulesVersion;
 use Nolviko\Core\Database\RateBuckets;
 use Nolviko\Core\Database\UpdatePreparation;
-use Nolviko\Core\Database\VersionCounter;
 use Nolviko\Core\Events\Outbox;
 use Nolviko\Core\Extensions\BeforeHooks;
 use Nolviko\Core\Extensions\ExtensionHandlers;
@@ -716,18 +716,24 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(ResponseCookies::class, static fn(): ResponseCookies => new ResponseCookies());
         $services->factory(
+            PermissionRulesVersion::class,
+            // Read lazily and once per request: only a cache lookup needs the version, and only then the connection.
+            static fn(Closure $connection): PermissionRulesVersion => new PermissionRulesVersion($connection),
+            [new Lazy(Connection::class)],
+        );
+        $services->factory(
             ForumTree::class,
-            static fn(Connection $connection): ForumTree => new DbalForumTree($connection),
-            [Connection::class],
+            static fn(Connection $connection, CacheFactory $caches, PermissionRulesVersion $version): ForumTree
+                => new DbalForumTree($connection, $caches->namespace('permissions'), $version->current(...)),
+            [Connection::class, CacheFactory::class, PermissionRulesVersion::class],
         );
         $services->factory(
             ForumVisibility::class,
-            static fn(CacheFactory $caches, Closure $connection): ForumVisibility => new ForumVisibility(
+            static fn(CacheFactory $caches, PermissionRulesVersion $version): ForumVisibility => new ForumVisibility(
                 $caches->namespace('permissions'),
-                // Read lazily: only a cache lookup needs the version, and only then the connection.
-                static fn(): int => (new VersionCounter($connection()))->current(VersionCounter::PERMISSION_RULES),
+                $version->current(...),
             ),
-            [CacheFactory::class, new Lazy(Connection::class)],
+            [CacheFactory::class, PermissionRulesVersion::class],
         );
         $services->factory(
             PostRepository::class,
@@ -759,9 +765,24 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             PermissionResolver::class,
-            static fn(Connection $connection, PermissionCatalog $catalog, ForumTree $forums): PermissionResolver
-                => new PermissionResolver($catalog, new DbalPermissionRuleStore($connection, $catalog), $forums),
-            [Connection::class, PermissionCatalog::class, ForumTree::class],
+            static fn(
+                Connection $connection,
+                PermissionCatalog $catalog,
+                ForumTree $forums,
+                CacheFactory $caches,
+                PermissionRulesVersion $version,
+            ): PermissionResolver => new PermissionResolver(
+                $catalog,
+                new DbalPermissionRuleStore(
+                    $connection,
+                    $catalog,
+                    $caches->namespace('permissions'),
+                    $version->current(...),
+                ),
+                $forums,
+            ),
+            [Connection::class, PermissionCatalog::class, ForumTree::class, CacheFactory::class,
+                PermissionRulesVersion::class],
         );
         $services->factory(
             PermissionCatalog::class,

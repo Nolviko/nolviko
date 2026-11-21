@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Forums\Infrastructure;
 
+use Closure;
 use Doctrine\DBAL\Connection;
+use Nolviko\Core\Cache\Cache;
 use Nolviko\Modules\Permissions\Domain\ArrayForumTree;
 use Nolviko\Modules\Permissions\Domain\ForumTree;
 
@@ -14,10 +16,18 @@ use Nolviko\Modules\Permissions\Domain\ForumTree;
  */
 final class DbalForumTree implements ForumTree
 {
+    public const CACHE_SECONDS = 300;
+
     private ?ArrayForumTree $tree = null;
 
+    /**
+     * @param Closure(): int|null $version Current VersionCounter::PERMISSION_RULES (forum moves, creation and
+     *     deletion bump it); with $cache the parent map is read from the cache (2026-11-21 benchmark).
+     */
     public function __construct(
         private readonly Connection $connection,
+        private readonly ?Cache $cache = null,
+        private readonly ?Closure $version = null,
     ) {
     }
 
@@ -34,11 +44,22 @@ final class DbalForumTree implements ForumTree
     private function tree(): ArrayForumTree
     {
         if ($this->tree === null) {
-            $parents = [];
-            $rows = $this->connection->fetchAllAssociative('SELECT id, parent_id FROM forums ORDER BY sort_order, id');
+            $key = $this->cache !== null && $this->version !== null ? 'tree.' . ($this->version)() : null;
+            $parents = $key === null ? null : $this->cache?->get($key);
 
-            foreach ($rows as $row) {
-                $parents[(int) $row['id']] = $row['parent_id'] === null ? null : (int) $row['parent_id'];
+            if (!is_array($parents)) {
+                $parents = [];
+                $rows = $this->connection->fetchAllAssociative(
+                    'SELECT id, parent_id FROM forums ORDER BY sort_order, id',
+                );
+
+                foreach ($rows as $row) {
+                    $parents[(int) $row['id']] = $row['parent_id'] === null ? null : (int) $row['parent_id'];
+                }
+
+                if ($key !== null) {
+                    $this->cache?->set($key, $parents, self::CACHE_SECONDS);
+                }
             }
 
             $this->tree = new ArrayForumTree($parents);

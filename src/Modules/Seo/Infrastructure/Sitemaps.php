@@ -29,6 +29,9 @@ final readonly class Sitemaps
     public const BATCH = 1000;
     public const MAX_PAGES = 49999;
 
+    /** `active_slot` of the last completed generation while its successor is built (slot 1 is the current one). */
+    private const PREVIOUS_SLOT = 2;
+
     public function __construct(
         private Connection $db,
         private ForumVisibility $visibility,
@@ -65,7 +68,16 @@ final readonly class Sitemaps
         ) {
             $this->schedule($version);
         }
-        return null;
+
+        // 2026-11-21 (owner: no 503 while a sitemap is rebuilt): the previous completed generation stays in slot 2
+        // and is served until the new one completes, unless the rules or the origin changed since (thread pages are
+        // filtered by the current visibility on every request anyway). Before, every request more than an hour
+        // after the last build answered 503 until a visitor's background batch had rebuilt it.
+        $previous = $this->db->fetchAssociative('SELECT id, token, rules_version, origin_hash, state, '
+            . 'completed_at FROM seo_sitemap_runs WHERE active_slot = ' . self::PREVIOUS_SLOT);
+
+        return $previous !== false && $previous['state'] === 'completed' && $this->matches($previous, $version)
+            ? $previous : null;
     }
 
     private function schedule(int $version): void
@@ -84,7 +96,18 @@ final readonly class Sitemaps
                     return;
                 }
                 if ($row !== false) {
-                    $this->db->update('seo_sitemap_runs', ['active_slot' => null], ['id' => $row['id']]);
+                    // A completed generation for the same rules and origin stays servable until its successor
+                    // completes; anything else is released for garbage collection as before.
+                    $keep = $row['state'] === 'completed' && $this->matches($row, $version);
+                    if ($keep) {
+                        $this->db->executeStatement('UPDATE seo_sitemap_runs SET active_slot = NULL '
+                            . 'WHERE active_slot = ' . self::PREVIOUS_SLOT);
+                    }
+                    $this->db->update(
+                        'seo_sitemap_runs',
+                        ['active_slot' => $keep ? self::PREVIOUS_SLOT : null],
+                        ['id' => $row['id']]
+                    );
                 }
                 $retained = $this->db->fetchFirstColumn('SELECT id FROM seo_sitemap_runs ORDER BY id LIMIT 33');
                 if (count($retained) > 31) {
@@ -137,6 +160,9 @@ final readonly class Sitemaps
         if ($ids === []) {
             $this->db->update('seo_sitemap_runs', ['state' => 'completed',
                 'completed_at' => $this->now()->format('Y-m-d H:i:s.u')], ['id' => $row['id']]);
+            // The new generation replaces the one served meanwhile; that one goes to garbage collection.
+            $this->db->executeStatement('UPDATE seo_sitemap_runs SET active_slot = NULL WHERE active_slot = '
+                . self::PREVIOUS_SLOT);
             $guard();
             return true;
         }

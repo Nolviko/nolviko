@@ -203,6 +203,43 @@ final class SitemapTest extends TestCase
         self::assertSame(2, (int) $this->db->fetchOne('SELECT COUNT(*) FROM seo_sitemap_runs'));
     }
 
+    /** 2026-11-21 (owner): an expired generation keeps being served while its successor is built; no 503. */
+    public function testExpiredGenerationIsServedUntilItsSuccessorCompletes(): void
+    {
+        $first = $this->finish();
+        $this->db->update('seo_sitemap_runs', ['completed_at' => '2026-01-01 00:00:00.000000'], ['id' => $first['id']]);
+
+        $index = $this->maps()->index();
+        self::assertIsString($index, 'the expired generation is still served');
+        self::assertStringContainsString('/sitemaps/' . $first['token'] . '/1.xml', $index);
+        self::assertIsString($this->maps()->threads($first['token'], 1));
+        self::assertSame(2, (int) $this->db->fetchOne('SELECT active_slot FROM seo_sitemap_runs WHERE id = ?', [
+            $first['id'],
+        ]));
+        $second = $this->db->fetchAssociative("SELECT id, token, state FROM seo_sitemap_runs WHERE active_slot = 1");
+        self::assertSame('running', $second['state']);
+
+        for ($iteration = 0; $iteration < 10; ++$iteration) {
+            $maps = $this->maps();
+            (new CooperativeTaskRunner(
+                $this->db,
+                new OutboxQueue($this->db),
+                ['seo.sitemap_requested' => $maps->build(...)],
+                static fn(): bool => true
+            ))->run(1, 5000);
+            $state = $this->db->fetchOne('SELECT state FROM seo_sitemap_runs WHERE id = ?', [$second['id']]);
+            if ($state === 'completed') {
+                break;
+            }
+            $this->db->executeStatement('UPDATE outbox_events SET available_at = CURRENT_TIMESTAMP(6) '
+                . '- INTERVAL \'1\' SECOND WHERE event_type = ?', ['seo.sitemap_requested']);
+        }
+
+        self::assertStringContainsString('/sitemaps/' . $second['token'] . '/1.xml', (string) $this->maps()->index());
+        self::assertNull($this->db->fetchOne('SELECT active_slot FROM seo_sitemap_runs WHERE id = ?', [$first['id']]));
+        self::assertNull($this->maps()->threads($first['token'], 1), 'the replaced generation is no longer served');
+    }
+
     public function testHttpResponsesRemainPrivateRegardlessOfMemberCookie(): void
     {
         $run = $this->finish();

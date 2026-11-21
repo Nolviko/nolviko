@@ -14,11 +14,17 @@ use Throwable;
 final class CooperativeTaskRunner
 {
     /** @param array<string, Closure(OutboxLease, Closure(): void): bool> $handlers Server-owned implementations. */
+    /**
+     * @param list<string> $bulk Handler types that only run when no other registered work is waiting (2026-11-21:
+     *     a backlog of member notices kept the sitemap and password-reset mail waiting for hours, because work was
+     *     claimed strictly in arrival order and visits run at most a few tasks every 15 seconds).
+     */
     public function __construct(
         private readonly Connection $connection,
         private readonly OutboxQueue $queue,
         private readonly array $handlers,
         private readonly Closure $allowed,
+        private readonly array $bulk = [],
     ) {
     }
 
@@ -40,7 +46,11 @@ final class CooperativeTaskRunner
                 break;
             }
 
-            $lease = $this->queue->claim(array_keys($this->handlers));
+            $types = array_keys($this->handlers);
+            $bulk = array_values(array_intersect($types, $this->bulk));
+            $urgent = array_values(array_diff($types, $bulk));
+            $lease = ($urgent === [] ? null : $this->queue->claim($urgent))
+                ?? ($bulk === [] ? null : $this->queue->claim($bulk));
 
             if ($lease === null) {
                 break;

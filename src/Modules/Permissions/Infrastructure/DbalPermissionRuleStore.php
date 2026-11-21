@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Permissions\Infrastructure;
 
+use Closure;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Nolviko\Core\Cache\Cache;
 use Nolviko\Core\Database\SqlDialect;
 use Nolviko\Core\Database\VersionCounter;
 use Nolviko\Modules\Permissions\Domain\ForumModeratorCapabilities;
@@ -21,9 +23,19 @@ use Nolviko\Modules\Permissions\Domain\RuleSnapshot;
  */
 final class DbalPermissionRuleStore implements PermissionRuleStore
 {
+    /** Seconds a cached group rule set may live; every rule change also bumps the version in its key. */
+    public const CACHE_SECONDS = 300;
+
+    /**
+     * @param Closure(): int|null $version Current VersionCounter::PERMISSION_RULES; with $cache, the group part of
+     *     a snapshot (group and group-forum rules, group moderator assignments) is read from the cache. Member
+     *     overrides and member moderator assignments are always read live.
+     */
     public function __construct(
         private readonly Connection $connection,
         private readonly PermissionCatalog $catalog,
+        private readonly ?Cache $cache = null,
+        private readonly ?Closure $version = null,
     ) {
     }
 
@@ -34,10 +46,26 @@ final class DbalPermissionRuleStore implements PermissionRuleStore
         $user = [];
         $userForum = [];
         $moderatorSources = [];
-        $postgres = SqlDialect::postgres($this->connection);
-        $capabilityRows = MysqlModeratorProjection::rows($postgres);
+        $postgres = null;
+        $capabilityRows = null;
+        $cacheKey = null;
+
+        if ($groupIds !== [] && $this->cache !== null && $this->version !== null) {
+            // 2026-11-21 benchmark: the group rules were read with two queries on every member request.
+            $sorted = array_values(array_unique(array_map(intval(...), $groupIds)));
+            sort($sorted);
+            $cacheKey = 'rules.' . ($this->version)() . '.' . implode('-', $sorted);
+            $hit = $this->cache->get($cacheKey);
+
+            if (is_array($hit) && count($hit) === 3) {
+                [$group, $groupForum, $moderatorSources] = $hit;
+                $groupIds = [];
+            }
+        }
 
         if ($groupIds !== []) {
+            $postgres = SqlDialect::postgres($this->connection);
+            $capabilityRows = MysqlModeratorProjection::rows($postgres);
             $parameters = [$groupIds];
             $types = [ArrayParameterType::INTEGER];
             $rows = $this->connection->fetchAllAssociative(
@@ -76,9 +104,15 @@ final class DbalPermissionRuleStore implements PermissionRuleStore
                         ['group:' . $row['usergroup_id']] = true;
                 }
             }
+
+            if ($cacheKey !== null) {
+                $this->cache?->set($cacheKey, [$group, $groupForum, $moderatorSources], self::CACHE_SECONDS);
+            }
         }
 
         if ($userId !== null) {
+            $postgres ??= SqlDialect::postgres($this->connection);
+            $capabilityRows ??= MysqlModeratorProjection::rows($postgres);
             $rows = $this->connection->fetchAllAssociative(
                 'SELECT permission_key, value FROM user_permission_overrides WHERE user_id = ?',
                 [$userId],

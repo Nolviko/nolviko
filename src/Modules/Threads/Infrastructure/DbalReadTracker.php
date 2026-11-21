@@ -28,14 +28,24 @@ final class DbalReadTracker implements ReadTracker
     public function markThread(int $userId, int $threadId, int $lastPostId, DateTimeImmutable $at): void
     {
         $stamp = self::stamp($at);
+        // 2026-11-21 benchmark: write only when the mark moves forward. Before, re-reading a thread without new posts
+        // changed no row, so MySQL reported 0 and the INSERT IGNORE below ran on every view: a committed write whose
+        // foreign-key check waited for the thread row that concurrent replies lock.
         $updated = $this->connection->executeStatement(
-            'UPDATE thread_reads SET last_read_post_id = GREATEST(last_read_post_id, ?), read_at = GREATEST(read_at, ?)'
-                . ' WHERE user_id = ? AND thread_id = ?',
-            [$lastPostId, $stamp, $userId, $threadId],
-            [ParameterType::INTEGER, ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER],
+            'UPDATE thread_reads SET last_read_post_id = ?, read_at = GREATEST(read_at, ?)'
+                . ' WHERE user_id = ? AND thread_id = ? AND last_read_post_id < ?',
+            [$lastPostId, $stamp, $userId, $threadId, $lastPostId],
+            [ParameterType::INTEGER, ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER,
+                ParameterType::INTEGER],
         );
 
-        if ($updated === 0) {
+        $exists = $updated > 0 || $this->connection->fetchOne(
+            'SELECT 1 FROM thread_reads WHERE user_id = ? AND thread_id = ?',
+            [$userId, $threadId],
+            [ParameterType::INTEGER, ParameterType::INTEGER],
+        ) !== false;
+
+        if (!$exists) {
             $this->connection->executeStatement(
                 SqlDialect::insertIgnore(
                     $this->connection,
