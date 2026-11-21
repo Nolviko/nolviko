@@ -7,8 +7,10 @@ namespace Nolviko\Modules\Importers\Infrastructure;
 use Doctrine\DBAL\Connection;
 use InvalidArgumentException;
 use Nolviko\Modules\Importers\Domain\ImportCursor;
+use Nolviko\Modules\Importers\Domain\ImportModelHooks;
 use Nolviko\Modules\Importers\Domain\ImportRecords;
 use Nolviko\Modules\Importers\Domain\ImportText;
+use Nolviko\Modules\Threads\Domain\CreateThread;
 use Nolviko\Modules\Users\Domain\IdentityNormalizer;
 use Nolviko\Modules\Users\Domain\LegacyPassword;
 use RuntimeException;
@@ -16,10 +18,14 @@ use RuntimeException;
 /** Target-only transactional mappings. No source roles, rendered HTML, email side effects or executable uploads. */
 final class ImportWriter
 {
+    /** A forum's access as the source granted it (beta.18): guests and members, listed (view) and topics (read). */
+    public const ACCESS_KEYS = ['guest_view', 'guest_read', 'member_view', 'member_read'];
+
     public function __construct(
         private readonly Connection $db,
         private readonly array $policy = [],
-        private readonly ?ImportAuxWriter $auxiliary = null
+        private readonly ?ImportAuxWriter $auxiliary = null,
+        private readonly ?ImportModelHooks $hooks = null,
     ) {
     }
 
@@ -35,7 +41,6 @@ final class ImportWriter
             return;
         }
         $now = gmdate('Y-m-d H:i:s') . '.000000';
-        $slug = 'import-' . $job . '-' . $phase . '-' . $id;
         $meta = [];
         $parent = null;
         if (!in_array($phase, ImportRecords::CORE_PHASES, true)) {
@@ -48,13 +53,18 @@ final class ImportWriter
             $target = 0;
             $meta['reason'] = 'system_identity';
         } elseif ($phase === 'groups') {
-            $this->db->insert('usergroups', ['slug' => $slug, 'name' => self::text($row['name'], 100),
+            $name = self::text($row['name'], 100);
+            $this->db->insert('usergroups', ['slug' => $this->uniqueSlug('usergroups', $name, 64, 'group', $id),
+                'name' => $name,
                 'built_in' => 0, 'created_at' => $now, 'updated_at' => $now]);
             $target = (int) $this->db->lastInsertId();
         } elseif ($phase === 'users' && isset($this->policy['user_map'][(string) $id])) {
             $target = (int) $this->policy['user_map'][(string) $id];
             $email = $this->db->fetchOne('SELECT email_normalized FROM users WHERE id = ?', [$target]);
-            if (!is_string($email) || $email !== IdentityNormalizer::email((string) $row['email'])) {
+            // The old forum's own administrator may be linked to the importing owner even when the addresses
+            // differ (beta.18): the source marks such an account, and the owner alone can be the target.
+            $owner = (bool) ($row['source_admin'] ?? false);
+            if (!is_string($email) || (!$owner && $email !== IdentityNormalizer::email((string) $row['email']))) {
                 throw new RuntimeException('import_existing_user_map_denied');
             }
             $meta['reason'] = 'existing_owner_explicitly_linked';
@@ -112,12 +122,15 @@ final class ImportWriter
         } elseif ($phase === 'forums' || $phase === 'categories') {
             $category = $phase === 'categories' || ($engine === 'mybb' && ($row['kind'] ?? '') === 'c')
                 || ($engine === 'phpbb' && (int) ($row['kind'] ?? 1) === 0);
+            $title = self::text($row['name'], 200);
             $this->db->insert('forums', ['type' => $category ? 'category' : 'forum',
-                'title' => self::text($row['name'], 200), 'description' => self::text($row['description'] ?? '', 10000),
-                'slug' => $slug, 'sort_order' => (int) ($row['sort'] ?? 0),
+                'title' => $title, 'description' => self::text($row['description'] ?? '', 10000),
+                'slug' => $this->uniqueSlug('forums', $title, 100, $category ? 'category' : 'forum', $id),
+                'sort_order' => (int) ($row['sort'] ?? 0),
                 'created_at' => $now, 'updated_at' => $now]);
             $target = (int) $this->db->lastInsertId();
-            $meta = ['parent' => (int) ($row['parent'] ?? 0), 'category' => (int) ($row['category'] ?? 0)];
+            $meta = ['parent' => (int) ($row['parent'] ?? 0), 'category' => (int) ($row['category'] ?? 0)]
+                + $this->access($row, $target);
             $groups = $this->db->fetchFirstColumn('SELECT id FROM usergroups ORDER BY id LIMIT 257');
             if (count($groups) > 256) {
                 throw new RuntimeException('import_group_budget');
@@ -142,7 +155,8 @@ final class ImportWriter
             $status = self::status($row['visible']);
             $this->db->insert('threads', ['forum_id' => $forum,
                 'user_id' => $this->mapped($job, 'users', (int) $row['user']),
-                'title' => self::text($row['name'], 255), 'slug' => $slug, 'status' => $status,
+                'title' => self::text($row['name'], 255), 'slug' => CreateThread::slug((string) $row['name']),
+                'status' => $status,
                 'is_locked' => (int) ((int) $row['locked'] > 0), 'is_sticky' => (int) ((int) $row['sticky'] > 0),
                 'created_at' => ImportText::timestamp($row['time']), 'updated_at' => $now]);
             $target = (int) $this->db->lastInsertId();
@@ -167,6 +181,13 @@ final class ImportWriter
             $this->db->insert('posts', ['thread_id' => $threadId, 'user_id' => $user, 'content' => $body,
                 'content_format' => 'bbcode', 'status' => $status, 'created_at' => $created, 'updated_at' => $now]);
             $target = (int) $this->db->lastInsertId();
+            $icon = (string) ($row['icon'] ?? '');
+            if ($icon !== '' && $icon !== '0' && preg_match('/^[A-Za-z0-9_.-]{1,40}$/D', $icon) === 1) {
+                $meta['icon'] = $icon;
+                if ($this->hooks?->supports(ImportModelHooks::POST_ICON) === true) {
+                    $this->hooks->apply(ImportModelHooks::POST_ICON, $target, ['icon' => $icon]);
+                }
+            }
             if ($first) {
                 $this->db->update('threads', ['first_post_id' => $target], ['id' => $threadId]);
             }
@@ -214,8 +235,10 @@ final class ImportWriter
         if ($this->entry($job, 'forums', $key) !== false) {
             return;
         }
+        // Global announcements' forum: staff only, as nothing in the source grants it to anyone.
         $row = ['id' => 0, '_key' => $key, 'name' => 'phpBB', 'parent' => 0, 'kind' => 1,
-            'description' => '', 'sort' => 0];
+            'description' => '', 'sort' => 0, 'guest_view' => 0, 'guest_read' => 0, 'member_view' => 0,
+            'member_read' => 0];
         $this->write($job, 'forums', $row, 'phpbb');
     }
 
@@ -384,6 +407,74 @@ final class ImportWriter
             throw new RuntimeException('import_text_invalid');
         }
         return $value;
+    }
+
+    /**
+     * Who may see and read an imported forum once the import is published (beta.18), from the source's own
+     * permissions: guests and members each `view` (listed) and `read` (topics), plus the source groups (`readers`,
+     * comma-separated source group IDs) that may read a forum members cannot. A record without these fields (an
+     * older source) stays as before: the forum follows its parent and the site default. A forum the old site
+     * protected with a password becomes staff only unless the password-forum mapping is wired.
+     *
+     * @return array<string, mixed> meta fields `access`, `readers`, `reason`
+     */
+    private function access(array $row, int $forum): array
+    {
+        $meta = [];
+        if (array_diff(self::ACCESS_KEYS, array_keys($row)) === []) {
+            $access = [];
+            foreach (self::ACCESS_KEYS as $key) {
+                $access[$key] = (int) $row[$key] > 0 ? 1 : 0;
+            }
+            // Reading needs seeing; guests never get more than members.
+            $access['member_read'] &= $access['member_view'];
+            $access['guest_view'] &= $access['member_view'];
+            $access['guest_read'] &= $access['guest_view'] & $access['member_read'];
+            $meta['access'] = $access;
+            $readers = [];
+            foreach (explode(',', (string) ($row['readers'] ?? '')) as $group) {
+                if (preg_match('/^[1-9][0-9]{0,8}$/D', $group) === 1 && count($readers) < 64) {
+                    $readers[] = (int) $group;
+                }
+            }
+            $meta['readers'] = array_values(array_unique($readers));
+        }
+        if ((int) ($row['protected'] ?? 0) > 0) {
+            if ($this->hooks?->supports(ImportModelHooks::FORUM_PASSWORD) === true) {
+                $this->hooks->apply(ImportModelHooks::FORUM_PASSWORD, $forum, ['protected' => true]);
+            } else {
+                $meta['access'] = array_fill_keys(self::ACCESS_KEYS, 0);
+                $meta['readers'] = [];
+                $meta['reason'] = 'password_forum_staff_only';
+            }
+        }
+        $link = (string) ($row['link'] ?? '');
+        if ($link !== '') {
+            $valid = strlen($link) <= 2000 && preg_match('~^https?://[^\s"<>]+$~iD', $link) === 1;
+            if ($valid && $this->hooks?->supports(ImportModelHooks::FORUM_LINK) === true) {
+                $this->hooks->apply(ImportModelHooks::FORUM_LINK, $forum, ['url' => $link]);
+            } else {
+                $meta['reason'] ??= 'link_forum_as_forum';
+            }
+        }
+        return $meta;
+    }
+
+    /** A free slug from a title for a table with unique slugs; a random suffix when the plain ones are taken. */
+    private function uniqueSlug(string $table, string $title, int $length, string $fallback, int $id): string
+    {
+        $base = CreateThread::slug($title);
+        if ($base === 'thread' && stripos($title, 'thread') === false) {
+            $base = $fallback;
+        }
+        $base = rtrim(substr($base, 0, $length - 8), '-');
+        for ($try = 1; $try <= 12; ++$try) {
+            $slug = $try === 1 ? $base : $base . '-' . $try;
+            if ($this->db->fetchOne('SELECT 1 FROM ' . $table . ' WHERE slug = ?', [$slug]) === false) {
+                return $slug;
+            }
+        }
+        return substr($base, 0, $length - 20) . '-' . $id . '-' . bin2hex(random_bytes(3));
     }
 
     /** The source's fingerprint of the raw row (contract 1); rows the target makes itself are hashed here. */

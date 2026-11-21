@@ -8,6 +8,9 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Nolviko\Core\Database\VersionCounter;
+use Nolviko\Modules\Groups\Domain\BuiltInGroup;
+use Nolviko\Modules\Importers\Domain\ImportCursor;
+use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use RuntimeException;
 use Throwable;
 
@@ -144,8 +147,13 @@ final readonly class ImportJobs
     }
     /**
      * The owner's decision to open a verified import: imported forums drop the "never view" rules the import put
-     * on them (they then follow their parent and the site default), and when asked, imported members whose
-     * passwords carried over can sign in. Members who must reset their password stay as they are.
+     * on them, and when asked, imported members whose passwords carried over can sign in. Members who must reset
+     * their password stay as they are.
+     *
+     * Since beta.18 a forum keeps the access the old forum gave it: where the source let guests or members see or
+     * read less than everyone, the forum gets the same group rules the forum screen's presets use (0 = no, so staff
+     * grants still work); a forum nobody but some groups could read becomes staff only plus those groups. A forum
+     * open to everyone, or imported by an older source, follows its parent and the site default as before.
      */
     public function publish(string $job, bool $activateMembers): array
     {
@@ -172,6 +180,7 @@ final readonly class ImportJobs
                     [ArrayParameterType::INTEGER]
                 );
             }
+            $restricted = $this->restrict($job);
             $members = 0;
             if ($activateMembers) {
                 $after = '';
@@ -192,9 +201,78 @@ final readonly class ImportJobs
             }
             $this->db->update('import_jobs', ['published_at' => gmdate('Y-m-d H:i:s') . '.000000'], ['id' => $job]);
             VersionCounter::bump($this->db, VersionCounter::PERMISSION_RULES);
-            return ['forums' => count($forums), 'rules' => $opened, 'members' => $members];
+            return ['forums' => count($forums), 'rules' => $opened, 'restricted' => $restricted,
+                'members' => $members];
         });
     }
+    /**
+     * Writes the source's forum access (ImportWriter meta `access`, `readers`) as group rules; returns how many
+     * forums got rules. Runs inside publish()'s transaction.
+     */
+    private function restrict(string $job): int
+    {
+        $restricted = 0;
+        $after = '';
+        do {
+            $rows = $this->db->fetchAllAssociative("SELECT source_id, target_id, meta_json FROM import_map "
+                . "WHERE job_id = ? AND entity IN ('forums', 'categories') AND target_id <> '0' AND source_id > ? "
+                . 'ORDER BY source_id LIMIT 500', [$job, $after]);
+            foreach ($rows as $row) {
+                $after = (string) $row['source_id'];
+                $meta = json_decode((string) $row['meta_json'], true, 8, JSON_THROW_ON_ERROR);
+                $rules = self::rules($meta, $job, $this->db);
+                if ($rules === []) {
+                    continue;
+                }
+                ++$restricted;
+                foreach ($rules as [$group, $key, $value]) {
+                    $where = ['forum_id' => (int) $row['target_id'], 'usergroup_id' => $group,
+                        'permission_key' => $key];
+                    $this->db->delete('forum_permissions', $where);
+                    $this->db->insert('forum_permissions', $where + ['value' => $value]);
+                }
+            }
+        } while (count($rows) === 500);
+        return $restricted;
+    }
+
+    /**
+     * Group rules for one imported forum: [group, key, '1' or '0'].
+     *
+     * @return list<array{int, string, string}>
+     */
+    private static function rules(mixed $meta, string $job, Connection $db): array
+    {
+        $access = is_array($meta) ? ($meta['access'] ?? null) : null;
+        if (!is_array($access) || !in_array(0, $access, true)) {
+            return [];
+        }
+        $rules = [];
+        $classes = [BuiltInGroup::Guests->value => 'guest', BuiltInGroup::Registered->value => 'member'];
+        foreach ($classes as $group => $class) {
+            $rules[] = [$group, ForumVisibility::VIEW, (int) ($access[$class . '_view'] ?? 0) === 1 ? '1' : '0'];
+            $rules[] = [$group, ForumVisibility::READ, (int) ($access[$class . '_read'] ?? 0) === 1 ? '1' : '0'];
+        }
+        if ((int) ($access['member_read'] ?? 0) === 1) {
+            return $rules;
+        }
+        $readers = [BuiltInGroup::Moderators->value, BuiltInGroup::Administrators->value];
+        foreach (array_slice((array) ($meta['readers'] ?? []), 0, 64) as $source) {
+            $mapped = is_int($source) ? $db->fetchOne(
+                "SELECT target_id FROM import_map WHERE job_id = ? AND entity = 'groups' AND source_id = ?",
+                [$job, ImportCursor::key([$source])]
+            ) : false;
+            if (is_string($mapped) && $mapped !== '0') {
+                $readers[] = (int) $mapped;
+            }
+        }
+        foreach (array_unique($readers) as $group) {
+            $rules[] = [$group, ForumVisibility::VIEW, '1'];
+            $rules[] = [$group, ForumVisibility::READ, '1'];
+        }
+        return $rules;
+    }
+
     private function stored(string $job): array
     {
         self::id($job);

@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Importers\Domain;
 
-/** Fixed legacy endpoint grammar. No host, destination URL or arbitrary redirect parameter is accepted. */
+/**
+ * Fixed legacy endpoint grammar. No host, destination URL or arbitrary redirect parameter is accepted.
+ *
+ * SMF writes its own addresses with `;` between parameters (`index.php?action=dlattach;topic=5.0;attach=3`), which
+ * PHP reads as one parameter; those are split here (beta.18). `index.php?msg=N` is SMF's short post address.
+ */
 final class LegacyLink
 {
     public static function parse(string $engine, string $path, array $query): ?array
@@ -12,12 +17,16 @@ final class LegacyLink
         $entity = null;
         $value = null;
         if ($engine === 'smf' && $path === 'index.php') {
+            $query = self::smfQuery($query);
             if (($query['action'] ?? null) === 'dlattach') {
                 $entity = 'attachments';
                 $value = $query['attach'] ?? null;
             } elseif (($query['action'] ?? null) === 'profile') {
                 $entity = 'users';
                 $value = $query['u'] ?? null;
+            } elseif (is_string($query['msg'] ?? null) && !isset($query['topic'])) {
+                $entity = 'posts';
+                $value = $query['msg'];
             } elseif (is_string($query['topic'] ?? null)) {
                 if (
                     preg_match(
@@ -60,5 +69,36 @@ final class LegacyLink
             return null;
         }
         return ['entity' => $entity, 'source' => (int) $value];
+    }
+
+    /**
+     * SMF's `;`-separated parameters as separate ones; a parameter given with `&` as well keeps its first value.
+     * At most 16 parameters are read.
+     *
+     * @param array<array-key, mixed> $query
+     * @return array<string, mixed>
+     */
+    private static function smfQuery(array $query): array
+    {
+        $result = [];
+        $count = 0;
+        foreach ($query as $key => $value) {
+            $parts = is_string($value) ? explode(';', $value) : [$value];
+            $first = array_shift($parts);
+            $pairs = [[(string) $key, $first]];
+            foreach ($parts as $part) {
+                [$name, $item] = array_pad(explode('=', (string) $part, 2), 2, '');
+                $pairs[] = [$name, $item];
+            }
+            foreach ($pairs as [$name, $item]) {
+                if (++$count > 16) {
+                    return $result;
+                }
+                if ($name !== '' && !array_key_exists($name, $result)) {
+                    $result[$name] = $item;
+                }
+            }
+        }
+        return $result;
     }
 }
