@@ -20,7 +20,11 @@ use Throwable;
  */
 final readonly class MemberStanding
 {
-    public const KINDS = ['text', 'url'];
+    /** Field kinds; `choice` (roadmap 22) stores the ID of an administrator-defined option, never its label. */
+    public const KINDS = ['text', 'url', 'choice'];
+
+    /** Options a choice field may have. */
+    public const MAX_OPTIONS = 50;
 
     /** Rank colour => chip class (theme.css), the same set as thread prefixes. */
     public const COLORS = ['neutral' => 'chip', 'accent' => 'chip chip-new', 'blue' => 'chip chip-blue',
@@ -44,17 +48,114 @@ final readonly class MemberStanding
     {
     }
 
-    /** @return list<array{id: int, label: string, kind: string}> */
+    /**
+     * Fields in creation order. `required` (roadmap 21) and choice `options` (roadmap 22) come from migration 0070;
+     * before it they are false and empty.
+     *
+     * @return list<array{id: int, label: string, kind: string, required: bool,
+     *     options: list<array{id: int, label: string}>}>
+     */
     public function fields(): array
     {
         try {
-            $rows = $this->db->fetchAllAssociative('SELECT id, label, kind FROM profile_fields ORDER BY id LIMIT 50');
+            $rows = $this->db->fetchAllAssociative(
+                'SELECT id, label, kind, required FROM profile_fields ORDER BY id LIMIT 50',
+            );
         } catch (Throwable) {
-            return [];
+            try {
+                $rows = $this->db->fetchAllAssociative(
+                    'SELECT id, label, kind, 0 AS required FROM profile_fields ORDER BY id LIMIT 50',
+                );
+            } catch (Throwable) {
+                return [];
+            }
+        }
+
+        $options = [];
+
+        if (in_array('choice', array_column($rows, 'kind'), true)) {
+            try {
+                $list = $this->db->fetchAllAssociative('SELECT id, field_id, label FROM profile_field_options '
+                    . 'ORDER BY field_id, position, id LIMIT 2500');
+            } catch (Throwable) {
+                $list = [];
+            }
+
+            foreach ($list as $option) {
+                $options[(int) $option['field_id']][] = ['id' => (int) $option['id'],
+                    'label' => (string) $option['label']];
+            }
         }
 
         return array_map(static fn(array $row): array => ['id' => (int) $row['id'], 'label' => (string) $row['label'],
-            'kind' => (string) $row['kind']], $rows);
+            'kind' => (string) $row['kind'], 'required' => (bool) $row['required'],
+            'options' => $options[(int) $row['id']] ?? []], $rows);
+    }
+
+    /**
+     * What a profile shows for a stored value: a choice field's option label (an option removed later shows
+     * nothing), any other value as it is.
+     *
+     * @param array{kind: string, options: list<array{id: int, label: string}>} $field
+     */
+    public static function display(array $field, string $value): string
+    {
+        if ($field['kind'] !== 'choice') {
+            return $value;
+        }
+
+        foreach ($field['options'] as $option) {
+            if ((string) $option['id'] === $value) {
+                return $option['label'];
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Labels of required fields the member has not filled in yet (roadmap 21: asked on the next profile edit, so
+     * making a field required later never locks anyone out).
+     *
+     * @return list<string>
+     */
+    public function missingRequired(int $userId): array
+    {
+        $values = $this->values($userId);
+        $missing = [];
+
+        foreach ($this->fields() as $field) {
+            if ($field['required'] && self::display($field, $values[$field['id']] ?? '') === '') {
+                $missing[] = $field['label'];
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Required fields must be filled in and a choice must name one of the field's options.
+     *
+     * @param list<array{id: int, label: string, kind: string, required: bool,
+     *     options: list<array{id: int, label: string}>}> $fields
+     * @param array<string, mixed> $input `field_<id>` values.
+     *
+     * @throws RegistrationRejected `community_invalid`, `profile_field_required:<label>`.
+     */
+    public static function check(array $fields, array $input): void
+    {
+        foreach ($fields as $field) {
+            $raw = $input['field_' . $field['id']] ?? '';
+            $value = is_string($raw) ? trim($raw) : '';
+
+            if ($field['kind'] === 'choice' && $value !== '' && self::display($field, $value) === '') {
+                throw new RegistrationRejected(['community_invalid']);
+            }
+
+            if ($field['required'] && $value === '') {
+                throw new RegistrationRejected(['profile_field_required:' . $field['label']]);
+            }
+        }
     }
 
     /** @return array<int, string> Field ID => value. */
@@ -83,7 +184,8 @@ final readonly class MemberStanding
      *
      * @param array<string, mixed> $input
      *
-     * @throws RegistrationRejected `community_invalid` for an address that is not http(s).
+     * @throws RegistrationRejected `community_invalid` for an address that is not http(s) or an unknown option,
+     *     `profile_field_required:<label>` for an empty required field.
      */
     public function saveValues(int $userId, array $input): void
     {
@@ -92,6 +194,8 @@ final readonly class MemberStanding
         if ($fields === []) {
             return;
         }
+
+        self::check($fields, $input);
 
         $values = [];
 
@@ -264,15 +368,66 @@ final readonly class MemberStanding
         return ['threads' => $threads, 'last_seen' => is_string($seen) ? $seen : null];
     }
 
-    public function addField(string $label, string $kind): void
+    /**
+     * @param list<string> $options Choice labels (roadmap 22), in the order shown; each gets its own stable ID.
+     *
+     * @throws RegistrationRejected `community_invalid`.
+     */
+    public function addField(string $label, string $kind, bool $required = false, array $options = []): void
     {
         $label = CommunityAccess::text($label, 60);
+        $options = array_values(array_unique(array_filter(array_map(
+            static fn(string $option): string => CommunityAccess::text($option, 100),
+            $options,
+        ), static fn(string $option): bool => $option !== '')));
 
-        if ($label === '' || !in_array($kind, self::KINDS, true)) {
+        if (
+            $label === '' || !in_array($kind, self::KINDS, true) || count($options) > self::MAX_OPTIONS
+            || ($kind === 'choice' && $options === [])
+        ) {
             throw new RegistrationRejected(['community_invalid']);
         }
 
-        $this->db->insert('profile_fields', ['label' => $label, 'kind' => $kind, 'created_at' => self::now()]);
+        $this->db->transactional(static function (Connection $db) use ($label, $kind, $required, $options): void {
+            $row = ['label' => $label, 'kind' => $kind, 'created_at' => self::now()];
+            $db->insert('profile_fields', $required ? $row + ['required' => 1] : $row);
+            $field = (int) $db->lastInsertId();
+
+            foreach ($kind === 'choice' ? $options : [] as $position => $option) {
+                $db->insert('profile_field_options', ['field_id' => $field, 'label' => $option,
+                    'position' => $position]);
+            }
+        });
+    }
+
+    /** Makes a field required or optional (roadmap 21); members are asked on their next profile edit. */
+    public function setRequired(int $id, bool $required): void
+    {
+        $this->db->update('profile_fields', ['required' => $required ? 1 : 0], ['id' => $id]);
+    }
+
+    /** @throws RegistrationRejected `community_invalid`. */
+    public function addOption(int $fieldId, string $label): void
+    {
+        $label = CommunityAccess::text($label, 100);
+        $field = $this->db->fetchOne("SELECT id FROM profile_fields WHERE id = ? AND kind = 'choice'", [$fieldId]);
+        $count = (int) $this->db->fetchOne(
+            'SELECT COUNT(*) FROM profile_field_options WHERE field_id = ?',
+            [$fieldId],
+        );
+
+        if ($label === '' || $field === false || $count >= self::MAX_OPTIONS) {
+            throw new RegistrationRejected(['community_invalid']);
+        }
+
+        $this->db->insert('profile_field_options', ['field_id' => $fieldId, 'label' => $label,
+            'position' => $count]);
+    }
+
+    /** Removes an option; members who chose it show nothing for that field until they choose again. */
+    public function deleteOption(int $id): void
+    {
+        $this->db->delete('profile_field_options', ['id' => $id]);
     }
 
     /** @throws RegistrationRejected `community_invalid`. */

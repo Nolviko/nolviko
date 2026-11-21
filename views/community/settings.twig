@@ -4,8 +4,16 @@
 <p><label>{{ t('community.biography') }}<textarea name="biography" maxlength="4000">{{ profile.biography }}</textarea></label></p>
 <p><label>{{ t('community.location') }}<input name="location" maxlength="120" value="{{ profile.location }}"></label></p>
 <p><label>{{ t('community.signature') }}<textarea name="signature" maxlength="1000">{{ profile.signature }}</textarea></label></p>
+{% if missing_fields|default([]) is not empty %}<p role="status">{{ t('community.fields_missing', {fields: missing_fields|join(', ')}) }}</p>{% endif %}
 {% for field in profile_fields|default([]) %}
-<p><label>{{ field.label }}<input name="field_{{ field.id }}" maxlength="255" value="{{ field.value }}"{% if field.kind == 'url' %} type="url" inputmode="url"{% endif %} dir="auto"></label></p>
+{% if field.kind == 'choice' %}
+<p><label>{{ field.label }}{% if field.required|default(false) %} {{ t('community.field_required') }}{% endif %}<select name="field_{{ field.id }}"{% if field.required|default(false) %} required{% endif %}>
+<option value="">{{ t('community.field_none') }}</option>
+{% for option in field.options|default([]) %}<option value="{{ option.id }}"{% if field.value == option.id ~ '' %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select></label></p>
+{% else %}
+<p><label>{{ field.label }}{% if field.required|default(false) %} {{ t('community.field_required') }}{% endif %}<input name="field_{{ field.id }}" maxlength="255" value="{{ field.value }}"{% if field.kind == 'url' %} type="url" inputmode="url"{% endif %}{% if field.required|default(false) %} required{% endif %} dir="auto"></label></p>
+{% endif %}
 {% endfor %}
 <p>{{ t('community.plain_text') }}</p>
 <p><label>{{ t('community.visibility') }}<select name="visibility">

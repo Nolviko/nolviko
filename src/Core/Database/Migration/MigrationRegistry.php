@@ -35,6 +35,7 @@ use Nolviko\Modules\Permissions\Infrastructure\PermissionRulesTable;
 use Nolviko\Modules\Permissions\Infrastructure\PermissionsTable;
 use Nolviko\Modules\Posts\Infrastructure\PostsRenderedHtmlColumn;
 use Nolviko\Modules\Posts\Infrastructure\PostsTable;
+use Nolviko\Modules\Membership\Infrastructure\MembershipTables;
 use Nolviko\Modules\Posts\Infrastructure\RepliesTable;
 use Nolviko\Modules\Search\Infrastructure\SearchIndex;
 use Nolviko\Modules\Seo\Infrastructure\SeoTables;
@@ -159,6 +160,7 @@ final class MigrationRegistry
             new SecondFactorTables(),
             new ExternalIdentityTable(),
             new ImportPanelTables(),
+            new MembershipTables(),
         ]);
     }
 

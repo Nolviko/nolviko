@@ -20,8 +20,10 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * `/admin/profile-fields` (2026-11-08): custom profile fields (text or link) members fill in their settings, and
- * post-count ranks shown on profiles and next to posts. Fresh administrator session required; audited.
+ * `/admin/profile-fields` (2026-11-08): custom profile fields (text, link or choice) members fill in their settings,
+ * and post-count ranks shown on profiles and next to posts. A required field (roadmap 21) is asked at registration
+ * and on a member's next profile edit; a choice field (roadmap 22) keeps option IDs apart from their labels.
+ * Fresh administrator session required; audited.
  */
 final readonly class MemberExtrasAdminHandler implements RouteHandler
 {
@@ -59,7 +61,18 @@ final readonly class MemberExtrasAdminHandler implements RouteHandler
                 try {
                     $action = $text('action');
                     match ($action) {
-                        'add_field' => $this->standing->addField($text('label'), $text('kind')),
+                        'add_field' => $this->standing->addField(
+                            $text('label'),
+                            $text('kind'),
+                            $text('required') === '1',
+                            preg_split('/\R/u', $text('options')) ?: [],
+                        ),
+                        'require_field', 'optional_field' => $this->standing->setRequired(
+                            (int) $text('id'),
+                            $action === 'require_field',
+                        ),
+                        'add_option' => $this->standing->addOption((int) $text('id'), $text('option')),
+                        'delete_option' => $this->standing->deleteOption((int) $text('id')),
                         'add_rank' => $this->standing->addRank(
                             $text('title'),
                             ctype_digit($text('min_posts')) ? (int) $text('min_posts') : -1,

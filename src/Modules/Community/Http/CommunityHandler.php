@@ -120,7 +120,9 @@ final class CommunityHandler implements RouteHandler
                 return $this->errors->notFound();
             }
 
-            $error = $this->translator->translate('diagnostics.' . $failure->diagnostics[0]);
+            // `id:field` diagnostics (a required profile field, roadmap 21) name the field in the message.
+            [$id, $field] = explode(':', $failure->diagnostics[0], 2) + [1 => ''];
+            $error = $this->translator->translate('diagnostics.' . $id, ['field' => $field]);
             $status = 422;
         } catch (RegistrationThrottled $failure) {
             $error = $this->translator->translate('diagnostics.account_wait', ['seconds' => $failure->seconds]);
@@ -177,10 +179,15 @@ final class CommunityHandler implements RouteHandler
                 // Standing and custom fields (2026-11-08).
                 if ($this->standing !== null) {
                     $values = $this->standing->values($target);
+                    // A choice field stores an option ID and shows its label (roadmap 22).
                     $context['profile_fields'] = array_map(
-                        static fn(array $field): array => $field + ['value' => $values[$field['id']] ?? ''],
+                        static fn(array $field): array => $field + ['value' => $values[$field['id']] ?? '',
+                            'display' => MemberStanding::display($field, $values[$field['id']] ?? '')],
                         $this->standing->fields(),
                     );
+                    // Required fields still empty (roadmap 21) are asked here, never at sign-in.
+                    $context['missing_fields'] = $section === 'settings' && $actor !== null
+                        ? $this->standing->missingRequired($actor) : [];
 
                     if ($section === 'profile') {
                         $standing = $this->standing->standing([$target])[$target]

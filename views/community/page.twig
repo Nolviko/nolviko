@@ -59,9 +59,9 @@
 {% if joined_at|default(null) %}<div><dt>{{ t('community.stat_joined') }}</dt><dd>{{ joined_at|format_date }}</dd></div>{% endif %}
 {% if last_seen|default(null) %}<div><dt>{{ t('community.stat_seen') }}</dt><dd>{{ last_seen|format_datetime }}</dd></div>{% endif %}
 </dl>{% endif %}
-{% set filled = profile_fields|default([])|filter(field => field.value) %}
+{% set filled = profile_fields|default([])|filter(field => field.display|default(field.value)) %}
 {% if filled is not empty %}
-<dl class="panel-pad profile-fields">{% for field in filled %}<dt dir="auto">{{ field.label }}</dt><dd dir="auto">{% if field.kind == 'url' %}<a href="{{ field.value|safe_url }}" rel="nofollow ugc noopener">{{ field.value }}</a>{% else %}{{ field.value }}{% endif %}</dd>{% endfor %}</dl>
+<dl class="panel-pad profile-fields">{% for field in filled %}<dt dir="auto">{{ field.label }}</dt><dd dir="auto">{% if field.kind == 'url' %}<a href="{{ field.value|safe_url }}" rel="nofollow ugc noopener">{{ field.value }}</a>{% else %}{{ field.display|default(field.value) }}{% endif %}</dd>{% endfor %}</dl>
 {% endif %}
 {% if profile.biography or profile.signature %}
 <div class="panel-pad">
