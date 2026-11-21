@@ -13,6 +13,7 @@ use Nolviko\Core\Config\RegistrationRules;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
+use Nolviko\Core\Mail\StoredMailSettings;
 use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
@@ -97,6 +98,11 @@ final readonly class SiteSettingsHandler implements RouteHandler
         $fields = [];
 
         foreach (SiteSettings::KEYS as $key => [$type, $limit]) {
+            // The SMTP block has its own page, Admin > Outgoing mail (ADR-034 amendment 2026-11-21).
+            if (in_array($key, StoredMailSettings::SMTP_KEYS, true)) {
+                continue;
+            }
+
             $fields[] = [
                 'key' => $key,
                 'id' => 'setting-' . str_replace('.', '-', $key),

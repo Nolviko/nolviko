@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Admin\Http;
 
+use InvalidArgumentException;
+use Nolviko\Core\Config\Config;
 use Nolviko\Core\Config\MailSettings;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
@@ -11,23 +13,40 @@ use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Mail\MailComposer;
 use Nolviko\Core\Mail\MailDeliveryFailed;
 use Nolviko\Core\Mail\Mailer;
+use Nolviko\Core\Mail\StoredMailSettings;
 use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
+use Nolviko\Core\Settings\SiteSettings;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Users\Domain\UserRepository;
 use Nolviko\Modules\Users\Http\RequestSubject;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
- * GET `/admin/mail` shows how mail is sent (never the SMTP password) and warns when PHP `mail()` is used; POST
- * (CSRF-checked, `admin.access` via AdminGuard, fresh password confirmation) sends a test mail to the signed-in
- * administrator's own address, synchronously (M02.02a). A failure is answered 503 with the translated
- * "could not send" message; the mailer has logged it without secrets.
+ * `/admin/mail`: how mail is sent, and (ADR-034 amendment 2026-11-21) the SMTP server, port, encryption, user,
+ * password and sender, all editable here. Every POST is CSRF-checked and needs `admin.access` (AdminGuard and
+ * again here). `store=1` stores the form through SiteSettings (one audit row; the password sealed with the
+ * app secret, never shown again, kept when the field stays empty); any other POST sends a test mail to the
+ * signed-in administrator's own address with the settings of this request. Values that `config/local.php` sets
+ * are shown read-only and never written.
  */
 final class MailSettingsHandler implements RouteHandler
 {
+    /** Form field => settings key. */
+    private const FIELDS = ['transport' => 'mail.transport', 'host' => 'mail.smtp_host', 'port' => 'mail.smtp_port',
+        'encryption' => 'mail.smtp_encryption', 'user' => 'mail.smtp_user', 'from_address' => 'mail.from_address',
+        'from_name' => 'mail.from_name'];
+
+    /** Settings key => label message ID for the "check this field" error. */
+    private const LABELS = ['mail.transport' => 'admin.mail.field.transport',
+        'mail.smtp_host' => 'admin.mail.field.host',
+        'mail.smtp_port' => 'admin.mail.field.port', 'mail.smtp_encryption' => 'admin.mail.field.encryption',
+        'mail.smtp_user' => 'admin.mail.field.user', 'mail.smtp_password' => 'admin.mail.field.password',
+        'mail.from_address' => 'admin.mail.field.from_address', 'mail.from_name' => 'admin.mail.field.from_name'];
+
     public function __construct(
         private readonly MessageTranslator $translator,
         private readonly TemplateRenderer $views,
@@ -39,6 +58,8 @@ final class MailSettingsHandler implements RouteHandler
         private readonly AdminSession $admin,
         private readonly CsrfTokens $csrf,
         private readonly UrlGenerator $urls,
+        private readonly ?SiteSettings $site = null,
+        private readonly ?Config $config = null,
     ) {
     }
 
@@ -47,33 +68,160 @@ final class MailSettingsHandler implements RouteHandler
         $action = $this->urls->generate(CoreRoutes::ADMIN_MAIL);
         $error = null;
         $status = Response::HTTP_OK;
+        $input = $request->request->all();
+        $form = null;
 
         if ($request->isMethod('POST')) {
-            $user = $this->users->findById((int) $this->subjects->userId($request));
+            $subject = $this->subjects->of($request);
+            $token = is_string($input[CsrfTokens::FIELD] ?? null) ? $input[CsrfTokens::FIELD] : '';
 
-            if (!$this->admin->isFresh()) {
-                $error = 'admin_reauth_required';
+            if (
+                !$this->csrf->isValid($token) || !$this->admin->isFresh() || $subject->userId === null
+                || !$subject->allows('admin.access')
+            ) {
+                $error = $this->translator->translate('admin.mail.denied');
                 $status = Response::HTTP_FORBIDDEN;
-            } elseif ($user !== null) {
-                try {
-                    $this->mailer->send($this->composer->compose('test', 'mail.test.subject', $user->email, [
-                        'name' => $user->username,
-                    ]));
+            } elseif (($input['store'] ?? null) === '1') {
+                $form = array_map(
+                    static fn(mixed $value): string => is_string($value) ? $value : '',
+                    array_intersect_key($input, self::FIELDS),
+                );
 
-                    return InstallerPage::redirect($action . '?sent=1');
-                } catch (MailDeliveryFailed $failure) {
-                    $error = $failure->diagnostic;
+                try {
+                    $changed = $this->save($input, $subject->userId);
+
+                    return InstallerPage::redirect($action . '?saved=' . ($changed === 0 ? '0' : '1'));
+                } catch (InvalidArgumentException $failure) {
+                    $key = substr($failure->getMessage(), strlen('setting_invalid:'));
+                    $error = $this->translator->translate('admin.mail.invalid', [
+                        'field' => $this->translator->translate(self::LABELS[$key] ?? 'admin.mail.field.transport'),
+                    ]);
+                    $status = Response::HTTP_UNPROCESSABLE_ENTITY;
+                } catch (Throwable) {
+                    $error = $this->translator->translate('admin.mail.unavailable');
                     $status = Response::HTTP_SERVICE_UNAVAILABLE;
+                }
+            } else {
+                $user = $this->users->findById($subject->userId);
+
+                if ($user !== null) {
+                    try {
+                        $this->mailer->send($this->composer->compose('test', 'mail.test.subject', $user->email, [
+                            'name' => $user->username,
+                        ]));
+
+                        return InstallerPage::redirect($action . '?sent=1');
+                    } catch (MailDeliveryFailed $failure) {
+                        $error = $this->translator->translate('diagnostics.' . $failure->diagnostic);
+                        $status = Response::HTTP_SERVICE_UNAVAILABLE;
+                    }
                 }
             }
         }
 
+        $html = $this->views->render('admin/mail.twig', $this->context($request, $action, $error, $form));
+
+        return new Response($html, $status, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+            'Cache-Control' => 'no-store, private',
+        ]);
+    }
+
+    /**
+     * @param array<array-key, mixed> $input
+     * @throws InvalidArgumentException `setting_invalid:<key>`.
+     */
+    private function save(array $input, int $actorId): int
+    {
+        if ($this->site === null || $this->config === null) {
+            throw new InvalidArgumentException('setting_invalid:mail.transport');
+        }
+
+        $submitted = [];
+        foreach (self::FIELDS as $field => $key) {
+            $submitted[$key] = is_string($input[$field] ?? null) ? $input[$field] : '';
+        }
+
+        if ($submitted['mail.transport'] === MailSettings::SMTP && trim($submitted['mail.smtp_host']) === '') {
+            throw new InvalidArgumentException('setting_invalid:mail.smtp_host');
+        }
+
+        $password = is_string($input['password'] ?? null) ? $input['password'] : '';
+        if (strlen($password) > StoredMailSettings::PASSWORD_MAX || preg_match('/[\x00\r\n]/', $password) === 1) {
+            throw new InvalidArgumentException('setting_invalid:mail.smtp_password');
+        }
+        if ($password !== '') {
+            $submitted['mail.smtp_password'] = StoredMailSettings::seal($this->config->appSecret, $password);
+        } elseif (($input['clear_password'] ?? null) === '1') {
+            $submitted['mail.smtp_password'] = '';
+        }
+
+        return $this->site->save($submitted, $this->pinned(), $actorId);
+    }
+
+    /**
+     * Keys that `config/local.php` / the environment sets; they are shown read-only and never written.
+     *
+     * @return list<string>
+     */
+    private function pinned(): array
+    {
+        $mail = $this->config?->mail;
+        $pinned = StoredMailSettings::pinned($this->config) ? StoredMailSettings::SMTP_KEYS : [];
+
+        if ($mail?->fromAddress !== null) {
+            $pinned[] = 'mail.from_address';
+        }
+        if ($mail?->fromName !== null) {
+            $pinned[] = 'mail.from_name';
+        }
+
+        return $pinned;
+    }
+
+    /**
+     * @param array<string, string>|null $form Submitted values to show again after a refused save.
+     * @return array<string, mixed>
+     */
+    private function context(Request $request, string $action, ?string $error, ?array $form): array
+    {
+        $stored = [];
+        try {
+            $stored = $this->site?->values() ?? [];
+        } catch (Throwable) {
+            // The page still shows the effective transport and the test button.
+        }
+
+        $pinned = $this->pinned();
+        $smtpPinned = StoredMailSettings::pinned($this->config);
+        $mail = $this->config?->mail;
+        $values = [];
+
+        foreach (self::FIELDS as $field => $key) {
+            $values[$field] = $form[$field] ?? match (true) {
+                $smtpPinned && $key === 'mail.transport' => MailSettings::SMTP,
+                $smtpPinned && $key === 'mail.smtp_host' => (string) $mail?->smtpHost,
+                $smtpPinned && $key === 'mail.smtp_port' => (string) $mail?->port(),
+                $smtpPinned && $key === 'mail.smtp_encryption' => (string) $mail?->smtpEncryption,
+                $smtpPinned && $key === 'mail.smtp_user' => (string) $mail?->smtpUser,
+                $key === 'mail.from_address' && $mail?->fromAddress !== null => $mail->fromAddress,
+                $key === 'mail.from_name' && $mail?->fromName !== null => $mail->fromName,
+                default => $stored[$key] ?? match ($key) {
+                    'mail.transport' => MailSettings::MAIL,
+                    'mail.smtp_encryption' => MailSettings::STARTTLS,
+                    default => '',
+                },
+            };
+        }
+
         $smtp = $this->settings->transport === MailSettings::SMTP;
-        $html = $this->views->render('admin/mail.twig', [
+
+        return [
             'title' => $this->translator->translate('admin.mail.title'),
             'nav' => AdminNavigation::items($this->urls, $this->translator, CoreRoutes::ADMIN_MAIL),
-            'error' => $error === null ? null : $this->translator->translate('diagnostics.' . $error),
+            'error' => $error,
             'sent' => $error === null && $request->query->get('sent') === '1',
+            'saved' => $error === null ? $request->query->get('saved') : null,
             'transport' => $smtp
                 ? $this->translator->translate('admin.mail.smtp', [
                     'host' => (string) $this->settings->smtpHost,
@@ -82,16 +230,32 @@ final class MailSettingsHandler implements RouteHandler
                 : $this->translator->translate('admin.mail.native'),
             'native' => !$smtp,
             'from' => $this->settings->fromAddress,
+            'editable' => $this->site !== null && $this->config !== null,
+            'values' => $values,
+            'transports' => [
+                $this->option(MailSettings::MAIL, 'admin.mail.transport.mail', $values['transport']),
+                $this->option(MailSettings::SMTP, 'admin.mail.transport.smtp', $values['transport']),
+            ],
+            'encryptions' => [
+                $this->option(MailSettings::STARTTLS, 'installer.mail.starttls', $values['encryption']),
+                $this->option(MailSettings::SMTPS, 'installer.mail.smtps', $values['encryption']),
+            ],
+            'pinned' => array_fill_keys(array_keys(array_intersect(self::FIELDS, $pinned)), true),
+            'smtp_pinned' => $smtpPinned,
+            'password_set' => $smtpPinned ? !$this->settings->smtpPassword->isEmpty()
+                : isset($stored['mail.smtp_password']),
+            'password_max' => StoredMailSettings::PASSWORD_MAX,
             'fresh' => $this->admin->isFresh(),
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),
             'action' => $action,
             'csrf_field' => CsrfTokens::FIELD,
             'csrf_token' => $this->csrf->token(),
-        ]);
+        ];
+    }
 
-        return new Response($html, $status, [
-            'Content-Type' => 'text/html; charset=UTF-8',
-            'Cache-Control' => 'no-store',
-        ]);
+    /** @return array{value: string, label: string, selected: bool} */
+    private function option(string $value, string $label, string $current): array
+    {
+        return ['value' => $value, 'label' => $this->translator->translate($label), 'selected' => $value === $current];
     }
 }

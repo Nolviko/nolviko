@@ -19,6 +19,7 @@ use Nolviko\Core\Extensions\ExtensionBootstrap;
 use Nolviko\Core\Extensions\ExtensionRegistry;
 use Nolviko\Core\Locale\TranslatorFactory;
 use Nolviko\Core\Mail\MailComposer;
+use Nolviko\Core\Mail\StoredMailSettings;
 use Nolviko\Core\Mail\SymfonyMailer;
 use Nolviko\Core\Mail\TransportFactory;
 use Nolviko\Core\Routing\RouterFactory;
@@ -52,6 +53,7 @@ use Nolviko\Modules\Users\Infrastructure\ResetMailQueue;
 use Nolviko\Modules\Users\Infrastructure\TemplatedAccountMail;
 use Psr\Log\NullLogger;
 use RuntimeException;
+use Throwable;
 
 /** One handler composition for visitor, administrator and opt-in CLI execution; no handler from user input. */
 final class TaskRuntime
@@ -147,7 +149,16 @@ final class TaskRuntime
         $profiles = new MemberProfiles($db, $access);
         $interactions = new CommunityInteractions($db, $access, $profiles);
         $notifications = new CommunityNotifications($db, $access, $interactions);
-        $mailer = new SymfonyMailer(TransportFactory::create($config->mail, 2), $config->mail, new NullLogger());
+        // Same precedence as the request mailer (ADR-034 amendment 2026-11-21): panel SMTP unless local.php sets it.
+        try {
+            $stored = array_map('strval', $db->fetchAllKeyValue(
+                "SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'mail.%'",
+            ));
+        } catch (Throwable) {
+            $stored = [];
+        }
+        $mailSettings = StoredMailSettings::resolve($config, $stored);
+        $mailer = new SymfonyMailer(TransportFactory::create($mailSettings, 2), $mailSettings, new NullLogger());
         $router = RouterFactory::create($root, $storage);
         $mail = new CommunityMail(
             $db,

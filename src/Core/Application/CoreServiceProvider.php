@@ -63,6 +63,7 @@ use Nolviko\Core\Locale\RequestTranslator;
 use Nolviko\Core\Locale\TranslatorFactory;
 use Nolviko\Core\Mail\MailComposer;
 use Nolviko\Core\Mail\Mailer;
+use Nolviko\Core\Mail\StoredMailSettings;
 use Nolviko\Core\Mail\SymfonyMailer;
 use Nolviko\Core\Mail\TransportFactory;
 use Nolviko\Core\Routing\CoreRoutes;
@@ -2139,22 +2140,18 @@ final class CoreServiceProvider implements ServiceProvider
                 => new SiteSettings($connection, $caches->namespace('settings'), $storage . '/settings/boot.json'),
             [new Lazy(Connection::class), CacheFactory::class, CompositionRoot::STORAGE],
         );
-        // ADR-034: config/local.php wins; otherwise the administrator's stored value; otherwise the default.
+        // ADR-034 (amended 2026-11-21): config/local.php wins; otherwise the administrator's stored value
+        // (SMTP from Admin > Outgoing mail); otherwise the default.
         $services->factory(
             MailSettings::class,
             static function (?Config $config, SiteSettings $site): MailSettings {
-                $mail = $config?->mail ?? new MailSettings();
+                try {
+                    $stored = $config === null ? [] : $site->values();
+                } catch (Throwable) {
+                    $stored = [];
+                }
 
-                return new MailSettings(
-                    $mail->transport,
-                    $mail->fromAddress ?? $site->get('mail.from_address'),
-                    $mail->fromName ?? $site->get('mail.from_name'),
-                    $mail->smtpHost,
-                    $mail->smtpPort,
-                    $mail->smtpEncryption,
-                    $mail->smtpUser,
-                    $mail->smtpPassword,
-                );
+                return StoredMailSettings::resolve($config, $stored);
             },
             [CompositionRoot::CONFIG, SiteSettings::class],
         );
@@ -2903,6 +2900,8 @@ final class CoreServiceProvider implements ServiceProvider
                 AdminSession $admin,
                 CsrfTokens $csrf,
                 Router $router,
+                SiteSettings $site,
+                ?Config $config,
             ): MailSettingsHandler => new MailSettingsHandler(
                 $translator,
                 $views,
@@ -2914,6 +2913,8 @@ final class CoreServiceProvider implements ServiceProvider
                 $admin,
                 $csrf,
                 $router,
+                $site,
+                $config,
             ),
             [
                 MessageTranslator::class,
@@ -2926,6 +2927,8 @@ final class CoreServiceProvider implements ServiceProvider
                 AdminSession::class,
                 CsrfTokens::class,
                 Router::class,
+                SiteSettings::class,
+                CompositionRoot::CONFIG,
             ],
         );
         $services->factory(

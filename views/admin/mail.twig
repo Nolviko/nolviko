@@ -1,6 +1,8 @@
-{# Outgoing mail (M02.02a). Context: title, nav, error (translated or null), sent, transport (translated
-   description), native (PHP mail() is used), from (sender address or null), fresh, reauth_url, action,
-   csrf_field, csrf_token. The SMTP password is never part of the context. #}
+{# Outgoing mail (M02.02a; editable SMTP since the ADR-034 amendment of 2026-11-21). Context: title, nav, error
+   (translated or null), sent, saved ('0'/'1'/null), transport (translated description), native (PHP mail() is
+   used), from (effective sender address or null), editable, transports and encryptions (value, label, selected), values (form field => value), pinned (form field =>
+   true when config/local.php sets it), smtp_pinned, password_set, password_max, fresh, reauth_url, action,
+   csrf_field, csrf_token. The SMTP password is never part of the context, only whether one is stored. #}
 {% extends 'admin/layout.twig' %}
 
 {% block admin %}
@@ -8,6 +10,10 @@
 <p role="alert">{{ error }}</p>
 {% elseif sent %}
 <p role="status">{{ t('admin.mail.sent') }}</p>
+{% elseif saved == '1' %}
+<p role="status">{{ t('admin.mail.saved') }}</p>
+{% elseif saved == '0' %}
+<p role="status">{{ t('admin.groups.rules_unchanged') }}</p>
 {% endif %}
 <p>{{ transport }}</p>
 {% if native %}
@@ -21,9 +27,48 @@
 {% if not fresh %}
 <p><a href="{{ reauth_url|safe_url }}">{{ t('admin.mail.reauth') }}</a></p>
 {% endif %}
+{% if editable %}
+<h2>{{ t('admin.mail.settings') }}</h2>
+{% if smtp_pinned %}<p>{{ t('admin.mail.smtp_pinned') }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="store" value="1">
+<p><label for="mail-transport">{{ t('admin.mail.field.transport') }}</label>
+<select id="mail-transport" name="transport"{% if pinned.transport is defined %} disabled{% endif %}>
+{% for option in transports %}<option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select></p>
+<p><label for="mail-host">{{ t('admin.mail.field.host') }}</label>
+<input id="mail-host" name="host" type="text" maxlength="253" value="{{ values.host }}" dir="ltr" autocomplete="off" spellcheck="false"{% if pinned.host is defined %} disabled{% endif %}>
+<span class="hint">{{ t('admin.mail.hint.host') }}</span></p>
+<p><label for="mail-port">{{ t('admin.mail.field.port') }}</label>
+<input id="mail-port" name="port" type="number" min="1" max="65535" value="{{ values.port }}"{% if pinned.port is defined %} disabled{% endif %}>
+<span class="hint">{{ t('admin.mail.hint.port') }}</span></p>
+<p><label for="mail-encryption">{{ t('admin.mail.field.encryption') }}</label>
+<select id="mail-encryption" name="encryption"{% if pinned.encryption is defined %} disabled{% endif %}>
+{% for option in encryptions %}<option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select>
+<span class="hint">{{ t('admin.mail.hint.encryption') }}</span></p>
+<p><label for="mail-user">{{ t('admin.mail.field.user') }}</label>
+<input id="mail-user" name="user" type="text" maxlength="254" value="{{ values.user }}" dir="ltr" autocomplete="off" spellcheck="false"{% if pinned.user is defined %} disabled{% endif %}></p>
+<p><label for="mail-password">{{ t('admin.mail.field.password') }}</label>
+<input id="mail-password" name="password" type="password" maxlength="{{ password_max }}" value="" autocomplete="new-password"{% if smtp_pinned %} disabled{% endif %}>
+<span class="hint">{{ password_set ? t('admin.mail.password_set') : t('admin.mail.password_not_set') }}</span></p>
+{% if password_set and not smtp_pinned %}
+<p><input id="mail-clear-password" name="clear_password" type="checkbox" value="1">
+<label for="mail-clear-password">{{ t('admin.mail.clear_password') }}</label></p>
+{% endif %}
+<p><label for="mail-from-address">{{ t('admin.mail.field.from_address') }}</label>
+<input id="mail-from-address" name="from_address" type="email" maxlength="254" value="{{ values.from_address }}" dir="ltr"{% if pinned.from_address is defined %} disabled{% endif %}></p>
+<p><label for="mail-from-name">{{ t('admin.mail.field.from_name') }}</label>
+<input id="mail-from-name" name="from_name" type="text" maxlength="100" value="{{ values.from_name }}" dir="auto"{% if pinned.from_name is defined %} disabled{% endif %}></p>
+{% if pinned|length > 0 %}<p class="hint">{{ t('admin.site.pinned') }}</p>{% endif %}
+<p><button type="submit">{{ t('admin.mail.save') }}</button></p>
+</form>
+{% endif %}
+<h2>{{ t('admin.mail.test') }}</h2>
+<p>{{ t('admin.mail.test_hint') }}</p>
 <form method="post" action="{{ action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <p><button type="submit">{{ t('admin.mail.send_test') }}</button></p>
 </form>
-<p><a href="{{ path('admin.site')|safe_url }}">{{ t('admin.site.edit_link') }}</a></p>
 {% endblock %}

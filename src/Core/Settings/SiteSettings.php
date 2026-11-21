@@ -44,6 +44,13 @@ final class SiteSettings
         'registration.challenge' => ['enum', RegistrationRules::CHALLENGES],
         'mail.from_address' => ['email', 254],
         'mail.from_name' => ['string', 100],
+        // ADR-034 amendment 2026-11-21: SMTP from Admin > Outgoing mail; the password row holds a sealed value.
+        'mail.transport' => ['enum', ['mail', 'smtp']],
+        'mail.smtp_host' => ['host', 253],
+        'mail.smtp_port' => ['int', [1, 65535]],
+        'mail.smtp_encryption' => ['enum', ['starttls', 'smtps']],
+        'mail.smtp_user' => ['string', 254],
+        'mail.smtp_password' => ['sealed', 2048],
         'home.layout' => ['enum', self::HOME_LAYOUTS],
         'appearance.accent' => ['enum', ['green', 'blue', 'yellow', 'red', 'purple']],
         'announcement.text' => ['string', 300],
@@ -286,6 +293,9 @@ final class SiteSettings
             'enum' => in_array($value, $limit, true),
             'locale' => strlen($value) <= $limit && preg_match(ConfigSchema::LOCALE_PATTERN, $value) === 1,
             'timezone' => strlen($value) <= $limit && LocaleFormatter::isTimeZone($value),
+            'host' => strlen($value) <= $limit
+                && preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/D', $value) === 1,
+            'sealed' => strlen($value) <= $limit && preg_match('/^v1:[A-Za-z0-9+\/]+={0,2}$/D', $value) === 1,
             default => false,
         };
 
