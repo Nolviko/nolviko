@@ -3,18 +3,11 @@
 <p>{{ t('admin.extensions.intro') }}</p>
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 {% if installed|default(null) %}<p role="status">{{ t('admin.extensions.installed_notice', {name: installed.name, version: installed.version}) }}{% if installed.settings_url %} <a href="{{ installed.settings_url|safe_url }}">{{ t('admin.extensions.settings') }}</a>{% endif %}</p>{% endif %}
-{% if safe %}<p role="status">{{ t('admin.extensions.safe_active') }}</p>{% endif %}
 {% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.extensions.reauth') }}</a></p>{% endif %}
 {% if diagnostics %}<h2>{{ t('admin.extensions.diagnostics') }}</h2><ul>
 {% for id, diagnostic in diagnostics %}<li><code>{{ id }}</code>: <code>{{ diagnostic }}</code></li>{% endfor %}
 </ul>{% endif %}
 {% if fresh %}
-<form method="post" action="{{ action|safe_url }}">
-<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<input type="hidden" name="action" value="{% if safe %}{{ actions.resume }}{% else %}{{ actions.safe }}{% endif %}">
-<p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>
-<button type="submit">{% if safe %}{{ t('admin.extensions.resume') }}{% else %}{{ t('admin.extensions.safe') }}{% endif %}</button>
-</form>
 <form method="post" action="{{ action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ actions.disable_all }}">
 <p><label><input type="checkbox" name="confirm" value="1" required> {{ t('admin.extensions.confirm') }}</label></p>

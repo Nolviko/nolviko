@@ -6,6 +6,7 @@ namespace Nolviko\Core\Database;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Nolviko\Core\Events\OutboxLease;
@@ -138,6 +139,32 @@ final class OutboxQueue
                 . "WHERE id = ? AND owner_token = ? AND revision = ? AND status = 'running'",
             [$lease->attempt >= self::MAX_ATTEMPTS ? 'failed' : 'pending', $next->format('Y-m-d H:i:s.u'),
                 $lease->id, $lease->token, $lease->revision],
+        );
+    }
+
+    /**
+     * Deletes up to $limit events completed more than $days ago (beta.17: completed work was kept for ever, so the
+     * table grew with every post). Failed and pending events stay for the owner. Returns the number deleted.
+     */
+    public function prune(int $days = 7, int $limit = 500): int
+    {
+        if ($this->connection->isTransactionActive() || $days < 1 || $limit < 1 || $limit > 5000) {
+            return 0;
+        }
+        $cutoff = $this->now()->modify('-' . $days . ' days')->format('Y-m-d H:i:s.u');
+        $ids = $this->connection->fetchFirstColumn(
+            "SELECT id FROM outbox_events WHERE status = 'completed' AND available_at < ? AND completed_at < ? "
+                . 'ORDER BY available_at, id LIMIT ' . $limit,
+            [$cutoff, $cutoff],
+        );
+        if ($ids === []) {
+            return 0;
+        }
+
+        return (int) $this->connection->executeStatement(
+            "DELETE FROM outbox_events WHERE status = 'completed' AND id IN (?)",
+            [array_map(intval(...), $ids)],
+            [ArrayParameterType::INTEGER],
         );
     }
 

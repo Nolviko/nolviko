@@ -97,8 +97,10 @@ final class AdminMailTest extends TestCase
         self::assertStringContainsString('spam folder', $page, 'mail() is flagged');
 
         (new AdminSession($session))->confirm();
+        // beta.14: the page posts with its CSRF token.
         $sent = $this->handler($session, $transport, $settings)->handle(Request::create('/admin/mail', 'POST', [
             'to' => 'someone-else@example.com',
+            CsrfTokens::FIELD => (new CsrfTokens($session))->token(),
         ]), []);
 
         self::assertSame(Response::HTTP_SEE_OTHER, $sent->getStatusCode());
@@ -125,17 +127,22 @@ final class AdminMailTest extends TestCase
             smtpPassword: new Secret('top-secret-smtp-password'),
         );
         $failed = $this->handler($session, new CapturingTransport('connection refused'), $settings)
-            ->handle(Request::create('/admin/mail', 'POST'), []);
+            ->handle(Request::create('/admin/mail', 'POST', [
+                CsrfTokens::FIELD => (new CsrfTokens($session))->token(),
+            ]), []);
         $content = (string) $failed->getContent();
 
         self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $failed->getStatusCode());
         self::assertStringContainsString('The mail could not be sent. Please try again in a few minutes.', $content);
         self::assertStringContainsString('smtp.example.com on port 587', $content);
         self::assertStringNotContainsString('top-secret-smtp-password', $content);
-        self::assertStringNotContainsString('connection refused', $content);
+        // beta.14 (owner decision): the administrator sees the mail server's reply; the password never.
+        self::assertStringContainsString('connection refused', $content);
 
         $unset = $this->handler($session, new CapturingTransport(), new MailSettings())
-            ->handle(Request::create('/admin/mail', 'POST'), []);
+            ->handle(Request::create('/admin/mail', 'POST', [
+                CsrfTokens::FIELD => (new CsrfTokens($session))->token(),
+            ]), []);
         self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $unset->getStatusCode());
         self::assertStringContainsString('Mail is not set up on this forum yet.', (string) $unset->getContent());
     }

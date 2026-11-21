@@ -15,6 +15,45 @@ final readonly class ThemeArchive
     {
     }
 
+    /**
+     * Removes an installed theme's source folder (beta.17, owner: installed themes could not be removed). The
+     * bundled default theme and the theme of the live build stay; published builds keep their own copies, so a
+     * rollback to an older build still works.
+     */
+    public function remove(string $id): void
+    {
+        if (preg_match(ThemeChain::ID_PATTERN, $id) !== 1 || $id === 'default') {
+            throw new TemplateException('theme_remove_refused');
+        }
+        if (($this->builds->active()['theme'] ?? 'default') === $id) {
+            throw new TemplateException('theme_remove_active');
+        }
+        $directory = $this->builds->root . '/themes/' . $id;
+        if (is_link($directory) || !is_dir($directory)) {
+            throw new TemplateException('theme_remove_refused');
+        }
+        self::delete($directory);
+    }
+
+    private static function delete(string $path): void
+    {
+        if (is_link($path) || is_file($path)) {
+            if (!unlink($path)) {
+                throw new TemplateException('theme_remove_failed');
+            }
+
+            return;
+        }
+        foreach (scandir($path) ?: [] as $name) {
+            if ($name !== '.' && $name !== '..') {
+                self::delete($path . '/' . $name);
+            }
+        }
+        if (!rmdir($path)) {
+            throw new TemplateException('theme_remove_failed');
+        }
+    }
+
     public function import(string $zipPath): string
     {
         if (is_link($zipPath) || !is_file($zipPath) || filesize($zipPath) > 4194304) {

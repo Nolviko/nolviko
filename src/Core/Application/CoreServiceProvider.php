@@ -114,6 +114,7 @@ use Nolviko\Modules\Admin\Http\TaxonomyAdminHandler;
 use Nolviko\Modules\Admin\Http\ThemesHandler;
 use Nolviko\Modules\Admin\Http\UpdatesHandler;
 use Nolviko\Modules\Admin\Http\WebhooksAdminHandler;
+use Nolviko\Modules\Admin\Infrastructure\AdminNotices;
 use Nolviko\Modules\Admin\Infrastructure\DbalAdminAudit;
 use Nolviko\Modules\Admin\Infrastructure\DbalAdminStats;
 use Nolviko\Modules\Admin\Infrastructure\DbalAuditLog;
@@ -521,6 +522,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Closure $notifications,
                 Closure $conversations,
                 Closure $siteSettings,
+                Closure $adminNotices,
             ): TemplateRenderer {
                 $selection = $presentation->selection();
                 // Site accent colour (appearance.accent) over the theme's palette; part of the render-cache key.
@@ -595,6 +597,7 @@ final class CoreServiceProvider implements ServiceProvider
                             'moderator' => $member && $moderator] + $unread;
                     },
                     censored: static fn(): array => $censored,
+                    adminNotices: static fn(): array => $adminNotices()->all(),
                     site: static fn(): array => [
                         'name' => $siteSettings()->peek('site.name') ?? '',
                         'description' => $siteSettings()->peek('site.description') ?? '',
@@ -613,7 +616,40 @@ final class CoreServiceProvider implements ServiceProvider
                 new Lazy(LocaleFormatter::class), Router::class, ThemePresentation::class, ThemeSlots::class,
                 CacheFactory::class, new Lazy(RequestSubject::class), ThemeRequest::class, SeoMetadata::class,
                 new Lazy(CommunityNotifications::class), new Lazy(PrivateConversations::class),
-                new Lazy(SiteSettings::class)],
+                new Lazy(SiteSettings::class), new Lazy(AdminNotices::class)],
+        );
+        $services->factory(
+            AdminNotices::class,
+            static fn(
+                ExtensionManager $manager,
+                Router $router,
+                CsrfTokens $csrf,
+                Closure $connection,
+                string $root,
+                string $storage,
+                ?Config $config,
+                CacheFactory $caches,
+                LoggerInterface $logger,
+            ): AdminNotices => new AdminNotices(
+                $manager,
+                static fn(): ?UpdatePreparation => $config?->databaseDriver === null ? null : new UpdatePreparation(
+                    $connection(),
+                    $root,
+                    $storage,
+                    $config->databaseDriver,
+                    new GitHubReleaseDiscovery(
+                        new NativeReleaseHttpClient(),
+                        $caches->namespace('update-discovery'),
+                        $logger
+                    ),
+                    new PackageAssetDownloader(),
+                ),
+                $router,
+                $csrf,
+            ),
+            [ExtensionManager::class, Router::class, CsrfTokens::class, new Lazy(Connection::class),
+                CompositionRoot::ROOT, CompositionRoot::STORAGE, CompositionRoot::CONFIG, CacheFactory::class,
+                LoggerInterface::class],
         );
         $services->factory(
             AppearanceHandler::class,
@@ -2648,9 +2684,15 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             PrivateConversations::class,
-            static fn(Connection $connection, MemberProfiles $profiles): PrivateConversations
-                => new PrivateConversations($connection, new RateBuckets($connection), $profiles),
-            [Connection::class, MemberProfiles::class],
+            static fn(Connection $connection, MemberProfiles $profiles, Closure $settings): PrivateConversations
+                => new PrivateConversations(
+                    $connection,
+                    new RateBuckets($connection),
+                    $profiles,
+                    (int) ($settings()->peek('limits.message_seconds')
+                        ?? SiteSettings::DEFAULTS['limits.message_seconds']),
+                ),
+            [Connection::class, MemberProfiles::class, new Lazy(SiteSettings::class)],
         );
         $services->factory(
             SearchHandler::class,
@@ -2663,6 +2705,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Router $router,
                 ForumRepository $forums,
                 UserRepository $users,
+                Closure $settings,
             ): SearchHandler => new SearchHandler(
                 $translator,
                 $views,
@@ -2673,10 +2716,11 @@ final class CoreServiceProvider implements ServiceProvider
                 $router,
                 $forums,
                 $users,
+                (int) ($settings()->peek('limits.search_seconds') ?? SiteSettings::DEFAULTS['limits.search_seconds']),
             ),
             [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class,
                 ForumVisibility::class, Connection::class, Router::class, ForumRepository::class,
-                UserRepository::class],
+                UserRepository::class, new Lazy(SiteSettings::class)],
         );
         $services->factory(
             PrivacyHandler::class,

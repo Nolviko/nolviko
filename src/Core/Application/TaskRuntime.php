@@ -295,6 +295,7 @@ final class TaskRuntime
             ['thread.created', 'post.created', 'post.approved', 'thread.approved'],
         ))->run($limit, $milliseconds);
         $exports->garbageCollect();
+        (new OutboxQueue($db))->prune();
         $sitemaps?->collect();
         $media->collect();
         if (in_array('0042_import_jobs', $optionalSchema, true)) {

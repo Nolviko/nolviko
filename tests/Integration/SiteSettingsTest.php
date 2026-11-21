@@ -205,7 +205,8 @@ final class SiteSettingsTest extends TestCase
 
         $page = (string) $handler->handle(Request::create('/admin/site'), [])->getContent();
         self::assertStringContainsString('name="setting[site.name]"', $page);
-        self::assertMatchesRegularExpression('~value="From config" dir="auto" disabled~', $page);
+        // beta.14 (owner decision): the sender fields live on Admin > Outgoing mail only.
+        self::assertStringNotContainsString('name="setting[mail.from_name]"', $page);
         self::assertSame(403, $handler->handle(Request::create('/admin/site', 'POST', $post), [])->getStatusCode());
 
         $adminSession->confirm();

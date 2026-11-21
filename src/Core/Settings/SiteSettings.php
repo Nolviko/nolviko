@@ -30,7 +30,7 @@ final class SiteSettings
     public const DEFAULTS = ['registration.mode' => 'verify', 'registration.challenge' => 'none',
         'home.layout' => 'classic', 'appearance.accent' => 'green', 'gallery.enabled' => 'off',
         'gallery.approval' => 'off', 'api.enabled' => 'on', 'posting.images' => 'off',
-        'seo.indexnow' => 'off'];
+        'seo.indexnow' => 'off', 'limits.search_seconds' => '1', 'limits.message_seconds' => '10'];
 
     /** Key => [type, limit] (string/email: max length, int: [min, max], enum: options). */
     public const KEYS = [
@@ -71,6 +71,10 @@ final class SiteSettings
         'antispam.new_user_max_links' => ['int', [0, 50]],
         'antispam.link_min_posts' => ['int', [0, 1000]],
         'antispam.first_posts_moderated' => ['int', [0, 100]],
+        // beta.17 (owner: limits belong in the panel): seconds between searches per network and between private
+        // messages per member; 0 switches the limit off. Empty means the built-in default.
+        'limits.search_seconds' => ['int', [0, 60]],
+        'limits.message_seconds' => ['int', [0, 600]],
     ];
 
     private const CACHE_KEY = 'site-settings-v1';

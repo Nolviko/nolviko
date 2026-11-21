@@ -26,6 +26,19 @@
 {% endfor %}
 </nav>
 <div class="admin-main" id="admin-main" tabindex="-1">
+{% for notice in admin_notices() %}
+<div class="panel admin-notice" role="status">
+{% if notice.safe %}
+<p><strong>{{ t('admin.notice.safe_title') }}</strong> {% if notice.failure %}{{ t('admin.notice.safe_failure') }}{% else %}{{ t('admin.notice.safe_text') }}{% endif %}</p>
+<form method="post" action="{{ notice.action|safe_url }}">
+<input type="hidden" name="{{ notice.csrf_field }}" value="{{ notice.csrf_token }}"><input type="hidden" name="action" value="{{ notice.value }}"><input type="hidden" name="confirm" value="{{ notice.confirm }}">
+<button type="submit">{{ t('admin.notice.safe_leave') }}</button>
+</form>
+{% else %}
+<p><strong>{{ t('admin.notice.update_title', {version: notice.version}) }}</strong> <a href="{{ notice.url|safe_url }}">{{ t('admin.notice.update_link') }}</a></p>
+{% endif %}
+</div>
+{% endfor %}
 <div class="head-row">
 <h1>{{ title }}</h1>
 </div>

@@ -23,13 +23,17 @@ final class ThemeViewExtension extends AbstractExtension implements GlobalsInter
         private readonly string $forumUrl,
         private readonly ?Closure $viewer = null,
         private readonly ?Closure $site = null,
+        private readonly ?Closure $adminNotices = null,
     ) {
     }
 
     public function getFunctions(): array
     {
         return [new TwigFunction('theme_slot', $this->slots->render(...)),
-            new TwigFunction('theme_fragment', $this->fragment)];
+            new TwigFunction('theme_fragment', $this->fragment),
+            // beta.17: notices for the top of admin pages, computed only when an admin layout asks for them.
+            new TwigFunction('admin_notices', fn(): array => $this->adminNotices === null ? []
+                : ($this->adminNotices)())];
     }
 
     public function getGlobals(): array

@@ -39,6 +39,7 @@ final class SearchHandler implements RouteHandler
         private readonly UrlGenerator $urls,
         private readonly ?ForumRepository $forums = null,
         private readonly ?UserRepository $users = null,
+        private readonly int $intervalSeconds = 1,
     ) {
     }
 
@@ -94,8 +95,11 @@ final class SearchHandler implements RouteHandler
                 $network = ClientNetwork::key($request->getClientIp()) ?? 'unknown';
                 $key = 'search.net:' . hash('sha256', $network);
                 $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-                $this->buckets->ensure($key, $now);
-                $wait = $this->buckets->hit($key, 1, $now);
+                $wait = 0;
+                if ($this->intervalSeconds > 0) {
+                    $this->buckets->ensure($key, $now);
+                    $wait = $this->buckets->hit($key, $this->intervalSeconds, $now);
+                }
 
                 if ($wait > 0) {
                     $error = $this->translator->translate('search.wait');

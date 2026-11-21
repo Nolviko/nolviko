@@ -20,6 +20,7 @@ final class PrivateConversations
         private readonly Connection $connection,
         private readonly RateBuckets $buckets,
         private readonly ?MemberProfiles $profiles = null,
+        private readonly int $intervalSeconds = 10,
     ) {
     }
 
@@ -210,10 +211,13 @@ final class PrivateConversations
 
     private function throttle(int $actor): void
     {
+        if ($this->intervalSeconds < 1) {
+            return;
+        }
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $key = 'conversation.send:' . $actor;
         $this->buckets->ensure($key, $now);
-        $wait = $this->buckets->hit($key, 10, $now);
+        $wait = $this->buckets->hit($key, $this->intervalSeconds, $now);
 
         if ($wait > 0) {
             throw new RegistrationThrottled($wait);

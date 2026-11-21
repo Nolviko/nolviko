@@ -55,6 +55,7 @@ final class TwigFactory
         ?Closure $viewer = null,
         ?Closure $site = null,
         ?Closure $censored = null,
+        ?Closure $adminNotices = null,
     ): TwigRenderer {
         $releaseId = ReleaseId::fromFile($root . '/config/release.php');
         $chain = ThemeChain::resolve($themesDirectory ?? $root . '/themes', $activeTheme);
@@ -110,7 +111,7 @@ final class TwigFactory
         $twig->addExtension(new ThemeViewExtension($slots, $themeSelection ?? [
             'css' => ThemeTokens::css([]), 'assets' => [], 'appearance' => 'system',
             'hash' => $cacheIdentity ?? 'default', 'preview' => false,
-        ], $nonce, $appearanceUrl, $renderer->fragment(...), $forumUrl, $viewer, $site));
+        ], $nonce, $appearanceUrl, $renderer->fragment(...), $forumUrl, $viewer, $site, $adminNotices));
 
         return $renderer;
     }

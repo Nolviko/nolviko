@@ -118,7 +118,7 @@ final readonly class ThemesHandler implements RouteHandler
                 }
                 $action = $text('action');
                 $actions = ['draft', 'preview', 'stop', 'publish', 'import', 'update', 'export', 'rollback',
-                    'install_official'];
+                    'install_official', 'activate', 'remove'];
                 if (!in_array($action, $actions, true)) {
                     throw new TemplateException('theme_action_invalid');
                 }
@@ -216,6 +216,34 @@ final readonly class ThemesHandler implements RouteHandler
                             @unlink($file);
                         }
                         break;
+                    case 'activate':
+                        // beta.17 (owner: the default theme could not be chosen again): one step back to any
+                        // installed theme, default included. Validated like a draft and published at once; a build
+                        // with template warnings stays a draft and the review below explains why.
+                        $theme = $text('theme');
+                        $valid = array_column(array_filter(
+                            $themes,
+                            static fn(array $item): bool => $item['valid'] === true,
+                        ), 'id');
+                        if (!in_array($theme, $valid, true)) {
+                            throw new TemplateException('theme_action_invalid');
+                        }
+                        $active = $this->builds->active();
+                        $tokens = ($active['theme'] ?? null) === $theme && is_array($active['tokens'] ?? null)
+                            ? $active['tokens'] : [];
+                        $built = $this->builds->build($theme, $tokens, $owner);
+                        if ($built['warnings'] !== 0) {
+                            throw new TemplateException('theme_publish_incompatible');
+                        }
+                        $this->builds->publish($owner, $built['build']);
+                        $this->presentation->stop();
+                        break;
+                    case 'remove':
+                        if ($text('confirm') !== '1') {
+                            throw new TemplateException('theme_action_invalid');
+                        }
+                        $this->archive->remove($text('theme'));
+                        break;
                     case 'export':
                         return new Response($this->archive->export($text('theme')), 200, [
                             'Content-Type' => 'application/zip',
@@ -239,6 +267,7 @@ final readonly class ThemesHandler implements RouteHandler
                 'theme_identity_exists' => 'admin.themes.identity_exists',
                 'theme_update_not_newer' => 'diagnostics.theme_update_not_newer',
                 'theme_update_unavailable', 'theme_update_download_failed' => 'admin.updates.package_failed',
+                'theme_remove_active' => 'admin.themes.remove_active',
                 default => 'admin.themes.invalid',
             });
         } catch (Throwable) {
@@ -261,8 +290,10 @@ final readonly class ThemesHandler implements RouteHandler
             'csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token(),
             'actions' => ['draft' => 'draft', 'preview' => 'preview', 'stop' => 'stop', 'publish' => 'publish',
                 'import' => 'import', 'update' => 'update', 'export' => 'export', 'rollback' => 'rollback',
-                'install_official' => 'install_official'],
+                'install_official' => 'install_official', 'activate' => 'activate', 'remove' => 'remove'],
             'official' => $official,
+            'default_theme' => 'default',
+            'active_theme' => $status === 200 ? ($this->builds->active()['theme'] ?? 'default') : null,
         ]), $status, ['Cache-Control' => 'no-store, private']);
     }
 

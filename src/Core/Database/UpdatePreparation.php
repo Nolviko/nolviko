@@ -100,6 +100,19 @@ final readonly class UpdatePreparation
         return UpdateTrust::load($this->site) !== null;
     }
 
+    /**
+     * The newest eligible release tag from the hourly cached discovery (beta.17 admin notice): GitHub is asked at
+     * most once an hour, failures back off, and nothing is downloaded.
+     */
+    public function available(): ?string
+    {
+        $trust = $this->trust();
+        $result = ($this->discovery ?? throw new RuntimeException('update_discovery_unavailable'))
+            ->check($trust->repository, $trust->channel, $this->now());
+        $installed = (new UpdatePreflight($this->db, $this->site, $this->storage, $this->driver))->current($trust);
+        return ReleaseVersion::select($result->releases, $installed, $trust->channel)?->tag;
+    }
+
     public function check(): ?string
     {
         $trust = $this->trust();
