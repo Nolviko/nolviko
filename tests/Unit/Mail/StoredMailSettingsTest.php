@@ -49,6 +49,16 @@ final class StoredMailSettingsTest extends TestCase
         ])->transport);
     }
 
+    public function testStoredSenderWinsOverConfigAndConfigIsTheFallback(): void
+    {
+        $config = self::config(new MailSettings(fromAddress: 'admin@gmail.example', fromName: 'Old'));
+
+        $panel = StoredMailSettings::resolve($config, ['mail.from_address' => 'no-reply@nolviko.example']);
+        self::assertSame('no-reply@nolviko.example', $panel->fromAddress);
+        self::assertSame('Old', $panel->fromName);
+        self::assertSame('admin@gmail.example', StoredMailSettings::resolve($config, [])->fromAddress);
+    }
+
     private static function config(MailSettings $mail): Config
     {
         return new Config(

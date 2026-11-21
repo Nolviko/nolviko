@@ -9,10 +9,12 @@ use RuntimeException;
 /**
  * A mail could not be handed to the transport. The message is a diagnostic ID (`mail_send_failed`,
  * `mail_not_configured`), never the transport's own text, which could contain server replies or addresses.
+ * `serverReply` (2026-11-21) carries the transport's message for the administrator's test-mail page only; it is
+ * never logged and never shown to members.
  */
 final class MailDeliveryFailed extends RuntimeException
 {
-    public function __construct(public readonly string $diagnostic)
+    public function __construct(public readonly string $diagnostic, public readonly ?string $serverReply = null)
     {
         parent::__construct($diagnostic);
     }

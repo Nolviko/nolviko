@@ -368,6 +368,8 @@ return [
     'admin.mail.invalid' => 'Check this field: {field}.',
     'admin.mail.denied' => 'This action is not allowed. Reload the page and try again.',
     'admin.mail.unavailable' => 'The settings could not be saved right now. Try again shortly.',
+    'admin.mail.server_reply' => 'The mail server answered:',
+    'admin.mail.hint.from_fallback' => 'Empty: {address} from config/local.php is used.',
     'admin.mail.test' => 'Test mail',
     'admin.mail.test_hint' => 'Sends a mail to your own address with the saved settings.',
     'admin.nav.updates' => 'Updates',

@@ -14,7 +14,8 @@ use SensitiveParameter;
  * panel). The SMTP rows live in the `settings` table; the password is sealed (libsodium secretbox) with a key
  * derived from `app.secret` and is never shown again. Precedence as for every ADR-034 setting: when
  * `config/local.php` or the environment selects SMTP, the whole SMTP block comes from there (read-only in the
- * panel); otherwise the stored values apply; otherwise PHP `mail()`.
+ * panel); otherwise the stored values apply; otherwise PHP `mail()`. The sender address and name are the
+ * exception (owner decision 2026-11-21): a stored value wins over `config/local.php`.
  */
 final class StoredMailSettings
 {
@@ -41,8 +42,10 @@ final class StoredMailSettings
     public static function resolve(?Config $config, array $stored): MailSettings
     {
         $mail = $config?->mail ?? new MailSettings();
-        $from = $mail->fromAddress ?? ($stored['mail.from_address'] ?? null);
-        $name = $mail->fromName ?? ($stored['mail.from_name'] ?? null);
+        // Owner decision 2026-11-21: the panel's sender wins; config/local.php (the installer writes the
+        // administrator's address there) is only the fallback.
+        $from = $stored['mail.from_address'] ?? $mail->fromAddress;
+        $name = $stored['mail.from_name'] ?? $mail->fromName;
         $host = $stored['mail.smtp_host'] ?? '';
 
         if (

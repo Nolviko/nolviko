@@ -48,7 +48,24 @@ final class SymfonyMailer implements Mailer
                 'error' => $exception::class,
             ]);
 
-            throw new MailDeliveryFailed('mail_send_failed');
+            throw new MailDeliveryFailed('mail_send_failed', $this->reply($exception));
         }
+    }
+
+    /**
+     * The transport's one-line message (for example `554 Message rejected: Email address is not verified`), at most
+     * 500 characters, with the SMTP password removed should a server ever echo it. Never the SMTP transcript
+     * (`getDebug()`), which holds the base64 AUTH exchange.
+     */
+    private function reply(TransportExceptionInterface | MimeException $exception): string
+    {
+        $text = trim((string) preg_replace('/\s+/', ' ', $exception->getMessage()));
+        $password = $this->settings->smtpPassword;
+
+        if (!$password->isEmpty()) {
+            $text = str_replace([$password->reveal(), base64_encode($password->reveal())], '***', $text);
+        }
+
+        return mb_substr($text, 0, 500);
     }
 }

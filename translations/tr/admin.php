@@ -438,6 +438,8 @@ return [
     'admin.mail.invalid' => 'Bu alanı kontrol edin: {field}.',
     'admin.mail.denied' => 'Bu işleme izin verilmiyor. Sayfayı yenileyip yeniden deneyin.',
     'admin.mail.unavailable' => 'Ayarlar şu anda kaydedilemedi. Biraz sonra yeniden deneyin.',
+    'admin.mail.server_reply' => 'E-posta sunucusunun yanıtı:',
+    'admin.mail.hint.from_fallback' => 'Boş bırakılırsa config/local.php içindeki {address} kullanılır.',
     'admin.mail.test' => 'Test iletisi',
     'admin.mail.test_hint' => 'Kayıtlı ayarlarla kendi adresinize bir ileti gönderir.',
     'admin.nav.privacy' => 'Hesap gizliliği',

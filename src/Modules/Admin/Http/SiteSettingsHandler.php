@@ -98,8 +98,8 @@ final readonly class SiteSettingsHandler implements RouteHandler
         $fields = [];
 
         foreach (SiteSettings::KEYS as $key => [$type, $limit]) {
-            // The SMTP block has its own page, Admin > Outgoing mail (ADR-034 amendment 2026-11-21).
-            if (in_array($key, StoredMailSettings::SMTP_KEYS, true)) {
+            // The SMTP block and the sender have their own page, Admin > Outgoing mail (ADR-034 amendment 2026-11-21).
+            if (in_array($key, StoredMailSettings::SMTP_KEYS, true) || str_starts_with($key, 'mail.from_')) {
                 continue;
             }
 

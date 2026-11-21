@@ -2,12 +2,15 @@
    (translated or null), sent, saved ('0'/'1'/null), transport (translated description), native (PHP mail() is
    used), from (effective sender address or null), editable, transports and encryptions (value, label, selected), values (form field => value), pinned (form field =>
    true when config/local.php sets it), smtp_pinned, password_set, password_max, fresh, reauth_url, action,
-   csrf_field, csrf_token. The SMTP password is never part of the context, only whether one is stored. #}
+   server_reply (the SMTP server's message after a failed test, admin only),
+   config_from (sender in config/local.php, used when the field is empty), csrf_field, csrf_token. The SMTP password is never part of the context, only whether one is stored. #}
 {% extends 'admin/layout.twig' %}
 
 {% block admin %}
 {% if error %}
 <p role="alert">{{ error }}</p>
+{% if server_reply %}<p>{{ t('admin.mail.server_reply') }}</p>
+<pre dir="ltr">{{ server_reply }}</pre>{% endif %}
 {% elseif sent %}
 <p role="status">{{ t('admin.mail.sent') }}</p>
 {% elseif saved == '1' %}
@@ -58,7 +61,8 @@
 <label for="mail-clear-password">{{ t('admin.mail.clear_password') }}</label></p>
 {% endif %}
 <p><label for="mail-from-address">{{ t('admin.mail.field.from_address') }}</label>
-<input id="mail-from-address" name="from_address" type="email" maxlength="254" value="{{ values.from_address }}" dir="ltr"{% if pinned.from_address is defined %} disabled{% endif %}></p>
+<input id="mail-from-address" name="from_address" type="email" maxlength="254" value="{{ values.from_address }}" dir="ltr"{% if pinned.from_address is defined %} disabled{% endif %}>
+{% if config_from %}<span class="hint">{{ t('admin.mail.hint.from_fallback', {address: config_from}) }}</span>{% endif %}</p>
 <p><label for="mail-from-name">{{ t('admin.mail.field.from_name') }}</label>
 <input id="mail-from-name" name="from_name" type="text" maxlength="100" value="{{ values.from_name }}" dir="auto"{% if pinned.from_name is defined %} disabled{% endif %}></p>
 {% if pinned|length > 0 %}<p class="hint">{{ t('admin.site.pinned') }}</p>{% endif %}

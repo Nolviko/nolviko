@@ -70,6 +70,7 @@ final class MailSettingsHandler implements RouteHandler
         $status = Response::HTTP_OK;
         $input = $request->request->all();
         $form = null;
+        $reply = null;
 
         if ($request->isMethod('POST')) {
             $subject = $this->subjects->of($request);
@@ -113,13 +114,17 @@ final class MailSettingsHandler implements RouteHandler
                         return InstallerPage::redirect($action . '?sent=1');
                     } catch (MailDeliveryFailed $failure) {
                         $error = $this->translator->translate('diagnostics.' . $failure->diagnostic);
+                        // Shown to this administrator only, never logged (the mailer logs the class name).
+                        $reply = $failure->serverReply;
                         $status = Response::HTTP_SERVICE_UNAVAILABLE;
                     }
                 }
             }
         }
 
-        $html = $this->views->render('admin/mail.twig', $this->context($request, $action, $error, $form));
+        $context = $this->context($request, $action, $error, $form);
+        $context['server_reply'] = $reply;
+        $html = $this->views->render('admin/mail.twig', $context);
 
         return new Response($html, $status, [
             'Content-Type' => 'text/html; charset=UTF-8',
@@ -166,17 +171,8 @@ final class MailSettingsHandler implements RouteHandler
      */
     private function pinned(): array
     {
-        $mail = $this->config?->mail;
-        $pinned = StoredMailSettings::pinned($this->config) ? StoredMailSettings::SMTP_KEYS : [];
-
-        if ($mail?->fromAddress !== null) {
-            $pinned[] = 'mail.from_address';
-        }
-        if ($mail?->fromName !== null) {
-            $pinned[] = 'mail.from_name';
-        }
-
-        return $pinned;
+        // The sender is never pinned: the panel value wins over config/local.php (owner decision 2026-11-21).
+        return StoredMailSettings::pinned($this->config) ? StoredMailSettings::SMTP_KEYS : [];
     }
 
     /**
@@ -204,8 +200,6 @@ final class MailSettingsHandler implements RouteHandler
                 $smtpPinned && $key === 'mail.smtp_port' => (string) $mail?->port(),
                 $smtpPinned && $key === 'mail.smtp_encryption' => (string) $mail?->smtpEncryption,
                 $smtpPinned && $key === 'mail.smtp_user' => (string) $mail?->smtpUser,
-                $key === 'mail.from_address' && $mail?->fromAddress !== null => $mail->fromAddress,
-                $key === 'mail.from_name' && $mail?->fromName !== null => $mail->fromName,
                 default => $stored[$key] ?? match ($key) {
                     'mail.transport' => MailSettings::MAIL,
                     'mail.smtp_encryption' => MailSettings::STARTTLS,
@@ -245,6 +239,7 @@ final class MailSettingsHandler implements RouteHandler
             'password_set' => $smtpPinned ? !$this->settings->smtpPassword->isEmpty()
                 : isset($stored['mail.smtp_password']),
             'password_max' => StoredMailSettings::PASSWORD_MAX,
+            'config_from' => $mail?->fromAddress,
             'fresh' => $this->admin->isFresh(),
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),
             'action' => $action,
