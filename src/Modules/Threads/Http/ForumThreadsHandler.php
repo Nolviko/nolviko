@@ -39,6 +39,11 @@ final class ForumThreadsHandler implements RouteHandler
 {
     public const PER_PAGE = 25;
 
+    /** Member-chosen orders (roadmap 14); empty means the default last-activity order. */
+    private const SORTS = ['title', 'replies', 'started'];
+
+    private const MAX_SORTED_PAGES = 100;
+
     public function __construct(
         private readonly MessageTranslator $translator,
         private readonly TemplateRenderer $views,
@@ -80,15 +85,44 @@ final class ForumThreadsHandler implements RouteHandler
         }
 
         $moderator = ModerateContent::seesDeleted($subject, $forumId);
-        $items = $this->threads->forumThreads($scope, $forumId, self::PER_PAGE + 1, $moderator, $after, $before);
-        $more = count($items) > self::PER_PAGE;
-        // The extra row lies beyond the page: after the last row going forwards, before the first going back.
-        $items = $before === null ? array_slice($items, 0, self::PER_PAGE) : array_slice($items, -self::PER_PAGE);
         $base = $this->urls->generate(CoreRoutes::FORUM_SHOW, ['forum' => (string) $forumId]);
+        // Roadmap 14 (beta.18): a member-chosen order uses numbered pages, at most MAX_SORTED_PAGES of them; the
+        // default last-activity order keeps keyset pagination (ADR-014).
+        $sort = $request->query->get('sort');
+        $sort = is_string($sort) && in_array($sort, self::SORTS, true) ? $sort : null;
+        $pageNumber = max(1, min(self::MAX_SORTED_PAGES, (int) $request->query->get('page', '1')));
+
+        if ($sort !== null && ($after !== null || $before !== null)) {
+            return $this->errors->notFound();
+        }
+
+        if ($sort !== null) {
+            $items = $this->threads->forumThreadsSorted(
+                $scope,
+                $forumId,
+                $sort,
+                self::PER_PAGE + 1,
+                ($pageNumber - 1) * self::PER_PAGE,
+                $moderator,
+            );
+            $more = count($items) > self::PER_PAGE && $pageNumber < self::MAX_SORTED_PAGES;
+            $items = array_slice($items, 0, self::PER_PAGE);
+        } else {
+            $items = $this->threads->forumThreads($scope, $forumId, self::PER_PAGE + 1, $moderator, $after, $before);
+            $more = count($items) > self::PER_PAGE;
+            // The extra row lies beyond the page: after the last row going forwards, before the first going back.
+            $items = $before === null ? array_slice($items, 0, self::PER_PAGE) : array_slice($items, -self::PER_PAGE);
+        }
+
         $first = $items === [] ? null : ThreadCursor::of($items[0]);
         $last = $items === [] ? null : ThreadCursor::of($items[count($items) - 1]);
         $hasOlder = $before !== null || $more;
         $hasNewer = $before !== null ? $more : $after !== null;
+        $sortBase = $sort === null ? null : $base . '?sort=' . $sort . '&page=';
+        $newerUrl = $sortBase !== null ? ($pageNumber > 1 ? $sortBase . ($pageNumber - 1) : null)
+            : ($hasNewer && $first !== null ? $base . '?before=' . $first->encode() : null);
+        $olderUrl = $sortBase !== null ? ($more ? $sortBase . ($pageNumber + 1) : null)
+            : ($hasOlder && $last !== null ? $base . '?after=' . $last->encode() : null);
         $unread = [];
 
         if ($this->reads !== null && $subject->userId !== null && $items !== []) {
@@ -123,7 +157,7 @@ final class ForumThreadsHandler implements RouteHandler
 
         $subforums = [];
 
-        if ($after === null && $before === null) {
+        if ($after === null && $before === null && $pageNumber === 1) {
             foreach ($tree as $node) {
                 if ($node->parentId === $forumId && $node->type === ForumType::Forum && $scope->contains($node->id)) {
                     $subforums[] = ['title' => $node->title,
@@ -146,7 +180,9 @@ final class ForumThreadsHandler implements RouteHandler
             'description' => $forum->description,
             'canonical' => $base,
             'feed_url' => $this->urls->generate(CoreRoutes::FEED_FORUM, ['forum' => (string) $forumId]),
-            'indexable' => $after === null && $before === null,
+            'indexable' => $after === null && $before === null && $sort === null,
+            'sort' => $sort,
+            'sorts' => self::SORTS,
             'threads' => array_map(
                 fn(ThreadListItem $item): ThreadRowView => $this->row(
                     $item,
@@ -164,8 +200,8 @@ final class ForumThreadsHandler implements RouteHandler
                 : null,
             'csrf_field' => CsrfTokens::FIELD,
             'csrf_token' => $this->csrf !== null && $subject->userId !== null ? $this->csrf->token() : '',
-            'newer' => $hasNewer && $first !== null ? $base . '?before=' . $first->encode() : null,
-            'older' => $hasOlder && $last !== null ? $base . '?after=' . $last->encode() : null,
+            'newer' => $newerUrl,
+            'older' => $olderUrl,
             'index_url' => $this->urls->generate(CoreRoutes::HOME),
             'new_thread_url' => $subject->userId !== null && $subject->allows(CreateThread::CREATE, $forumId)
                 ? $this->urls->generate(CoreRoutes::THREAD_CREATE, ['forum' => (string) $forumId])
