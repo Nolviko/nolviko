@@ -16,8 +16,12 @@ use Nolviko\Core\Events\OutboxTable;
 use Nolviko\Modules\Admin\Infrastructure\AdminSavedFiltersTable;
 use Nolviko\Modules\Admin\Infrastructure\ForumModeratorsTable;
 use Nolviko\Modules\Api\Infrastructure\WebhookTables;
+use Nolviko\Modules\Calendar\Infrastructure\CalendarTables;
 use Nolviko\Modules\Community\Infrastructure\CommunityTables;
+use Nolviko\Modules\Community\Infrastructure\MediaInventoryIndex;
 use Nolviko\Modules\Community\Infrastructure\MemberStandingTables;
+use Nolviko\Modules\Community\Infrastructure\PollVoteChange;
+use Nolviko\Modules\Content\Infrastructure\ContentTables;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationReadsColumn;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationsTable;
 use Nolviko\Modules\Forums\Infrastructure\ForumQuestionMode;
@@ -159,6 +163,11 @@ final class MigrationRegistry
             new SecondFactorTables(),
             new ExternalIdentityTable(),
             new ImportPanelTables(),
+            // beta.18 group G5 (0080-0083).
+            new ContentTables(),
+            new PollVoteChange(),
+            new CalendarTables(),
+            new MediaInventoryIndex(),
         ]);
     }
 

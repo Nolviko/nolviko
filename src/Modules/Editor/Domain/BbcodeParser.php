@@ -29,7 +29,8 @@ final class BbcodeParser
 
     public const SIZES = ['small', 'large', 'x-large'];
 
-    private const TAGS = ['b', 'i', 'u', 's', 'url', 'quote', 'code', 'list', '*', 'img', 'spoiler', 'color', 'size',
+    /** Built-in tags (ADR-012); MyCode names may not reuse them (ADR-042). */
+    public const TAGS = ['b', 'i', 'u', 's', 'url', 'quote', 'code', 'list', '*', 'img', 'spoiler', 'color', 'size',
         'table', 'tr', 'th', 'td'];
 
     /** Tags whose content is read raw, up to the matching closer. */
@@ -45,6 +46,13 @@ final class BbcodeParser
     private array $stack = [];
 
     private int $tags = 0;
+
+    /**
+     * @param array<string, CustomTag> $custom Administrator-defined tags (ADR-042), checked like built-in ones.
+     */
+    public function __construct(private readonly array $custom = [])
+    {
+    }
 
     public function parse(string $source): BbcodeNode
     {
@@ -83,7 +91,7 @@ final class BbcodeParser
      */
     private function open(string $tag, ?string $parameter, string $whole, string $source, int $offset): int
     {
-        $allowed = in_array($tag, self::TAGS, true) && $this->withinLimits($tag);
+        $allowed = (in_array($tag, self::TAGS, true) || isset($this->custom[$tag])) && $this->withinLimits($tag);
 
         if (!$allowed || !$this->validParameter($tag, $parameter)) {
             $this->appendText($whole);
@@ -262,6 +270,10 @@ final class BbcodeParser
 
     private function validParameter(string $tag, ?string $parameter): bool
     {
+        if (isset($this->custom[$tag])) {
+            return $this->custom[$tag]->accepts($parameter);
+        }
+
         return match ($tag) {
             'url' => $parameter === null || UrlPolicy::allowed($parameter),
             'quote', 'spoiler' => $parameter === null || preg_match(self::NAME, $parameter) === 1,

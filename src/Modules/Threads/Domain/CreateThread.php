@@ -114,7 +114,7 @@ final class CreateThread
             $content,
             PostRenderer::FORMAT,
             $rendered,
-            BbcodeRenderer::VERSION,
+            $this->renderer->version(),
             $status === PostStatus::Visible ? ThreadStatus::Visible : ThreadStatus::Pending,
             $status,
             ($this->clock)(),
