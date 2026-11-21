@@ -44,7 +44,7 @@ return [
     'conversations.hidden_hint' => 'Only you and each of them know they were included; their replies come to you only.',
     'conversations.participants' => 'Participants',
     'conversations.hidden_mark' => 'hidden',
-    'conversations.hidden_notice' => 'You are a hidden recipient: others do not see you and your replies go to the sender only.',
+    'conversations.hidden_notice' => 'Hidden recipient: others cannot see you, and replies go to the sender only.',
     'conversations.hidden_reply' => 'Your reply goes only to the sender.',
     'conversations.private_reply' => 'private reply',
 ];

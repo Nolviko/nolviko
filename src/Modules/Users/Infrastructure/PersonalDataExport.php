@@ -246,10 +246,20 @@ final class PersonalDataExport
         }
         $scope = 'EXISTS (SELECT 1 FROM private_conversation_members member WHERE member.conversation_id = '
             . $conversation . ' AND member.user_id = ?)';
+        $parameters = [$userId];
+
+        // Beta 17 G1: a hidden recipient's reply (`visible_to`) is exported only for its author and its addressee.
+        $limited = $messages && $this->connection->createSchemaManager()->introspectTable('private_messages')
+            ->hasColumn('visible_to');
+
+        if ($limited) {
+            $scope .= ' AND (data.visible_to IS NULL OR data.visible_to = ? OR data.user_id = ?)';
+            $parameters = [$userId, $userId, $userId];
+        }
         $size = $this->connection->fetchAssociative(
             'SELECT COUNT(*) AS total, COALESCE(SUM(OCTET_LENGTH(' . $text . ')), 0) AS bytes, '
                 . 'COALESCE(MAX(OCTET_LENGTH(' . $text . ')), 0) AS largest FROM ' . $table . ' WHERE ' . $scope,
-            [$userId],
+            $parameters,
         );
 
         if (
@@ -263,7 +273,7 @@ final class PersonalDataExport
             : 'data.id, data.subject, data.created_at, data.updated_at';
         $rows = $this->connection->iterateAssociative(
             'SELECT ' . $columns . ' FROM ' . $table . ' WHERE ' . $scope . ' ORDER BY data.id LIMIT 2001',
-            [$userId],
+            $parameters,
         );
         $json = '';
         $count = 0;
