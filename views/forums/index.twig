@@ -60,4 +60,5 @@
 {{ theme_slot('forum.list.after', {forums: forums}) }}
 {% if birthdays|default([]) is not empty %}<section class="panel" aria-labelledby="birthdays-title"><h2 id="birthdays-title">{{ t('community.birthdays') }}</h2>
 <p>{% for member in birthdays %}<a href="{{ member.url|safe_url }}"><bdi>{{ member.username }}</bdi></a>{% if member.age is not null %} ({{ member.age }}){% endif %} <span class="meta">{{ member.today ? t('community.birthday_today') : member.day }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</p></section>{% endif %}
+<p><a href="{{ path('calendar')|safe_url }}">{{ t('calendar.title') }}</a></p>
 {% endblock %}

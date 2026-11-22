@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Editor\Domain;
 
+use Closure;
+
 /**
  * Syntax tree → HTML, exactly the elements and attributes of the ADR-012 tag table; every piece of text is
  * escaped. Bump VERSION whenever the output for any input changes: cached renderings of older versions are then
@@ -37,14 +39,43 @@ final class BbcodeRenderer
     /** Bare URLs in text; trailing punctuation is left outside the link. */
     private const BARE_URL = '~https?://[^\s<>"\'\[\]`\\\\]+(?<![.,!?;:)])~i';
 
+    private ?RenderAddons $loaded = null;
+
+    private ?BbcodeParser $customParser = null;
+
+    /**
+     * @param (Closure(): RenderAddons)|null $addons The administrator's smileys and MyCode (ADR-042), read once and
+     *     only when a post is rendered or a cache key is needed.
+     */
     public function __construct(
         private readonly BbcodeParser $parser = new BbcodeParser(),
+        private readonly ?Closure $addons = null,
     ) {
     }
 
     public function render(string $source): string
     {
-        return $this->children($this->parser->parse($source), autolink: true);
+        $addons = $this->addons();
+        $parser = $addons === null || $addons->tags === [] ? $this->parser
+            : $this->customParser ??= new BbcodeParser($addons->tags);
+
+        return $this->children($parser->parse($source), autolink: true);
+    }
+
+    /**
+     * The render-cache key (ADR-012, ADR-042): VERSION alone while no smiley or MyCode was ever defined, so
+     * existing caches stay valid; otherwise VERSION and the add-on set's version together.
+     */
+    public function version(): int
+    {
+        $set = $this->addons()?->version ?? 0;
+
+        return $set <= 0 ? self::VERSION : self::VERSION * 1000000 + (($set - 1) % 999999) + 1;
+    }
+
+    private function addons(): ?RenderAddons
+    {
+        return $this->addons === null ? null : $this->loaded ??= ($this->addons)();
     }
 
     /**
@@ -60,7 +91,7 @@ final class BbcodeRenderer
         $html = '';
 
         foreach ($node->children as $child) {
-            $html .= $child->isText() ? self::text($child->text, $autolink) : $this->element($child, $autolink);
+            $html .= $child->isText() ? $this->text($child->text, $autolink) : $this->element($child, $autolink);
         }
 
         return $html;
@@ -93,14 +124,26 @@ final class BbcodeRenderer
             'size' => '<span class="bb-size-' . strtolower((string) $node->parameter) . '">'
                 . $this->children($node, $autolink) . '</span>',
             'table' => '<table class="bb-table">' . $this->children($node, $autolink) . '</table>',
-            default => $this->children($node, $autolink),
+            default => $this->custom($node, $autolink),
         };
+    }
+
+    /** A MyCode element (ADR-042); its template escapes the parameter and wraps the rendered children. */
+    private function custom(BbcodeNode $node, bool $autolink): string
+    {
+        $definition = $this->addons()?->tags[(string) $node->tag] ?? null;
+        $content = $this->children($node, $autolink);
+
+        return $definition === null ? $content : $definition->render(
+            $content,
+            $node->parameter === null ? null : self::clean($node->parameter),
+        );
     }
 
     private function link(BbcodeNode $node): string
     {
         $href = $node->parameter ?? $node->text;
-        $label = $node->parameter === null ? self::text($node->text, false) : $this->children($node, false);
+        $label = $node->parameter === null ? $this->text($node->text, false) : $this->children($node, false);
 
         return '<a href="' . self::escape($href) . '" rel="nofollow ugc noopener">'
             . ($label === '' ? self::escape($href) : $label) . '</a>';
@@ -117,12 +160,12 @@ final class BbcodeRenderer
         return trim($before) === '' && trim($end === false ? $rest : substr($rest, 0, $end)) === '';
     }
 
-    private static function text(string $text, bool $autolink): string
+    private function text(string $text, bool $autolink): string
     {
         $text = self::clean($text);
 
         if (!$autolink) {
-            return nl2br(self::escape($text), false);
+            return $this->plain($text);
         }
 
         $html = '';
@@ -130,7 +173,7 @@ final class BbcodeRenderer
         preg_match_all(self::BARE_URL, $text, $matches, PREG_OFFSET_CAPTURE);
 
         foreach ($matches[0] as [$url, $position]) {
-            $html .= nl2br(self::escape(substr($text, $offset, $position - $offset)), false);
+            $html .= $this->plain(substr($text, $offset, $position - $offset));
             $video = UrlPolicy::allowed($url) && self::aloneOnLine($text, $position, strlen($url))
                 ? MediaEmbed::match($url) : null;
 
@@ -146,7 +189,27 @@ final class BbcodeRenderer
             $offset = $position + strlen($url);
         }
 
-        return $html . nl2br(self::escape(substr($text, $offset)), false);
+        return $html . $this->plain(substr($text, $offset));
+    }
+
+    /** Escaped text with line breaks, and the administrator's smileys (ADR-042) where a code stands alone. */
+    private function plain(string $text): string
+    {
+        $pattern = $this->addons()?->smileyPattern;
+
+        if ($pattern === null || $text === '') {
+            return nl2br(self::escape($text), false);
+        }
+
+        $smileys = $this->addons()?->smileys ?? [];
+        $html = '';
+
+        foreach (preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$text] as $index => $piece) {
+            $html .= $index % 2 === 1 && isset($smileys[$piece])
+                ? $smileys[$piece] : nl2br(self::escape($piece), false);
+        }
+
+        return $html;
     }
 
     private static function languageClass(?string $language): string

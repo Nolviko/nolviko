@@ -99,4 +99,6 @@ return [
     'threads.show.first_unread' => 'First unread post',
     'threads.show.search' => 'Search this thread',
     'threads.manage.saved_action' => 'Saved action: {title}',
+    'threads.create.icon' => 'Thread icon',
+    'threads.create.no_icon' => 'None',
 ];

@@ -138,7 +138,7 @@ final class CreateReply
             $content,
             PostRenderer::FORMAT,
             $rendered,
-            BbcodeRenderer::VERSION,
+            $this->renderer->version(),
             (new PostApproval($this->posts, $firstPosts))->status($subject, $userId, $thread->forumId),
             ($this->clock)(),
             (int) $subject->value(CreateThread::FLOOD, $thread->forumId),

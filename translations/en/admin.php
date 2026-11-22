@@ -913,4 +913,14 @@ return [
         . 'keep working, administrators browse normally.',
     'admin.site.field.site_closed_message' => 'Message while the site is closed',
     'admin.site.hint.site_closed_message' => 'Plain text, at most 500 characters.',
+    'admin.nav.smileys' => 'Smileys',
+    'admin.nav.icons' => 'Post icons',
+    'admin.nav.mycode' => 'Custom BBCode',
+    'admin.nav.attachments' => 'Attachments',
+    'admin.site.field.attachments_types' => 'Attachment types',
+    'admin.site.hint.attachments_types' => 'Comma separated, from: png, jpg, pdf, txt, zip, 7z, gz. Empty: png, jpg, '
+        . 'pdf, txt.',
+    'admin.site.field.attachments_max_mb' => 'Largest attachment (MB)',
+    'admin.site.hint.attachments_max_mb' => 'Up to 20 MB; images stay at most 5 MB. The host’s PHP upload limit also '
+        . 'applies.',
 ];

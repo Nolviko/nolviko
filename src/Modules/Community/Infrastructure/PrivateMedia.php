@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Community\Infrastructure;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Connection;
@@ -18,6 +19,23 @@ use Throwable;
 /** Private random-key storage. User-supplied paths, URLs, MIME and filename extensions are never trusted. */
 final class PrivateMedia
 {
+    /**
+     * Attachment types an administrator may allow (beta.18 roadmap 15): a fixed, safe catalog. Images are re-encoded
+     * by ImageProcessor; every other type is served as a download with `nosniff`, never inline.
+     */
+    public const TYPES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'pdf' => 'application/pdf',
+        'txt' => 'text/plain', 'zip' => 'application/zip', '7z' => 'application/x-7z-compressed',
+        'gz' => 'application/gzip'];
+
+    /** Types allowed while Admin > Site settings leaves the list empty (the behaviour before beta.18). */
+    public const DEFAULT_TYPES = ['png', 'jpg', 'pdf', 'txt'];
+
+    public const MAX_ATTACHMENT_BYTES = 20971520;
+
+    /**
+     * @param (Closure(): array{types: list<string>, bytes: int})|null $policy Allowed type keys and the size limit
+     *     of post attachments; null keeps DEFAULT_TYPES and ImageProcessor::MAX_BYTES.
+     */
     public function __construct(
         private readonly Connection $db,
         private readonly CommunityAccess $access,
@@ -25,20 +43,35 @@ final class PrivateMedia
         private readonly ImageProcessor $images,
         private readonly string $storage,
         private readonly string $public,
+        private readonly ?Closure $policy = null,
     ) {
+    }
+
+    /** @return array{types: list<string>, bytes: int} */
+    public function policy(): array
+    {
+        $policy = $this->policy === null ? [] : ($this->policy)();
+        $types = array_values(array_intersect($policy['types'] ?? [], array_keys(self::TYPES)));
+
+        return ['types' => $types === [] ? self::DEFAULT_TYPES : $types,
+            'bytes' => max(1, min((int) ($policy['bytes'] ?? ImageProcessor::MAX_BYTES), self::MAX_ATTACHMENT_BYTES))];
     }
 
     public function upload(SubjectPermissions $subject, UploadedFile $upload, ?int $postId, bool $avatar): string
     {
         $actor = $this->access->actor($subject);
 
-        if (!$upload->isValid() || $upload->getSize() < 1 || $upload->getSize() > ImageProcessor::MAX_BYTES) {
+        $policy = $this->policy();
+        $allowed = array_map(static fn(string $type): string => self::TYPES[$type], $policy['types']);
+        $limit = $avatar ? ImageProcessor::MAX_BYTES : $policy['bytes'];
+
+        if (!$upload->isValid() || $upload->getSize() < 1 || $upload->getSize() > $limit) {
             throw new RegistrationRejected(['community_upload_invalid']);
         }
 
-        $bytes = file_get_contents($upload->getPathname(), false, null, 0, ImageProcessor::MAX_BYTES + 1);
+        $bytes = file_get_contents($upload->getPathname(), false, null, 0, $limit + 1);
 
-        if (!is_string($bytes) || strlen($bytes) > ImageProcessor::MAX_BYTES) {
+        if (!is_string($bytes) || strlen($bytes) > $limit) {
             throw new RegistrationRejected(['community_upload_invalid']);
         }
 
@@ -46,9 +79,13 @@ final class PrivateMedia
         $result = ['bytes' => $bytes, 'thumbnail' => null, 'width' => null, 'height' => null, 'mime' => $mime];
 
         if ($avatar || in_array($mime, ['image/png', 'image/jpeg'], true)) {
+            if (!$avatar && (!in_array($mime, $allowed, true) || strlen($bytes) > ImageProcessor::MAX_BYTES)) {
+                throw new RegistrationRejected(['community_upload_invalid']);
+            }
+
             $result = $this->images->process($bytes, $avatar);
         } elseif (
-            !in_array($mime, ['text/plain', 'application/pdf'], true)
+            !in_array($mime, $allowed, true)
             || ($mime === 'text/plain' && (!mb_check_encoding($bytes, 'UTF-8')
                 || str_contains(strtolower($bytes), '<?php') || str_contains($bytes, "\0")))
         ) {

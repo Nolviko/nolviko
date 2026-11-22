@@ -128,7 +128,7 @@ final class EditPost
             $content,
             PostRenderer::FORMAT,
             $rendered,
-            BbcodeRenderer::VERSION,
+            $this->renderer->version(),
             $reason,
             ($this->clock)(),
         ));

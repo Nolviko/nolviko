@@ -64,7 +64,7 @@
 <div class="trow-main">
 <div class="trow-title">
 {% if thread.unread %}<span class="dot" aria-hidden="true"></span>{% endif %}
-{% if thread.prefix|default(null) %}<span class="{{ thread.prefix.class }}"><bdi>{{ thread.prefix.label }}</bdi></span>{% endif %}<a href="{{ thread.url|safe_url }}">{% if thread.moved %}{{ t('forums.show.moved', {title: thread.title|censor}) }}{% else %}<bdi>{{ thread.title|censor }}</bdi>{% endif %}</a>
+{% if thread.icon|default(null) %}<img class="thread-icon" src="{{ thread.icon.url|safe_url }}" width="{{ thread.icon.width }}" height="{{ thread.icon.height }}" alt="{{ thread.icon.title }}"> {% endif %}{% if thread.prefix|default(null) %}<span class="{{ thread.prefix.class }}"><bdi>{{ thread.prefix.label }}</bdi></span>{% endif %}<a href="{{ thread.url|safe_url }}">{% if thread.moved %}{{ t('forums.show.moved', {title: thread.title|censor}) }}{% else %}<bdi>{{ thread.title|censor }}</bdi>{% endif %}</a>
 {% if thread.unread %}{% if thread.unreadUrl|default(null) %}<a class="chip chip-new thread-unread" href="{{ thread.unreadUrl|safe_url }}" title="{{ t('threads.show.first_unread') }}">{{ t('forums.show.unread') }}</a>{% else %}<span class="chip chip-new thread-unread">{{ t('forums.show.unread') }}</span>{% endif %}{% endif %}
 {% if thread.sticky %}<span class="chip chip-amber">{{ t('forums.show.sticky') }}</span>{% endif %}
 {% if thread.locked %}<span class="chip">{{ t('forums.show.locked') }}</span>{% endif %}

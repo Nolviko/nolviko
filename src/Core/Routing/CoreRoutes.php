@@ -249,6 +249,19 @@ final class CoreRoutes
 
     /** beta.18 roadmap 03: joinable groups and the leaders' application queue. */
     public const GROUPS = 'groups';
+    /** beta.18 (G5, ADR-042): smileys, post icons, MyCode and their public image files. */
+    public const ADMIN_SMILEYS = 'admin.smileys';
+
+    public const ADMIN_ICONS = 'admin.icons';
+
+    public const ADMIN_MYCODE = 'admin.mycode';
+
+    public const SITE_IMAGE = 'site_image';
+
+    /** beta.18 roadmap 15, 16 and 38. */
+    public const ADMIN_ATTACHMENTS = 'admin.attachments';
+
+    public const CALENDAR = 'calendar';
 
     public const ADMIN_WEBHOOKS = 'admin.webhooks';
 
@@ -640,6 +653,17 @@ final class CoreRoutes
                 => '[1-9][0-9]{0,17}']),
             new RouteDefinition(self::ADMIN_MEMBERSHIP, '/admin/membership', ['GET', 'POST'], requiresHttps: true),
             new RouteDefinition(self::GROUPS, '/groups', ['GET', 'POST']),
+            new RouteDefinition(self::ADMIN_SMILEYS, '/admin/smileys', ['GET', 'POST'], requiresHttps: true),
+            new RouteDefinition(self::ADMIN_ICONS, '/admin/icons', ['GET', 'POST'], requiresHttps: true),
+            new RouteDefinition(self::ADMIN_MYCODE, '/admin/mycode', ['GET', 'POST'], requiresHttps: true),
+            new RouteDefinition(self::ADMIN_ATTACHMENTS, '/admin/attachments', ['GET', 'POST'], requiresHttps: true),
+            new RouteDefinition(self::CALENDAR, '/calendar', ['GET', 'POST']),
+            new RouteDefinition(
+                self::SITE_IMAGE,
+                '/site-images/{key}.{ext}',
+                ['GET'],
+                ['key' => '[a-f0-9]{64}', 'ext' => 'png|jpg|gif|webp'],
+            ),
             new RouteDefinition(
                 self::ADMIN_MEMBER_EXTRAS,
                 '/admin/profile-fields',

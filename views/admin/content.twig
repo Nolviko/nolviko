@@ -1,0 +1,84 @@
+{# Smileys, thread/post icons and MyCode (beta.18, ADR-042). Context: title, nav, section (smileys, icons, mycode),
+   action, smileys (id, code, aliases, title, url, width, height), icons (id, title, url, width, height), mycodes (id,
+   tag, parameter, template, description, enabled, pattern), parameters, elements, max_kb, max_side, error, notice,
+   fresh, reauth_url, csrf_field, csrf_token. Images are shown from their own public URL; nothing here is raw HTML. #}
+{% extends 'admin/layout.twig' %}
+
+{% block admin %}
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+{% if not fresh %}<p><a href="{{ reauth_url|safe_url }}">{{ t('admin.site.reauth') }}</a></p>{% endif %}
+{% set off = not fresh ? ' disabled' : '' %}
+
+{% if section == 'smileys' %}
+<p>{{ t('content.admin.smileys_intro') }}</p>
+{% if smileys is empty %}<p class="hint">{{ t('content.admin.no_smileys') }}</p>{% else %}
+<ul class="panel list">
+{% for smiley in smileys %}
+<li><img src="{{ smiley.url|safe_url }}" alt="{{ smiley.code }}" width="{{ smiley.width }}" height="{{ smiley.height }}">
+<form method="post" action="{{ action|safe_url }}" class="row">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ smiley.id }}">
+<label>{{ t('content.admin.code') }} <input name="code" value="{{ smiley.code }}" maxlength="30" required></label>
+<label>{{ t('content.admin.aliases') }} <input name="aliases" value="{{ smiley.aliases }}" maxlength="200"></label>
+<label>{{ t('content.admin.image_title') }} <input name="title" value="{{ smiley.title }}" maxlength="60" required></label>
+<button type="submit" name="action" value="{{ 'update_smiley' }}"{{ off }}>{{ t('content.admin.save') }}</button>
+<button type="submit" name="action" value="{{ 'delete_smiley' }}" class="btn-s"{{ off }}>{{ t('content.admin.delete') }}</button>
+</form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<h2>{{ t('content.admin.add_smiley') }}</h2>
+<form method="post" action="{{ action|safe_url }}" enctype="multipart/form-data">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="smiley-code">{{ t('content.admin.code') }}</label> <input id="smiley-code" name="code" maxlength="30" required></p>
+<p><label for="smiley-aliases">{{ t('content.admin.aliases') }}</label> <input id="smiley-aliases" name="aliases" maxlength="200">
+<span class="hint">{{ t('content.admin.aliases_hint') }}</span></p>
+<p><label for="smiley-title">{{ t('content.admin.image_title') }}</label> <input id="smiley-title" name="title" maxlength="60" required dir="auto"></p>
+<p><label for="smiley-image">{{ t('content.admin.image') }}</label> <input id="smiley-image" name="image" type="file" accept="image/png,image/jpeg,image/gif,image/webp" required>
+<span class="hint">{{ t('content.admin.image_hint', {kb: max_kb, side: max_side}) }}</span></p>
+<p><button type="submit" name="action" value="{{ 'add_smiley' }}"{{ off }}>{{ t('content.admin.add_smiley') }}</button></p>
+</form>
+
+{% elseif section == 'icons' %}
+<p>{{ t('content.admin.icons_intro') }}</p>
+{% if icons is empty %}<p class="hint">{{ t('content.admin.no_icons') }}</p>{% else %}
+<ul class="panel list">
+{% for icon in icons %}
+<li><img src="{{ icon.url|safe_url }}" alt="" width="{{ icon.width }}" height="{{ icon.height }}"> <bdi>{{ icon.title }}</bdi>
+<form method="post" action="{{ action|safe_url }}" class="row-end">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ icon.id }}">
+<button type="submit" name="action" value="{{ 'delete_icon' }}" class="btn-s"{{ off }}>{{ t('content.admin.delete') }}</button>
+</form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<h2>{{ t('content.admin.add_icon') }}</h2>
+<form method="post" action="{{ action|safe_url }}" enctype="multipart/form-data">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="icon-title">{{ t('content.admin.image_title') }}</label> <input id="icon-title" name="title" maxlength="60" required dir="auto"></p>
+<p><label for="icon-image">{{ t('content.admin.image') }}</label> <input id="icon-image" name="image" type="file" accept="image/png,image/jpeg,image/gif,image/webp" required>
+<span class="hint">{{ t('content.admin.image_hint', {kb: max_kb, side: max_side}) }}</span></p>
+<p><button type="submit" name="action" value="{{ 'add_icon' }}"{{ off }}>{{ t('content.admin.add_icon') }}</button></p>
+</form>
+
+{% else %}
+<p>{{ t('content.admin.mycode_intro') }}</p>
+<p class="hint">{{ t('content.admin.mycode_elements', {elements: elements}) }}</p>
+{% for code in mycodes|merge([{id: 0, pattern: '', parameter: 'none', template: '', description: '', enabled: 1}]) %}
+<form method="post" action="{{ action|safe_url }}" class="card">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ code.id }}">
+{% if code.id == 0 %}<h2>{{ t('content.admin.add_mycode') }}</h2>{% endif %}
+<p><label for="mycode-pattern-{{ code.id }}">{{ t('content.admin.pattern') }}</label>
+<input id="mycode-pattern-{{ code.id }}" name="pattern" value="{{ code.pattern }}" maxlength="80" required placeholder="[note]{content}[/note]" dir="ltr"></p>
+<p><label for="mycode-parameter-{{ code.id }}">{{ t('content.admin.parameter') }}</label>
+<select id="mycode-parameter-{{ code.id }}" name="parameter">{% for kind in parameters %}<option value="{{ kind }}"{% if kind == code.parameter %} selected{% endif %}>{{ t('content.admin.parameter_' ~ kind) }}</option>{% endfor %}</select></p>
+<p><label for="mycode-template-{{ code.id }}">{{ t('content.admin.template') }}</label>
+<textarea id="mycode-template-{{ code.id }}" name="template" maxlength="2000" required dir="ltr" placeholder="&lt;div class=&quot;note&quot;&gt;{content}&lt;/div&gt;">{{ code.template }}</textarea></p>
+<p><label for="mycode-description-{{ code.id }}">{{ t('content.admin.description') }}</label>
+<input id="mycode-description-{{ code.id }}" name="description" value="{{ code.description }}" maxlength="200"></p>
+<p><label><input type="checkbox" name="enabled" value="1"{% if code.enabled %} checked{% endif %}> {{ t('content.admin.enabled') }}</label></p>
+<p><button type="submit" name="action" value="{{ 'save_mycode' }}"{{ off }}>{{ t('content.admin.save') }}</button>
+{% if code.id %}<button type="submit" name="action" value="{{ 'delete_mycode' }}" class="btn-s"{{ off }}>{{ t('content.admin.delete') }}</button>{% endif %}</p>
+</form>
+{% endfor %}
+{% endif %}
+{% endblock %}

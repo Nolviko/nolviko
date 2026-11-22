@@ -29,11 +29,11 @@ final class PostRenderer
 
     public function html(Post $post, string $spoilerLabel): SafeHtml
     {
-        $cached = $post->rendererVersion === BbcodeRenderer::VERSION ? $post->renderedHtml : null;
+        $cached = $post->rendererVersion === $this->renderer->version() ? $post->renderedHtml : null;
 
         if ($cached === null) {
             $cached = $this->renderer->render($post->content);
-            $this->posts->storeRendering($post->id, $cached, BbcodeRenderer::VERSION, $post->content);
+            $this->posts->storeRendering($post->id, $cached, $this->renderer->version(), $post->content);
         }
 
         $html = BbcodeRenderer::localize($cached, $spoilerLabel);

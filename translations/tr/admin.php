@@ -908,4 +908,13 @@ return [
         . 'çalışır, yöneticiler siteyi normal gezer.',
     'admin.site.field.site_closed_message' => 'Site kapalıyken gösterilecek mesaj',
     'admin.site.hint.site_closed_message' => 'Düz metin, en çok 500 karakter.',
+    'admin.nav.smileys' => 'İfadeler',
+    'admin.nav.icons' => 'İleti simgeleri',
+    'admin.nav.mycode' => 'Özel BBCode',
+    'admin.nav.attachments' => 'Ek dosyalar',
+    'admin.site.field.attachments_types' => 'Ek dosya türleri',
+    'admin.site.hint.attachments_types' => 'Virgülle ayırın: png, jpg, pdf, txt, zip, 7z, gz. Boş: png, jpg, pdf, txt.',
+    'admin.site.field.attachments_max_mb' => 'En büyük ek dosya (MB)',
+    'admin.site.hint.attachments_max_mb' => 'En çok 20 MB; görseller en çok 5 MB kalır. Sunucunun PHP yükleme sınırı '
+        . 'da geçerlidir.',
 ];

@@ -14,6 +14,7 @@ use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Community\Infrastructure\CommunityRead;
+use Nolviko\Modules\Content\Infrastructure\ContentLibrary;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Domain\ForumType;
 use Nolviko\Modules\Forums\Infrastructure\ForumSubscriptions;
@@ -59,6 +60,7 @@ final class ForumThreadsHandler implements RouteHandler
         private readonly ?ThreadTaxonomy $taxonomy = null,
         private readonly ?CommunityRead $community = null,
         private readonly ?ForumSubscriptions $subscriptions = null,
+        private readonly ?ContentLibrary $content = null,
     ) {
     }
 
@@ -190,6 +192,8 @@ final class ForumThreadsHandler implements RouteHandler
         $labels = $this->taxonomy?->forThreads(
             array_map(static fn(ThreadListItem $item): int => $item->id, $items),
         ) ?? [];
+        $icons = $this->content?->threadIcons(array_map(static fn(ThreadListItem $item): int => $item->id, $items))
+            ?? [];
         $html = $this->views->render('forums/show.twig', [
             'trail' => $trail,
             'subforums' => $subforums,
@@ -209,6 +213,7 @@ final class ForumThreadsHandler implements RouteHandler
                         CoreRoutes::COMMUNITY_MEDIA,
                         ['media' => $avatars[$item->lastPosterId ?? 0]],
                     ) : null,
+                    $icons[$item->id] ?? null,
                 ),
                 $items,
             ),
@@ -241,6 +246,7 @@ final class ForumThreadsHandler implements RouteHandler
         bool $unread,
         ?array $prefix = null,
         ?string $avatar = null,
+        ?array $icon = null,
     ): ThreadRowView {
         return new ThreadRowView(
             $item->title,
@@ -265,6 +271,7 @@ final class ForumThreadsHandler implements RouteHandler
             // beta.18 (roadmap 13): the "new" marker leads to the first unread post.
             $unread && $item->movedToThreadId === null
                 ? $this->urls->generate(CoreRoutes::THREAD_UNREAD, ['thread' => (string) $item->id]) : null,
+            $icon,
         );
     }
 }

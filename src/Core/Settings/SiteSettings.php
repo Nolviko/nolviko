@@ -92,6 +92,9 @@ final class SiteSettings
         // beta.18 roadmap 36: close the site for visitors (administrators and sign-in keep working).
         'site.closed' => ['enum', ['off', 'on']],
         'site.closed_message' => ['string', 500],
+        // beta.18 roadmap 15: post attachment types (comma separated keys of PrivateMedia::TYPES) and size limit.
+        'attachments.types' => ['string', 100],
+        'attachments.max_mb' => ['int', [1, 20]],
     ];
 
     private const CACHE_KEY = 'site-settings-v1';

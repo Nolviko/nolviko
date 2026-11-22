@@ -44,6 +44,10 @@ final class AdminNavigation
             CoreRoutes::ADMIN_THEMES => 'admin.nav.themes',
             CoreRoutes::ADMIN_EXTENSIONS => 'admin.nav.extensions',
             CoreRoutes::ADMIN_WEBHOOKS => 'admin.nav.webhooks',
+            CoreRoutes::ADMIN_SMILEYS => 'admin.nav.smileys',
+            CoreRoutes::ADMIN_ICONS => 'admin.nav.icons',
+            CoreRoutes::ADMIN_MYCODE => 'admin.nav.mycode',
+            CoreRoutes::ADMIN_ATTACHMENTS => 'admin.nav.attachments',
         ],
         'admin.nav.group.records' => [
             CoreRoutes::ADMIN_AUDIT => 'admin.nav.audit',

@@ -96,4 +96,6 @@ return [
     'threads.show.first_unread' => 'İlk okunmamış ileti',
     'threads.show.search' => 'Bu konuda ara',
     'threads.manage.saved_action' => 'Kayıtlı işlem: {title}',
+    'threads.create.icon' => 'Konu simgesi',
+    'threads.create.no_icon' => 'Yok',
 ];
