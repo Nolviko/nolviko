@@ -46,7 +46,7 @@ final class CommunityRead
         $thread = $this->access->thread($subject, $id);
         $poll = $this->db->fetchAssociative('SELECT thread_id, user_id, COALESCE(imported_question, '
             . 'question) AS question, multiple_choice, '
-            . 'closes_at, imported_lock, imported_results, imported_max_choices FROM '
+            . 'closes_at, imported_lock, imported_results, imported_max_choices, allow_change FROM '
             . 'thread_polls WHERE thread_id = ?', [$id]);
         $options = $poll === false ? [] : $this->db->fetchAllAssociative(
             'SELECT o.id, COALESCE(o.imported_label, o.label) AS label, '

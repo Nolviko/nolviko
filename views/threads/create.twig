@@ -24,6 +24,13 @@
 <p><label for="thread-title">{{ t('threads.create.subject') }}</label>
 <input id="thread-title" dir="auto" name="title" type="text" required maxlength="{{ max_title }}" value="{{ thread_title }}"></p>
 {% include 'components/thread_labels_fields.twig' %}
+<details class="event-pick"><summary>{{ t('calendar.add_event') }}</summary>
+<p><label for="event-start">{{ t('calendar.starts') }}</label><input id="event-start" name="event_start" type="date"></p>
+<p><label for="event-end">{{ t('calendar.ends') }}</label><input id="event-end" name="event_end" type="date"></p></details>
+{% if icon_options|default([]) is not empty %}<fieldset class="icon-pick"><legend>{{ t('threads.create.icon') }}</legend>
+<label><input type="radio" name="icon" value="" checked> {{ t('threads.create.no_icon') }}</label>
+{% for icon in icon_options %}<label><input type="radio" name="icon" value="{{ icon.id }}"> <img src="{{ icon.url|safe_url }}" width="{{ icon.width }}" height="{{ icon.height }}" alt="{{ icon.title }}"></label>{% endfor %}
+</fieldset>{% endif %}
 <p><label for="thread-content">{{ t('threads.create.content') }}</label>
 {% include 'components/editor_toolbar.twig' with {target: 'thread-content', image_upload: csrf_token|default('') and site.post_images|default('off') == 'on' ? {url: path('gallery.attach'), token: csrf_token, max: site.images_per_post|default('5')} : null} only %}
 <textarea dir="auto" id="thread-content" data-mentions name="content" rows="12" required maxlength="{{ max_content }}">{{ content }}</textarea></p>

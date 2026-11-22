@@ -129,6 +129,8 @@ use Nolviko\Modules\Admin\Infrastructure\SavedAdminFilters;
 use Nolviko\Modules\Admin\Infrastructure\SystemDiagnostics;
 use Nolviko\Modules\Api\Http\ApiHandler;
 use Nolviko\Modules\Api\Infrastructure\Webhooks;
+use Nolviko\Modules\Calendar\Http\CalendarHandler;
+use Nolviko\Modules\Calendar\Infrastructure\CalendarEvents;
 use Nolviko\Modules\Community\Http\CommunityHandler;
 use Nolviko\Modules\Community\Http\MemberLinkHandler;
 use Nolviko\Modules\Community\Http\MemberSuggestHandler;
@@ -143,8 +145,17 @@ use Nolviko\Modules\Community\Infrastructure\ImageProcessor;
 use Nolviko\Modules\Community\Infrastructure\MemberProfiles;
 use Nolviko\Modules\Community\Infrastructure\MemberStanding;
 use Nolviko\Modules\Community\Infrastructure\PrivateMedia;
+use Nolviko\Modules\Content\Http\AttachmentsAdminHandler;
+use Nolviko\Modules\Content\Http\ContentAdminHandler;
+use Nolviko\Modules\Content\Http\SiteImageHandler;
+use Nolviko\Modules\Content\Infrastructure\AttachmentInventory;
+use Nolviko\Modules\Content\Infrastructure\ContentLibrary;
+use Nolviko\Modules\Content\Infrastructure\SiteImages;
 use Nolviko\Modules\Conversations\Http\ConversationsHandler;
 use Nolviko\Modules\Conversations\Infrastructure\PrivateConversations;
+use Nolviko\Modules\Editor\Domain\BbcodeParser;
+use Nolviko\Modules\Editor\Domain\BbcodeRenderer;
+use Nolviko\Modules\Editor\Domain\RenderAddons;
 use Nolviko\Modules\Forums\Domain\ForumIndex;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Http\DiscussionFeed;
@@ -372,6 +383,111 @@ final class CoreServiceProvider implements ServiceProvider
                 },
             ),
             [Session::class, new Lazy(Connection::class)],
+        );
+        // beta.18 (G5, ADR-042): smileys, post icons and administrator MyCode; the renderer reads the cached set.
+        $services->factory(
+            ContentLibrary::class,
+            static fn(Closure $connection, CacheFactory $caches, string $storage, Router $router): ContentLibrary
+                => new ContentLibrary(
+                    $connection,
+                    $caches->namespace('content'),
+                    new SiteImages($storage),
+                    static fn(string $key, string $extension): string => $router->generate(
+                        CoreRoutes::SITE_IMAGE,
+                        ['key' => $key, 'ext' => $extension],
+                    ),
+                ),
+            [new Lazy(Connection::class), CacheFactory::class, CompositionRoot::STORAGE, Router::class],
+        );
+        $services->factory(
+            BbcodeRenderer::class,
+            static fn(Closure $library): BbcodeRenderer => new BbcodeRenderer(
+                new BbcodeParser(),
+                static fn(): RenderAddons => $library()->addons(),
+            ),
+            [new Lazy(ContentLibrary::class)],
+        );
+        $services->factory(
+            ContentAdminHandler::class,
+            static fn(
+                ContentLibrary $library,
+                RequestSubject $subjects,
+                AdminSession $admin,
+                CsrfTokens $csrf,
+                Session $session,
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                Router $router,
+            ): ContentAdminHandler => new ContentAdminHandler(
+                $library,
+                $subjects,
+                $admin,
+                $csrf,
+                $session,
+                $translator,
+                $views,
+                $router,
+            ),
+            [ContentLibrary::class, RequestSubject::class, AdminSession::class, CsrfTokens::class, Session::class,
+                MessageTranslator::class, TemplateRenderer::class, Router::class],
+        );
+        $services->factory(
+            AttachmentsAdminHandler::class,
+            static fn(
+                Connection $db,
+                PrivateMedia $media,
+                RequestSubject $subjects,
+                AdminSession $admin,
+                CsrfTokens $csrf,
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                Router $router,
+            ): AttachmentsAdminHandler => new AttachmentsAdminHandler(
+                new AttachmentInventory($db),
+                $media,
+                $subjects,
+                $admin,
+                $csrf,
+                $translator,
+                $views,
+                $router,
+                new DbalAdminAudit($db),
+            ),
+            [Connection::class, PrivateMedia::class, RequestSubject::class, AdminSession::class, CsrfTokens::class,
+                MessageTranslator::class, TemplateRenderer::class, Router::class],
+        );
+        $services->factory(
+            CalendarHandler::class,
+            static fn(
+                Connection $db,
+                ThreadRepository $threads,
+                ForumVisibility $visibility,
+                RequestSubject $subjects,
+                CsrfTokens $csrf,
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                Router $router,
+                ErrorResponder $errors,
+            ): CalendarHandler => new CalendarHandler(
+                new CalendarEvents($db),
+                $threads,
+                $visibility,
+                $subjects,
+                $csrf,
+                $translator,
+                $views,
+                $router,
+                $errors,
+            ),
+            [Connection::class, ThreadRepository::class, ForumVisibility::class, RequestSubject::class,
+                CsrfTokens::class, MessageTranslator::class, TemplateRenderer::class, Router::class,
+                ErrorResponder::class],
+        );
+        $services->factory(
+            SiteImageHandler::class,
+            static fn(string $storage, ErrorResponder $errors): SiteImageHandler
+                => new SiteImageHandler(new SiteImages($storage), $errors),
+            [CompositionRoot::STORAGE, ErrorResponder::class],
         );
         $services->factory(
             ThemePresentation::class,
@@ -1852,6 +1968,7 @@ final class CoreServiceProvider implements ServiceProvider
                 CsrfTokens $csrf,
                 ThreadTaxonomy $taxonomy,
                 CommunityRead $community,
+                ContentLibrary $content,
             ): ForumThreadsHandler => new ForumThreadsHandler(
                 $translator,
                 $views,
@@ -1865,6 +1982,7 @@ final class CoreServiceProvider implements ServiceProvider
                 $csrf,
                 taxonomy: $taxonomy,
                 community: $community,
+                content: $content,
             ),
             [
                 MessageTranslator::class,
@@ -1879,6 +1997,7 @@ final class CoreServiceProvider implements ServiceProvider
                 CsrfTokens::class,
                 ThreadTaxonomy::class,
                 CommunityRead::class,
+                ContentLibrary::class,
             ],
         );
         $services->factory(
@@ -3134,6 +3253,8 @@ final class CoreServiceProvider implements ServiceProvider
                 ErrorResponder $errors,
                 Drafts $drafts,
                 ThreadTaxonomy $taxonomy,
+                ContentLibrary $content,
+                Connection $db,
             ): CreateThreadHandler => new CreateThreadHandler(
                 $translator,
                 $views,
@@ -3144,6 +3265,8 @@ final class CoreServiceProvider implements ServiceProvider
                 $errors,
                 $drafts,
                 taxonomy: $taxonomy,
+                content: $content,
+                db: $db,
             ),
             [
                 MessageTranslator::class,
@@ -3155,6 +3278,8 @@ final class CoreServiceProvider implements ServiceProvider
                 ErrorResponder::class,
                 Drafts::class,
                 ThreadTaxonomy::class,
+                ContentLibrary::class,
+                Connection::class,
             ],
         );
         $services->factory(
@@ -3409,16 +3534,21 @@ final class CoreServiceProvider implements ServiceProvider
         $services->factory(
             PrivateMedia::class,
             static fn(Connection $db, CommunityAccess $access, MemberProfiles $profiles, string $storage,
-                string $root): PrivateMedia => new PrivateMedia(
+                string $root, SiteSettings $settings): PrivateMedia => new PrivateMedia(
                     $db,
                     $access,
                     $profiles,
                     new ImageProcessor(),
                     $storage,
                     $root . '/public',
+                    // beta.18 roadmap 15: types and size from Admin > Site settings.
+                    static fn(): array => ['types' => array_values(array_filter(array_map(
+                        'trim',
+                        explode(',', strtolower((string) $settings->get('attachments.types'))),
+                    ))), 'bytes' => (int) ($settings->get('attachments.max_mb') ?? 5) * 1048576],
                 ),
             [Connection::class, CommunityAccess::class, MemberProfiles::class,
-                CompositionRoot::STORAGE, CompositionRoot::ROOT],
+                CompositionRoot::STORAGE, CompositionRoot::ROOT, SiteSettings::class],
         );
         $services->factory(
             CommunityActions::class,
@@ -3616,6 +3746,10 @@ final class CoreServiceProvider implements ServiceProvider
                 Closure $externalRegister,
                 Closure $externalUnlink,
                 Closure $externalLink,
+                Closure $contentAdmin,
+                Closure $siteImage,
+                Closure $attachmentsAdmin,
+                Closure $calendar,
             ): Kernel => new Kernel(
                 $router,
                 [
@@ -3664,6 +3798,12 @@ final class CoreServiceProvider implements ServiceProvider
                     CoreRoutes::AUTH_EXTERNAL_REGISTER => $externalRegister,
                     CoreRoutes::ACCOUNT_EXTERNAL => $externalUnlink,
                     CoreRoutes::AUTH_EXTERNAL_LINK => $externalLink,
+                    CoreRoutes::ADMIN_SMILEYS => $contentAdmin,
+                    CoreRoutes::ADMIN_ICONS => $contentAdmin,
+                    CoreRoutes::ADMIN_MYCODE => $contentAdmin,
+                    CoreRoutes::SITE_IMAGE => $siteImage,
+                    CoreRoutes::ADMIN_ATTACHMENTS => $attachmentsAdmin,
+                    CoreRoutes::CALENDAR => $calendar,
                     CoreRoutes::ADMIN_DASHBOARD => $adminDashboard,
                     CoreRoutes::ADMIN_UPDATES => $adminUpdates,
                     CoreRoutes::ADMIN_IMPORTS => $imports,
@@ -3848,6 +3988,10 @@ final class CoreServiceProvider implements ServiceProvider
                 new Lazy(ExternalAuthHandler::class . '.' . ExternalAuthHandler::REGISTER),
                 new Lazy(ExternalAuthHandler::class . '.' . ExternalAuthHandler::UNLINK),
                 new Lazy(ExternalAuthHandler::class . '.' . ExternalAuthHandler::LINK),
+                new Lazy(ContentAdminHandler::class),
+                new Lazy(SiteImageHandler::class),
+                new Lazy(AttachmentsAdminHandler::class),
+                new Lazy(CalendarHandler::class),
             ],
         );
     }

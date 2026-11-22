@@ -48,4 +48,5 @@
 </ul>
 {% endif %}
 {{ theme_slot('forum.list.after', {forums: forums}) }}
+<p><a href="{{ path('calendar')|safe_url }}">{{ t('calendar.title') }}</a></p>
 {% endblock %}

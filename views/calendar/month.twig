@@ -1,0 +1,17 @@
+{# Calendar month (beta.18 roadmap 38). Context: title, month (YYYY-MM), events (thread_id, title, url, starts_on,
+   ends_on), previous_url, next_url. Only events of threads the reader may read are listed. #}
+{% extends 'layouts/page.twig' %}
+{% block content %}
+<h1>{{ title }}</h1>
+<nav class="head-row" aria-label="{{ t('calendar.months') }}">
+<a class="btn btn-s" rel="prev" href="{{ previous_url|safe_url }}">{{ t('calendar.previous') }}</a>
+<h2>{{ month }}</h2>
+<a class="btn btn-s" rel="next" href="{{ next_url|safe_url }}">{{ t('calendar.next') }}</a>
+</nav>
+{% if events is empty %}<p class="hint">{{ t('calendar.none') }}</p>{% else %}
+<ul class="panel list">
+{% for event in events %}<li><time datetime="{{ event.starts_on }}">{{ event.starts_on }}</time>{% if event.ends_on != event.starts_on %} – <time datetime="{{ event.ends_on }}">{{ event.ends_on }}</time>{% endif %}
+· <a href="{{ event.url|safe_url }}"><bdi>{{ event.title|censor }}</bdi></a></li>{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

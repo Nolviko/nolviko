@@ -7,6 +7,7 @@ namespace Nolviko\Modules\Threads\Http;
 use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
+use Doctrine\DBAL\Connection;
 use Nolviko\Core\Http\ErrorResponder;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
@@ -16,6 +17,8 @@ use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\View\SafeHtml;
 use Nolviko\Core\View\TemplateRenderer;
+use Nolviko\Modules\Calendar\Infrastructure\CalendarEvents;
+use Nolviko\Modules\Content\Infrastructure\ContentLibrary;
 use Nolviko\Modules\Editor\Domain\MarkdownToBbcode;
 use Nolviko\Modules\Forums\Domain\Forum;
 use Nolviko\Modules\Threads\Domain\CreateThread;
@@ -63,6 +66,8 @@ final class CreateThreadHandler implements RouteHandler
         private readonly ?Drafts $drafts = null,
         private readonly ?Closure $clock = null,
         private readonly ?ThreadTaxonomy $taxonomy = null,
+        private readonly ?ContentLibrary $content = null,
+        private readonly ?Connection $db = null,
     ) {
     }
 
@@ -146,6 +151,25 @@ final class CreateThreadHandler implements RouteHandler
             $this->taxonomy->assign($created->threadId, $forumId, $prefix, $tags);
         }
 
+        // beta.18 roadmap 29: an administrator-defined thread icon, chosen from the library only.
+        $icon = $this->content?->pickIcon($input['icon'] ?? null);
+
+        if ($icon !== null && $this->db !== null) {
+            $this->db->update('threads', ['icon_id' => $icon], ['id' => $created->threadId]);
+        }
+
+        // beta.18 roadmap 38: an optional calendar date (range) for the new thread.
+        $start = is_string($input['event_start'] ?? null) ? $input['event_start'] : '';
+
+        if ($start !== '' && $this->db !== null) {
+            (new CalendarEvents($this->db))->set(
+                $created->threadId,
+                $userId,
+                $start,
+                is_string($input['event_end'] ?? null) ? $input['event_end'] : '',
+            );
+        }
+
         $this->drafts?->discard($userId, $context);
 
         // The new thread, or its forum while it waits for approval (a pending thread is not shown to its author).
@@ -190,6 +214,7 @@ final class CreateThreadHandler implements RouteHandler
             'csrf_token' => $this->csrf->token(),
             'thread_title' => $title,
             'prefix_options' => $forum === null ? [] : $this->taxonomy?->prefixes($forum->id) ?? [],
+            'icon_options' => array_values($this->content?->icons() ?? []),
             'tag_options' => $forum === null ? [] : $this->taxonomy?->tags() ?? [],
             'selected_prefix' => $picked[0],
             'selected_tags' => $picked[1],

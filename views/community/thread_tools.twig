@@ -42,6 +42,9 @@
 </ul>
 {% if not tools.poll_results_visible %}<p class="meta">{{ t('operations.poll_results_hidden') }}</p>{% endif %}
 {% endif %}
+{% if member and tools.relationship.voted and tools.poll.allow_change|default(0) and not tools.poll_closed %}<form method="post" action="{{ act|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'vote_retract' }}"><input type="hidden" name="target" value="{{ thread_id }}"><input type="hidden" name="return_thread" value="{{ thread_id }}">
+<button class="btn-s">{{ t('community.retract_vote') }}</button></form>{% endif %}
 {% if tools.poll_closed %}<p class="meta">{{ t('operations.poll_locked') }}</p>{% endif %}
 </section>
 {% endif %}

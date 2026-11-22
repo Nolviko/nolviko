@@ -91,9 +91,15 @@ final class SiteImages
             return null;
         }
 
-        $response = new BinaryFileResponse($path, 200, ['Content-Type' => $mime, 'X-Content-Type-Options' => 'nosniff',
-            'Content-Security-Policy' => "default-src 'none'; sandbox"], public: true, autoEtag: false,
-            autoLastModified: false);
+        $response = new BinaryFileResponse(
+            $path,
+            200,
+            ['Content-Type' => $mime, 'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox"],
+            public: true,
+            autoEtag: false,
+            autoLastModified: false
+        );
         $response->headers->set('Cache-Control', 'public, max-age=31536000, immutable');
 
         return $response;

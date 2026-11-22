@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nolviko\Modules\Content\Infrastructure;
 
 use Closure;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Nolviko\Core\Cache\Cache;
@@ -84,6 +85,42 @@ final class ContentLibrary
         return $id === null ? null : ($this->icons()[$id] ?? null);
     }
 
+    /**
+     * Icons of listed threads (roadmap 29). No query while the library has no icons, so boards without icons pay
+     * nothing on forum pages.
+     *
+     * @param list<int> $threadIds
+     * @return array<int, array{id: int, url: string, title: string, width: int, height: int}> thread ID => icon
+     */
+    public function threadIcons(array $threadIds): array
+    {
+        $icons = $this->icons();
+
+        if ($icons === [] || $threadIds === []) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db()->fetchAllKeyValue(
+                'SELECT id, icon_id FROM threads WHERE id IN (?) AND icon_id IS NOT NULL',
+                [$threadIds],
+                [ArrayParameterType::INTEGER],
+            );
+        } catch (Throwable) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($rows as $thread => $icon) {
+            if (isset($icons[(int) $icon])) {
+                $result[(int) $thread] = $icons[(int) $icon];
+            }
+        }
+
+        return $result;
+    }
+
     /** A submitted icon choice: null for none or unknown. */
     public function pickIcon(mixed $value): ?int
     {
@@ -101,10 +138,12 @@ final class ContentLibrary
     /** @return list<array<string, mixed>> */
     public function bbcodes(): array
     {
-        return array_map(static fn(array $row): array => $row + ['pattern' => '[' . $row['tag']
+        return array_map(
+            static fn(array $row): array => $row + ['pattern' => '[' . $row['tag']
             . ($row['parameter'] === 'none' ? '' : '={param}') . ']{content}[/' . $row['tag'] . ']'],
             $this->db()->fetchAllAssociative('SELECT id, tag, parameter, template, description, enabled '
-            . 'FROM custom_bbcodes ORDER BY tag'));
+            . 'FROM custom_bbcodes ORDER BY tag')
+        );
     }
 
     /**
@@ -350,14 +389,19 @@ final class ContentLibrary
                 . 'ORDER BY position, id') as $row
         ) {
             $icons[(int) $row['id']] = ['id' => (int) $row['id'], 'title' => (string) $row['title'],
-                'url' => ($this->imageUrl)((string) $row['image_key'], SiteImages::TYPES[(string) $row['mime']] ?? 'png'),
+                'url' => ($this->imageUrl)(
+                    (string) $row['image_key'],
+                    SiteImages::TYPES[(string) $row['mime']] ?? 'png',
+                ),
                 'width' => (int) $row['width'], 'height' => (int) $row['height']];
         }
 
-        $tags = array_map(static fn(array $row): array => ['tag' => (string) $row['tag'],
+        $tags = array_map(
+            static fn(array $row): array => ['tag' => (string) $row['tag'],
             'parameter' => (string) $row['parameter'], 'template' => (string) $row['template']],
             $db->fetchAllAssociative('SELECT tag, parameter, template FROM custom_bbcodes WHERE enabled = 1 '
-                . 'ORDER BY tag'));
+            . 'ORDER BY tag')
+        );
 
         return ['version' => (new VersionCounter($db))->current(self::VERSION_KEY), 'smileys' => $smileys,
             'smiley_rows' => $rows, 'tags' => $tags, 'icons' => $icons];
@@ -432,7 +476,10 @@ final class ContentLibrary
         }
 
         foreach ($codes as $one) {
-            if (preg_match(self::CODE, $one) !== 1 || in_array(strtolower(trim($one, '[]')), BbcodeParser::TAGS, true)) {
+            if (
+                preg_match(self::CODE, $one) !== 1
+                || in_array(strtolower(trim($one, '[]')), BbcodeParser::TAGS, true)
+            ) {
                 throw new ContentRejected('content_code_invalid');
             }
         }
@@ -450,8 +497,10 @@ final class ContentLibrary
     {
         $title = trim($title);
 
-        if ($title === '' || mb_strlen($title) > 60 || !mb_check_encoding($title, 'UTF-8')
-            || preg_match('/[\x00-\x1f\x7f]/', $title) === 1) {
+        if (
+            $title === '' || mb_strlen($title) > 60 || !mb_check_encoding($title, 'UTF-8')
+            || preg_match('/[\x00-\x1f\x7f]/', $title) === 1
+        ) {
             throw new ContentRejected('content_title_invalid');
         }
 

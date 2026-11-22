@@ -75,6 +75,9 @@ final class SiteSettings
         // messages per member; 0 switches the limit off. Empty means the built-in default.
         'limits.search_seconds' => ['int', [0, 60]],
         'limits.message_seconds' => ['int', [0, 600]],
+        // beta.18 roadmap 15: post attachment types (comma separated keys of PrivateMedia::TYPES) and size limit.
+        'attachments.types' => ['string', 100],
+        'attachments.max_mb' => ['int', [1, 20]],
     ];
 
     private const CACHE_KEY = 'site-settings-v1';

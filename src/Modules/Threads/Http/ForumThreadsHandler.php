@@ -14,6 +14,7 @@ use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Community\Infrastructure\CommunityRead;
+use Nolviko\Modules\Content\Infrastructure\ContentLibrary;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Domain\ForumType;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
@@ -52,6 +53,7 @@ final class ForumThreadsHandler implements RouteHandler
         private readonly ?CsrfTokens $csrf = null,
         private readonly ?ThreadTaxonomy $taxonomy = null,
         private readonly ?CommunityRead $community = null,
+        private readonly ?ContentLibrary $content = null,
     ) {
     }
 
@@ -139,6 +141,8 @@ final class ForumThreadsHandler implements RouteHandler
         $labels = $this->taxonomy?->forThreads(
             array_map(static fn(ThreadListItem $item): int => $item->id, $items),
         ) ?? [];
+        $icons = $this->content?->threadIcons(array_map(static fn(ThreadListItem $item): int => $item->id, $items))
+            ?? [];
         $html = $this->views->render('forums/show.twig', [
             'trail' => $trail,
             'subforums' => $subforums,
@@ -156,6 +160,7 @@ final class ForumThreadsHandler implements RouteHandler
                         CoreRoutes::COMMUNITY_MEDIA,
                         ['media' => $avatars[$item->lastPosterId ?? 0]],
                     ) : null,
+                    $icons[$item->id] ?? null,
                 ),
                 $items,
             ),
@@ -184,6 +189,7 @@ final class ForumThreadsHandler implements RouteHandler
         bool $unread,
         ?array $prefix = null,
         ?string $avatar = null,
+        ?array $icon = null,
     ): ThreadRowView {
         return new ThreadRowView(
             $item->title,
@@ -205,6 +211,7 @@ final class ForumThreadsHandler implements RouteHandler
             $item->movedToThreadId === null ? $item->viewCount : null,
             $prefix,
             $avatar,
+            $icon,
         );
     }
 }

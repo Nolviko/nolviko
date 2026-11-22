@@ -820,4 +820,14 @@ return [
     'admin.dashboard.second_factor_off' => '{count, plural, one {# member has} other {# members have}} two-step '
         . 'verification from an extension that is off; they sign in with the password alone until it is on again.',
     'admin.extensions.settings' => 'Settings',
+    'admin.nav.smileys' => 'Smileys',
+    'admin.nav.icons' => 'Post icons',
+    'admin.nav.mycode' => 'Custom BBCode',
+    'admin.nav.attachments' => 'Attachments',
+    'admin.site.field.attachments_types' => 'Attachment types',
+    'admin.site.hint.attachments_types' => 'Comma separated, from: png, jpg, pdf, txt, zip, 7z, gz. Empty: png, jpg, '
+        . 'pdf, txt.',
+    'admin.site.field.attachments_max_mb' => 'Largest attachment (MB)',
+    'admin.site.hint.attachments_max_mb' => 'Up to 20 MB; images stay at most 5 MB. The host’s PHP upload limit also '
+        . 'applies.',
 ];

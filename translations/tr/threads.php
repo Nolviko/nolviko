@@ -93,4 +93,6 @@ return [
     'threads.show.embed_play' => 'Videoyu oynat',
     'threads.show.embed_notice' => 'Oynatınca video kendi sitesinden yüklenir; o site çerez kullanabilir.',
     'threads.show.edit' => 'Düzenle',
+    'threads.create.icon' => 'Konu simgesi',
+    'threads.create.no_icon' => 'Yok',
 ];

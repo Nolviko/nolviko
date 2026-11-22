@@ -61,8 +61,28 @@ final class CommunityActions
                     self::field($fields, 'question'),
                     explode("\n", str_replace("\r", '', self::field($fields, 'options'))),
                     ($fields['multiple'] ?? '') === '1',
-                    self::id($fields['days'] ?? '0')
+                    self::id($fields['days'] ?? '0'),
+                    ($fields['allow_change'] ?? '') === '1',
                 );
+                break;
+            case 'poll_edit':
+                $labels = is_array($fields['labels'] ?? null) ? $fields['labels'] : [];
+                $this->polls->edit(
+                    $subject,
+                    $id,
+                    self::field($fields, 'question'),
+                    array_map(static fn(mixed $label): string => is_string($label) ? $label : '', $labels),
+                    explode("\n", str_replace("\r", '', self::field($fields, 'options'))),
+                    self::id($fields['days'] ?? '0'),
+                    ($fields['allow_change'] ?? '') === '1',
+                );
+                break;
+            case 'poll_reset':
+            case 'poll_remove':
+                $this->polls->clear($subject, $id, $action === 'poll_remove');
+                break;
+            case 'vote_retract':
+                $this->polls->retract($subject, $id);
                 break;
             case 'vote':
                 $selected = $fields['options'] ?? [];

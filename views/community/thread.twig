@@ -22,7 +22,22 @@
 {% for option in data.options %}
 <p><label><input type="{% if data.poll.multiple_choice %}checkbox{% else %}radio{% endif %}" name="options[]" value="{{ option.id }}"> <bdi>{{ option.label }}</bdi> {% if (data.poll_results_visible ?? true) %}({{ option.votes|format_number }}){% endif %}</label></p>
 {% endfor %}</fieldset>
-{% if actor and not data.relationship.voted and not data.poll.imported_lock|default(0) %}<button>{{ t('community.vote') }}</button>{% endif %}</form>
+{% if actor and (not data.relationship.voted or data.poll.allow_change|default(0)) and not data.poll.imported_lock|default(0) %}<button>{{ data.relationship.voted ? t('community.change_vote') : t('community.vote') }}</button>{% endif %}</form>
+{% if actor and data.relationship.voted and data.poll.allow_change|default(0) %}<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="action" value="{{ 'vote_retract' }}"><input type="hidden" name="target" value="{{ thread_id }}"><button>{{ t('community.retract_vote') }}</button></form>{% endif %}
+{% if data.can_manage %}<details><summary>{{ t('community.edit_poll') }}</summary><form method="post">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'poll_edit' }}">
+<input type="hidden" name="target" value="{{ thread_id }}">
+<p><label>{{ t('community.question') }} <input name="question" maxlength="240" required value="{{ data.poll.question }}"></label></p>
+{% for option in data.options %}<p><label>{{ t('community.option_label') }} <input name="labels[{{ option.id }}]" maxlength="160" value="{{ option.label }}"></label></p>{% endfor %}
+<p class="meta">{{ t('community.edit_poll_hint') }}</p>
+<p><label>{{ t('community.poll_more_options') }}<textarea name="options" maxlength="1610"></textarea></label></p>
+<p><label><input type="checkbox" name="allow_change" value="1"{% if data.poll.allow_change|default(0) %} checked{% endif %}> {{ t('community.allow_change') }}</label></p>
+<p><label>{{ t('community.close_days') }} <input type="number" name="days" min="0" max="365" value="0"></label></p>
+<button>{{ t('community.save_poll') }}</button></form>
+<form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="target" value="{{ thread_id }}">
+<button name="action" value="{{ 'poll_reset' }}">{{ t('community.reset_poll') }}</button>
+<button name="action" value="{{ 'poll_remove' }}">{{ t('community.remove_poll') }}</button></form></details>{% endif %}
 {% elseif data.can_manage %}
 <details><summary>{{ t('community.create_poll') }}</summary><form method="post">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'poll' }}">
@@ -30,9 +45,15 @@
 <p><label>{{ t('community.question') }} <input name="question" maxlength="240" required></label></p>
 <p><label>{{ t('community.poll_options') }}<textarea name="options" maxlength="1610" required></textarea></label></p>
 <p><label><input type="checkbox" name="multiple" value="1"> {{ t('community.multiple') }}</label></p>
+<p><label><input type="checkbox" name="allow_change" value="1"> {{ t('community.allow_change') }}</label></p>
 <p><label>{{ t('community.close_days') }} <input type="number" name="days" min="0" max="365" value="0"></label></p>
 <button>{{ t('community.create_poll') }}</button></form></details>
 {% endif %}
+{% if data.can_manage %}<details><summary>{{ t('calendar.add_event') }}</summary><form method="post" action="{{ path('calendar')|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="thread" value="{{ thread_id }}">
+<p><label>{{ t('calendar.starts') }} <input type="date" name="starts_on"></label></p>
+<p><label>{{ t('calendar.ends') }} <input type="date" name="ends_on"></label></p>
+<p class="meta">{{ t('calendar.clear_hint') }}</p><button>{{ t('calendar.save') }}</button></form></details>{% endif %}
 {% for post in data.posts %}
 <section><h3><a href="{{ path('posts.show', {post: post.id})|safe_url }}">{{ t('community.post', {id: post.id}) }}</a></h3>
 {% if actor and actor != post.user_id %}

@@ -18,6 +18,7 @@ use Nolviko\Modules\Content\Domain\ContentRejected;
 use Nolviko\Modules\Content\Infrastructure\ContentLibrary;
 use Nolviko\Modules\Content\Infrastructure\SiteImages;
 use Nolviko\Modules\Editor\Domain\CustomTag;
+use Nolviko\Modules\Editor\Domain\CustomTagRejected;
 use Nolviko\Modules\Users\Http\RequestSubject;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -101,7 +102,7 @@ final readonly class ContentAdminHandler implements RouteHandler
                     $this->session->set($flash, $this->translator->translate('content.admin.saved'));
 
                     return InstallerPage::redirect($this->urls->generate($route));
-                } catch (ContentRejected $rejected) {
+                } catch (ContentRejected | CustomTagRejected $rejected) {
                     [$status, $error] = [422, $this->translator->translate(
                         'diagnostics.' . $rejected->diagnostic,
                         $rejected->parameters,
