@@ -297,6 +297,14 @@ final class ResumableDataExport
                 . 'AND message.id <= ? AND EXISTS (SELECT 1 FROM private_conversation_members member '
                 . 'WHERE member.conversation_id = message.conversation_id AND member.user_id = ?)';
             $parameters = [$after['conversation'], $cursor, $limit, $target];
+
+            // beta.18 (G1): a hidden recipient's reply (`visible_to`) belongs only to its author and its addressee.
+            $columns = $this->connection->createSchemaManager()->introspectTable('private_messages');
+
+            if ($columns->hasColumn('visible_to')) {
+                $sql .= ' AND (message.visible_to IS NULL OR message.visible_to = ? OR message.user_id = ?)';
+                $parameters = [...$parameters, $target, $target];
+            }
         }
 
         if ($stage >= 2 && $this->connection->createSchemaManager()->tablesExist(['import_private_files'])) {
