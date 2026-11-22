@@ -831,7 +831,7 @@ return [
     'admin.dashboard.second_factor_off' => '{count, plural, one {# üyenin} other {# üyenin}} iki adımlı doğrulaması '
         . 'kapalı bir eklentiye ait; eklenti yeniden açılana kadar yalnızca parolayla giriş yapıyorlar.',
     'admin.extensions.settings' => 'Ayarlar',
-    'admin.groups.perm.pm.max_conversations' => 'İleti kutusu kapasitesi, konuşma (0 = sınırsız)',
+    'admin.groups.perm.user.pm.max_conversations' => 'İleti kutusu kapasitesi, konuşma (0 = sınırsız)',
     'admin.site.field.limits_message_recipients' => 'Bir özel iletinin alıcı sayısı',
     'admin.site.hint.limits_message_recipients' => 'Görünür ve gizli birlikte (1-50, varsayılan 10).',
     'admin.nav.membership' => 'Üyelik ve gruplar',
@@ -840,7 +840,7 @@ return [
         . 'e-postası ve kayıt soruları. Yerleşik gruplara katılım ve kuralla terfi yapılamaz.',
     'admin.membership.groups' => 'Özel gruplar',
     'admin.membership.no_groups' => 'Henüz özel grup yok. Gruplar sayfasından oluşturun.',
-    'admin.membership.members' => '{count} üye',
+    'admin.membership.members' => '{count, plural, other {# üye}}',
     'admin.membership.joinable' => 'Üyeler katılmak için başvurabilir',
     'admin.membership.description' => 'Kısa açıklama',
     'admin.membership.leaders' => 'Liderler (başvurulara karar verir)',
@@ -917,4 +917,12 @@ return [
     'admin.site.field.attachments_max_mb' => 'En büyük ek dosya (MB)',
     'admin.site.hint.attachments_max_mb' => 'En çok 20 MB; görseller en çok 5 MB kalır. Sunucunun PHP yükleme sınırı '
         . 'da geçerlidir.',
+    'admin.extras.required' => 'Zorunlu',
+    'admin.extras.make_optional' => 'İsteğe bağlı yap',
+    'admin.extras.make_required' => 'Zorunlu yap',
+    'admin.extras.option' => 'Yeni seçenek',
+    'admin.extras.add_option' => 'Seçenek ekle',
+    'admin.extras.options' => 'Seçenekler (seçim alanı için her satıra bir tane)',
+    'admin.extras.options_hint' => 'Üyeler bunlardan birini seçer. Her seçenek adı değişse de numarasını korur.',
+    'admin.extras.required_hint' => 'Zorunlu: kayıtta ve üyenin bir sonraki profil düzenlemesinde sorulur',
 ];

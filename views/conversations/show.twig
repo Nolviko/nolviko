@@ -11,7 +11,7 @@
 {% if conversation.hidden %}<p class="alert alert-info">{{ t('conversations.hidden_notice') }}</p>{% endif %}
 {% if conversation.import_job_id|default(null) %}<p>{{ t('operations.private_archive') }}</p>{% endif %}
 <div class="actions">
-<form method="post" action="{{ action|safe_url }}" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="remove"><button class="btn-s">{{ t('conversations.remove') }}</button></form>
+<form method="post" action="{{ action|safe_url }}" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'remove' }}"><button class="btn-s">{{ t('conversations.remove') }}</button></form>
 {% for folder in folders %}<form method="post" action="{{ action|safe_url }}" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="folder" value="{{ folder.id }}"><input type="hidden" name="action" value="{{ folder.filed ? 'unfile' : 'file' }}"><button class="btn-s" aria-pressed="{{ folder.filed ? 'true' : 'false' }}">{% if folder.filed %}{{ t('conversations.unfile', {folder: folder.name}) }}{% else %}{{ t('conversations.file', {folder: folder.name}) }}{% endif %}</button></form>{% endfor %}
 </div>
 {% for file in files|default([]) %}<p><a href="{{ path('import.private_file', {file: file.id})|safe_url }}"><bdi>{{ file.original_name }}</bdi></a></p>{% endfor %}

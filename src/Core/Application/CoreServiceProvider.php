@@ -104,9 +104,9 @@ use Nolviko\Modules\Admin\Http\GroupHandler;
 use Nolviko\Modules\Admin\Http\GroupsHandler;
 use Nolviko\Modules\Admin\Http\MailSettingsHandler;
 use Nolviko\Modules\Admin\Http\MemberExtrasAdminHandler;
-use Nolviko\Modules\Admin\Http\MembershipAdminHandler;
 use Nolviko\Modules\Admin\Http\MemberHandler;
 use Nolviko\Modules\Admin\Http\MembersHandler;
+use Nolviko\Modules\Admin\Http\MembershipAdminHandler;
 use Nolviko\Modules\Admin\Http\PermissionSimulatorHandler;
 use Nolviko\Modules\Admin\Http\ReauthHandler;
 use Nolviko\Modules\Admin\Http\RegistrationSettingsHandler;
@@ -136,6 +136,7 @@ use Nolviko\Modules\Api\Infrastructure\Webhooks;
 use Nolviko\Modules\Calendar\Http\CalendarHandler;
 use Nolviko\Modules\Calendar\Infrastructure\CalendarEvents;
 use Nolviko\Modules\Community\Http\CommunityHandler;
+use Nolviko\Modules\Community\Http\FollowedHandler;
 use Nolviko\Modules\Community\Http\MemberLinkHandler;
 use Nolviko\Modules\Community\Http\MemberSuggestHandler;
 use Nolviko\Modules\Community\Infrastructure\CommunityAccess;
@@ -238,11 +239,9 @@ use Nolviko\Modules\Threads\Domain\ThreadCommands;
 use Nolviko\Modules\Threads\Domain\ThreadRepository;
 use Nolviko\Modules\Threads\Http\CreateReplyHandler;
 use Nolviko\Modules\Threads\Http\CreateThreadHandler;
+use Nolviko\Modules\Threads\Http\DraftsHandler;
 use Nolviko\Modules\Threads\Http\EditPostHandler;
 use Nolviko\Modules\Threads\Http\ForumReadHandler;
-use Nolviko\Modules\Community\Http\FollowedHandler;
-use Nolviko\Modules\Threads\Http\DraftsHandler;
-use Nolviko\Modules\Threads\Http\ThreadUnreadHandler;
 use Nolviko\Modules\Threads\Http\ForumThreadsHandler;
 use Nolviko\Modules\Threads\Http\ModerationHandler;
 use Nolviko\Modules\Threads\Http\PostHistoryHandler;
@@ -251,6 +250,7 @@ use Nolviko\Modules\Threads\Http\ThreadCommandHandler;
 use Nolviko\Modules\Threads\Http\ThreadLabelsHandler;
 use Nolviko\Modules\Threads\Http\ThreadPageHandler;
 use Nolviko\Modules\Threads\Http\ThreadPostsHandler;
+use Nolviko\Modules\Threads\Http\ThreadUnreadHandler;
 use Nolviko\Modules\Threads\Infrastructure\DbalDrafts;
 use Nolviko\Modules\Threads\Infrastructure\DbalModerationWriter;
 use Nolviko\Modules\Threads\Infrastructure\DbalPostEditor;
@@ -530,7 +530,7 @@ final class CoreServiceProvider implements ServiceProvider
                 $request,
                 // beta.18 roadmap 28: only when Admin > Site settings lets members choose a theme.
                 static fn(): ?string => is_int($session->get('_user_id'))
-                    && $settings()->peek('membership.member_themes') === 'on'
+                    && $settings()->cached('membership.member_themes') === 'on'
                     ? (new MemberOptions($connection()))->of($session->get('_user_id'))['site_theme'] : null,
             ),
             [ThemeBuildStore::class, Session::class, ThemeRequest::class, new Lazy(SiteSettings::class),
@@ -4141,9 +4141,10 @@ final class CoreServiceProvider implements ServiceProvider
                 $reporter,
                 [$installation, $https, $csrf, $secondFactorGuard, $admin,
                     new SiteClosedGuard(
+                        // Cache only (never opens a connection): save() writes the cache through.
                         static fn(): ?string => $installedState->isInstalled()
-                            && $closedSettings()->get('site.closed') === 'on'
-                            ? (string) $closedSettings()->get('site.closed_message') : null,
+                            && $closedSettings()->cached('site.closed') === 'on'
+                            ? (string) $closedSettings()->cached('site.closed_message') : null,
                         static fn(Request $request): bool => $extensionSubjects()->of($request)->allows('admin.access'),
                         $errors,
                     ),

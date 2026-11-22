@@ -69,7 +69,7 @@ final class PermissionCatalog
             PermissionDefinition::bool('user.second_factor.required'),
             // Beta 17 G1: private message box capacity in conversations (0 = unlimited, the default). Read by
             // PrivateConversations::boxLimit(): any group without a limit leaves the box unlimited.
-            PermissionDefinition::int('pm.max_conversations', 0, 1000000),
+            PermissionDefinition::int('user.pm.max_conversations', 0, 1000000),
         ], $strict);
     }
 

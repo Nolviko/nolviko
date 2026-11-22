@@ -17,7 +17,7 @@
 <p><label>{{ t('search.filter_from') }} <input type="date" name="from" value="{{ filters.from|default('') }}"></label></p>
 <p><label>{{ t('search.filter_until') }} <input type="date" name="until" value="{{ filters.until|default('') }}"></label></p>
 {% if in_thread|default(null) is null %}<p><label><input type="checkbox" name="titles" value="1"{% if filters.titles|default(null) %} checked{% endif %}> {{ t('search.titles_only') }}</label></p>{% endif %}
-{% if sorts|default([])|length > 1 %}<p><label>{{ t('search.sort') }} <select name="sort">{% for sort in sorts %}<option value="{{ sort }}"{% if filters.sort|default('newest') == sort %} selected{% endif %}>{{ t('search.sort_' ~ sort) }}</option>{% endfor %}</select></label></p>{% endif %}
+{% if sorts|default([])|length > 1 %}<p><label>{{ t('search.sort') }} <select name="sort">{% for sort in sorts %}<option value="{{ sort }}"{% if filters.sort|default('newest') == sort %} selected{% endif %}>{{ {newest: t('search.sort_newest'), oldest: t('search.sort_oldest'), relevance: t('search.sort_relevance')}[sort]|default(sort) }}</option>{% endfor %}</select></label></p>{% endif %}
 </div>
 {% if filters.thread|default(null) %}<input type="hidden" name="thread" value="{{ filters.thread }}">
 <p class="hint">{% if in_thread|default(null) %}{{ t('search.in_thread') }} <a href="{{ in_thread.url|safe_url }}"><bdi>{{ in_thread.title }}</bdi></a>{% else %}{{ t('search.in_thread_unknown') }}{% endif %}</p>{% endif %}

@@ -17,6 +17,11 @@ final class ExpandOnlyPolicy
 
         foreach (MigrationRegistry::statements($migration, $backend) as $sql) {
             $scan = self::withoutNewTableReferenceActions($sql);
+            // beta.18: an index expression may call the SQL function replace() (PostgreSQL search folding, as in
+            // 0033); only the function form inside CREATE INDEX is exempt, never a REPLACE statement.
+            if (preg_match('/^\\s*CREATE\\s+(?:UNIQUE\\s+)?INDEX\\b/i', $sql) === 1) {
+                $scan = (string) preg_replace('/\\breplace\\s*\\(/i', 'fn(', $scan);
+            }
             if (
                 strlen($sql) > 1048576
                 || str_contains($sql, ';')
@@ -47,7 +52,7 @@ final class ExpandOnlyPolicy
 
             $identifier = '(?:`[A-Za-z0-9_]+`|[A-Za-z_][A-Za-z0-9_]*)';
             $pattern = '~^\s*(?:CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?' . $identifier . '\s*\('
-                . '|CREATE\s+(?:UNIQUE\s+)?INDEX\s+' . $identifier . '\s+ON\s+'
+                . '|CREATE\s+(?:UNIQUE\s+|FULLTEXT\s+)?INDEX\s+' . $identifier . '\s+ON\s+'
                 . '|ALTER\s+TABLE\s+' . $identifier . '\s+ADD\s+)~i';
 
             if (preg_match($pattern, $sql) !== 1) {

@@ -112,7 +112,11 @@ final readonly class ContentAdminHandler implements RouteHandler
         }
 
         return new Response($this->views->render('admin/content.twig', [
-            'title' => $this->translator->translate('content.admin.' . $section),
+            'title' => $this->translator->translate(match ($section) {
+                'icons' => 'content.admin.icons',
+                'mycode' => 'content.admin.mycode',
+                default => 'content.admin.smileys',
+            }),
             'nav' => AdminNavigation::items($this->urls, $this->translator, $route),
             'section' => $section,
             'action' => $this->urls->generate($route),

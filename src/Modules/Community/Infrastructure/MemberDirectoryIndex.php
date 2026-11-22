@@ -32,6 +32,6 @@ final class MemberDirectoryIndex implements Migration
             throw new MigrationException('migration_backend_unsupported:' . $backend);
         }
 
-        return ['ALTER TABLE users ADD INDEX ix_users_directory_joined (status, created_at, id)'];
+        return ['CREATE INDEX ix_users_directory_joined ON users (status, created_at, id)'];
     }
 }

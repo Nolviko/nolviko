@@ -20,7 +20,7 @@ use Nolviko\Modules\Users\Domain\RegistrationThrottled;
  * Beta 17 G1: group conversations (up to `limits.message_recipients` recipients), hidden recipients (a member row
  * with `hidden` = 1 and `invited_by` = the sender; only that sender and that recipient ever see the row, and the
  * recipient's replies carry `visible_to` = the sender), removal from one member's own box (`removed_at`; a new
- * message the member can see brings the conversation back) and the `pm.max_conversations` box capacity.
+ * message the member can see brings the conversation back) and the `user.pm.max_conversations` box capacity.
  */
 final class PrivateConversations
 {
@@ -38,7 +38,7 @@ final class PrivateConversations
 
     public const DEFAULT_RECIPIENTS = 10;
 
-    public const CAPACITY = 'pm.max_conversations';
+    public const CAPACITY = 'user.pm.max_conversations';
 
     public function __construct(
         private readonly Connection $connection,

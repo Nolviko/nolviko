@@ -33,10 +33,10 @@ final class ThreadSortIndexes implements Migration
         }
 
         return [
-            'ALTER TABLE threads ADD INDEX ix_threads_forum_title (forum_id, status, is_sticky, title, id)',
-            'ALTER TABLE threads ADD INDEX ix_threads_forum_replies '
-                . '(forum_id, status, is_sticky, reply_count, id)',
-            'ALTER TABLE threads ADD INDEX ix_threads_forum_started (forum_id, status, is_sticky, created_at, id)',
+            // CREATE INDEX (not ALTER TABLE ... ADD INDEX with commas) so an unattended update may apply it.
+            'CREATE INDEX ix_threads_forum_title ON threads (forum_id, status, is_sticky, title, id)',
+            'CREATE INDEX ix_threads_forum_replies ON threads (forum_id, status, is_sticky, reply_count, id)',
+            'CREATE INDEX ix_threads_forum_started ON threads (forum_id, status, is_sticky, created_at, id)',
         ];
     }
 }

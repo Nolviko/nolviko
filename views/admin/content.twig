@@ -68,11 +68,11 @@
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ code.id }}">
 {% if code.id == 0 %}<h2>{{ t('content.admin.add_mycode') }}</h2>{% endif %}
 <p><label for="mycode-pattern-{{ code.id }}">{{ t('content.admin.pattern') }}</label>
-<input id="mycode-pattern-{{ code.id }}" name="pattern" value="{{ code.pattern }}" maxlength="80" required placeholder="[note]{content}[/note]" dir="ltr"></p>
+<input id="mycode-pattern-{{ code.id }}" name="pattern" value="{{ code.pattern }}" maxlength="80" required placeholder="{{ '[note]{content}[/note]' }}" dir="ltr"></p>
 <p><label for="mycode-parameter-{{ code.id }}">{{ t('content.admin.parameter') }}</label>
-<select id="mycode-parameter-{{ code.id }}" name="parameter">{% for kind in parameters %}<option value="{{ kind }}"{% if kind == code.parameter %} selected{% endif %}>{{ t('content.admin.parameter_' ~ kind) }}</option>{% endfor %}</select></p>
+<select id="mycode-parameter-{{ code.id }}" name="parameter">{% for kind in parameters %}<option value="{{ kind }}"{% if kind == code.parameter %} selected{% endif %}>{{ {none: t('content.admin.parameter_none'), text: t('content.admin.parameter_text'), url: t('content.admin.parameter_url'), int: t('content.admin.parameter_int'), color: t('content.admin.parameter_color')}[kind]|default(kind) }}</option>{% endfor %}</select></p>
 <p><label for="mycode-template-{{ code.id }}">{{ t('content.admin.template') }}</label>
-<textarea id="mycode-template-{{ code.id }}" name="template" maxlength="2000" required dir="ltr" placeholder="&lt;div class=&quot;note&quot;&gt;{content}&lt;/div&gt;">{{ code.template }}</textarea></p>
+<textarea id="mycode-template-{{ code.id }}" name="template" maxlength="2000" required dir="ltr" placeholder="{{ '<div class="note">{content}</div>' }}">{{ code.template }}</textarea></p>
 <p><label for="mycode-description-{{ code.id }}">{{ t('content.admin.description') }}</label>
 <input id="mycode-description-{{ code.id }}" name="description" value="{{ code.description }}" maxlength="200"></p>
 <p><label><input type="checkbox" name="enabled" value="1"{% if code.enabled %} checked{% endif %}> {{ t('content.admin.enabled') }}</label></p>

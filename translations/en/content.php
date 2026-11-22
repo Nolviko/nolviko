@@ -42,13 +42,14 @@ return [
     'content.attachments.title' => 'Attachments',
     'content.attachments.policy' => 'Allowed types: {types}; at most {mb} MB per file.',
     'content.attachments.change' => 'Change in Site settings',
-    'content.attachments.totals' => '{count} files, {mb} MB in total, {orphans} not attached to a post.',
+    'content.attachments.totals' => '{count, plural, one {# file} other {# files}}, {mb} MB in total, {orphans, '
+        . 'plural, one {# file} other {# files}} not attached to a post.',
     'content.attachments.type' => 'Type',
     'content.attachments.all' => 'All types',
     'content.attachments.filter' => 'Filter',
     'content.attachments.none' => 'No attachments.',
     'content.attachments.select' => 'Select',
-    'content.attachments.select_one' => 'Select {name}',
+    'content.attachments.select_file' => 'Select {name}',
     'content.attachments.name' => 'File',
     'content.attachments.size' => 'Size',
     'content.attachments.owner' => 'Member',
@@ -57,4 +58,5 @@ return [
     'content.attachments.unattached' => 'Not attached',
     'content.attachments.remove' => 'Remove selected',
     'content.attachments.older' => 'Older files',
+    'content.attachments.kb' => '{kb} KB',
 ];

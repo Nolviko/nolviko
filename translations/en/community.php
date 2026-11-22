@@ -160,4 +160,7 @@ return [
     'community.save_poll' => 'Save poll',
     'community.reset_poll' => 'Remove all votes',
     'community.remove_poll' => 'Remove poll',
+    'community.field_none' => 'Choose…',
+    'community.field_required' => '(required)',
+    'community.fields_missing' => 'Please fill in: {fields}.',
 ];

@@ -836,7 +836,7 @@ return [
     'admin.dashboard.second_factor_off' => '{count, plural, one {# member has} other {# members have}} two-step '
         . 'verification from an extension that is off; they sign in with the password alone until it is on again.',
     'admin.extensions.settings' => 'Settings',
-    'admin.groups.perm.pm.max_conversations' => 'Message box size in conversations (0 = unlimited)',
+    'admin.groups.perm.user.pm.max_conversations' => 'Message box size in conversations (0 = unlimited)',
     'admin.site.field.limits_message_recipients' => 'Recipients of one private message',
     'admin.site.hint.limits_message_recipients' => 'Visible and hidden together (1 to 50, default 10).',
     'admin.nav.membership' => 'Membership and groups',
@@ -845,7 +845,7 @@ return [
         . 'and registration questions. Built-in groups cannot be joined or reached by rules.',
     'admin.membership.groups' => 'Custom groups',
     'admin.membership.no_groups' => 'There are no custom groups yet. Create one under Groups.',
-    'admin.membership.members' => '{count} members',
+    'admin.membership.members' => '{count, plural, one {# member} other {# members}}',
     'admin.membership.joinable' => 'Members may ask to join',
     'admin.membership.description' => 'Short description',
     'admin.membership.leaders' => 'Leaders (decide join requests)',
@@ -923,4 +923,12 @@ return [
     'admin.site.field.attachments_max_mb' => 'Largest attachment (MB)',
     'admin.site.hint.attachments_max_mb' => 'Up to 20 MB; images stay at most 5 MB. The host’s PHP upload limit also '
         . 'applies.',
+    'admin.extras.required' => 'Required',
+    'admin.extras.make_optional' => 'Make optional',
+    'admin.extras.make_required' => 'Make required',
+    'admin.extras.option' => 'New choice',
+    'admin.extras.add_option' => 'Add choice',
+    'admin.extras.options' => 'Choices (one per line, for a choice field)',
+    'admin.extras.options_hint' => 'Members pick one of these. Each choice keeps its number when renamed.',
+    'admin.extras.required_hint' => 'Required: asked at registration and on the member’s next profile edit',
 ];

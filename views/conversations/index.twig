@@ -17,7 +17,7 @@
 {% if view == 'drafts' %}
 <ul class="panel thread-list">{% for item in drafts %}<li class="trow"><div class="trow-main"><p class="trow-title"><a href="{{ item.url|safe_url }}"><bdi>{{ item.subject ?: t('conversations.draft_untitled') }}</bdi></a></p>
 <p class="meta">{% if item.recipients %}<bdi>{{ item.recipients }}</bdi> · {% endif %}<time datetime="{{ item.date|date('c') }}">{{ item.date|format_datetime }}</time></p></div>
-<form method="post" action="{{ index_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="draft_delete"><input type="hidden" name="draft" value="{{ item.id }}"><button class="btn-s">{{ t('conversations.draft_delete') }}</button></form></li>
+<form method="post" action="{{ index_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'draft_delete' }}"><input type="hidden" name="draft" value="{{ item.id }}"><button class="btn-s">{{ t('conversations.draft_delete') }}</button></form></li>
 {% else %}<li class="empty">{{ t('conversations.drafts_empty') }}</li>{% endfor %}</ul>
 {% elseif view == 'folders' %}
 <section class="card">
@@ -27,10 +27,10 @@
 <form method="post" action="{{ index_url|safe_url }}" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="folder" value="{{ item.id }}">
 <label for="folder-{{ item.id }}" class="visually-hidden">{{ t('conversations.folder_name') }}</label>
 <input id="folder-{{ item.id }}" name="name" value="{{ item.name }}" required maxlength="60" dir="auto">
-<button name="action" value="folder_rename" class="btn-s">{{ t('conversations.folder_rename') }}</button>
-<button name="action" value="folder_delete" class="btn-s" formnovalidate>{{ t('conversations.folder_delete') }}</button></form>
+<button name="action" value="{{ 'folder_rename' }}" class="btn-s">{{ t('conversations.folder_rename') }}</button>
+<button name="action" value="{{ 'folder_delete' }}" class="btn-s" formnovalidate>{{ t('conversations.folder_delete') }}</button></form>
 {% else %}<p class="empty">{{ t('conversations.folders_empty') }}</p>{% endfor %}
-<form method="post" action="{{ index_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="folder_create">
+<form method="post" action="{{ index_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'folder_create' }}">
 <p><label for="folder-new">{{ t('conversations.folder_new') }}</label>
 <input id="folder-new" name="name" required maxlength="60" dir="auto"> <button>{{ t('conversations.folder_create') }}</button></p></form>
 </section>

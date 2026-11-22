@@ -14,8 +14,8 @@
 <form method="post" action="{{ action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <table class="table"><thead><tr><th scope="col"><span class="visually-hidden">{{ t('content.attachments.select') }}</span></th><th scope="col">{{ t('content.attachments.name') }}</th><th scope="col">{{ t('content.attachments.type') }}</th><th scope="col">{{ t('content.attachments.size') }}</th><th scope="col">{{ t('content.attachments.owner') }}</th><th scope="col">{{ t('content.attachments.post') }}</th><th scope="col">{{ t('content.attachments.date') }}</th></tr></thead>
-<tbody>{% for row in page.rows %}<tr><td><input type="checkbox" name="media[]" value="{{ row.id }}" aria-label="{{ t('content.attachments.select_one', {name: row.name}) }}"></td>
-<td><bdi>{{ row.name }}</bdi></td><td>{{ row.mime }}</td><td>{{ (row.bytes / 1024)|round }} KB</td>
+<tbody>{% for row in page.rows %}<tr><td><input type="checkbox" name="media[]" value="{{ row.id }}" aria-label="{{ t('content.attachments.select_file', {name: row.name}) }}"></td>
+<td><bdi>{{ row.name }}</bdi></td><td>{{ row.mime }}</td><td>{{ t('content.attachments.kb', {kb: (row.bytes / 1024)|round}) }}</td>
 <td>{% if row.user %}<bdi>{{ row.user }}</bdi>{% else %}—{% endif %}</td>
 <td>{% if row.post_id %}<a href="{{ path('posts.show', {post: row.post_id})|safe_url }}">#{{ row.post_id }}</a>{% else %}{{ t('content.attachments.unattached') }}{% endif %}</td>
 <td>{{ row.created_at }}</td></tr>{% endfor %}</tbody></table>

@@ -112,7 +112,7 @@ final class SiteSettings
      * @param Closure(): Connection $connection Built only when the cache misses or on save.
      */
     /** Keys every request may need before it touches the database; also kept in the boot file (2026-11-17). */
-    public const BOOT_KEYS = ['locale.default', 'locale.time_zone'];
+    public const BOOT_KEYS = ['locale.default', 'locale.time_zone', 'site.closed', 'site.closed_message'];
 
     /**
      * @param string|null $bootFile Small JSON copy of BOOT_KEYS that survives cache clears and updates; null: none.

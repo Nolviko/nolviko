@@ -10,10 +10,10 @@ use Nolviko\Modules\Search\Domain\SearchQuery;
 /** Backend-owned native full-text expressions. Ranking parity is deliberately not promised. */
 final class SearchDialect
 {
-    public const POSTGRES_VECTOR = "to_tsvector('simple', replace(lower(content), U&'i\0307', 'i'))";
+    public const POSTGRES_VECTOR = "to_tsvector('simple', replace(lower(content), U&'i\\0307', 'i'))";
 
     /** Thread titles (beta.18, migration 0065): the same folding as post bodies. */
-    public const POSTGRES_TITLE_VECTOR = "to_tsvector('simple', replace(lower(title), U&'i\0307', 'i'))";
+    public const POSTGRES_TITLE_VECTOR = "to_tsvector('simple', replace(lower(title), U&'i\\0307', 'i'))";
 
     public static function predicate(bool $postgres): string
     {
@@ -25,7 +25,7 @@ final class SearchDialect
      */
     public static function match(bool $postgres, string $column): string
     {
-        return $postgres ? "to_tsvector('simple', replace(lower(" . $column . "), U&'i\0307', 'i')) "
+        return $postgres ? "to_tsvector('simple', replace(lower(" . $column . "), U&'i\\0307', 'i')) "
             . "@@ to_tsquery('simple', ?)" : 'MATCH(' . $column . ') AGAINST (? IN BOOLEAN MODE)';
     }
 
@@ -34,7 +34,7 @@ final class SearchDialect
      */
     public static function score(bool $postgres, string $column): string
     {
-        return $postgres ? "ts_rank(to_tsvector('simple', replace(lower(" . $column . "), U&'i\0307', 'i')), "
+        return $postgres ? "ts_rank(to_tsvector('simple', replace(lower(" . $column . "), U&'i\\0307', 'i')), "
             . "to_tsquery('simple', ?))" : 'MATCH(' . $column . ') AGAINST (? IN BOOLEAN MODE)';
     }
 

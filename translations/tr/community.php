@@ -160,4 +160,7 @@ return [
     'community.save_poll' => 'Anketi kaydet',
     'community.reset_poll' => 'Tüm oyları sil',
     'community.remove_poll' => 'Anketi kaldır',
+    'community.field_none' => 'Seçin…',
+    'community.field_required' => '(zorunlu)',
+    'community.fields_missing' => 'Lütfen doldurun: {fields}.',
 ];

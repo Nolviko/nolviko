@@ -41,13 +41,14 @@ return [
     'content.attachments.title' => 'Ek dosyalar',
     'content.attachments.policy' => 'İzin verilen türler: {types}; dosya başına en çok {mb} MB.',
     'content.attachments.change' => 'Site ayarlarından değiştir',
-    'content.attachments.totals' => 'Toplam {count} dosya, {mb} MB; {orphans} dosya bir iletiye bağlı değil.',
+    'content.attachments.totals' => 'Toplam {count, plural, other {# dosya}}, {mb} MB; {orphans, plural, other {# '
+        . 'dosya}} bir iletiye bağlı değil.',
     'content.attachments.type' => 'Tür',
     'content.attachments.all' => 'Tüm türler',
     'content.attachments.filter' => 'Süz',
     'content.attachments.none' => 'Ek dosya yok.',
     'content.attachments.select' => 'Seç',
-    'content.attachments.select_one' => '{name} dosyasını seç',
+    'content.attachments.select_file' => '{name} dosyasını seç',
     'content.attachments.name' => 'Dosya',
     'content.attachments.size' => 'Boyut',
     'content.attachments.owner' => 'Üye',
@@ -56,4 +57,5 @@ return [
     'content.attachments.unattached' => 'Bağlı değil',
     'content.attachments.remove' => 'Seçilenleri kaldır',
     'content.attachments.older' => 'Daha eski dosyalar',
+    'content.attachments.kb' => '{kb} KB',
 ];

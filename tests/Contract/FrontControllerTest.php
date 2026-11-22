@@ -294,6 +294,18 @@ final class FrontControllerTest extends TestCase
                 CoreRoutes::CONVERSATIONS_NEW,
                 CoreRoutes::CONVERSATION,
                 CoreRoutes::ACCOUNT_PRIVACY,
+                // beta.18 member, forum and content pages read the database.
+                CoreRoutes::FORUMS_READ_ALL,
+                CoreRoutes::THREAD_UNREAD,
+                CoreRoutes::DRAFTS,
+                CoreRoutes::FOLLOWED,
+                CoreRoutes::GROUPS,
+                CoreRoutes::FORUM_LINK,
+                CoreRoutes::FORUM_UNLOCK,
+                CoreRoutes::FORUM_SUBSCRIBE,
+                CoreRoutes::CALENDAR,
+                // Its key and extension requirements are not numeric; covered by its own handler.
+                CoreRoutes::SITE_IMAGE,
             ];
 
             if (in_array($definition->name, $needsDatabase, true)) {
