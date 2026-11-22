@@ -162,7 +162,11 @@ final class PrivateFolders
 
     private function assertFree(Connection $db, int $user, string $name, ?int $except): void
     {
-        $other = $db->fetchOne('SELECT id FROM private_folders WHERE user_id = ? AND name = ?', [$user, $name]);
+        // Case-insensitive on every engine (MySQL collations already are, PostgreSQL is not).
+        $other = $db->fetchOne(
+            'SELECT id FROM private_folders WHERE user_id = ? AND LOWER(name) = ?',
+            [$user, mb_strtolower($name, 'UTF-8')],
+        );
 
         if ($other !== false && (int) $other !== $except) {
             throw new ConversationRefused('conversation_folder_exists', ['name' => $name]);
