@@ -94,6 +94,10 @@ final readonly class InlineAttachments
                 CoreRoutes::LEGACY_RECORD,
                 ['job' => $job, 'entity' => 'attachments', 'source' => $source]
             );
-            return '[url=' . $origin . $path . ']' . $source . '[/url]';
+            $url = $origin . $path;
+            // An imported picture is shown in the post (beta.18); other files stay a download link.
+            $mime = $this->db->fetchOne('SELECT mime FROM community_media WHERE id = ?', [$target]);
+            return in_array($mime, ImportAuxWriter::IMAGES, true)
+                ? '[img]' . $url . '[/img]' : '[url=' . $url . ']' . $source . '[/url]';
     }
 }

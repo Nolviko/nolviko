@@ -36,6 +36,7 @@ use Nolviko\Modules\Forums\Infrastructure\ForumSubscriptionsTable;
 use Nolviko\Modules\Gallery\Infrastructure\GalleryTables;
 use Nolviko\Modules\Groups\Infrastructure\UsergroupsTable;
 use Nolviko\Modules\Importers\Infrastructure\ImportPanelTables;
+use Nolviko\Modules\Importers\Infrastructure\ImportPrivateChains;
 use Nolviko\Modules\Importers\Infrastructure\ImportTables;
 use Nolviko\Modules\Moderation\Infrastructure\BansTable;
 use Nolviko\Modules\Moderation\Infrastructure\ModerationActionsTable;
@@ -194,6 +195,7 @@ final class MigrationRegistry
             new PollVoteChange(),
             new CalendarTables(),
             new MediaInventoryIndex(),
+            new ImportPrivateChains(),
         ]);
     }
 

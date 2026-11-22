@@ -15,6 +15,9 @@ use RuntimeException;
 /** Private per-owner archives and native poll/media projections, all under the caller's import transaction. */
 final readonly class ImportAuxWriter
 {
+    /** Image types shown inline (the same raster types member uploads may be shown as). */
+    public const IMAGES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
     /** @param Closure(array): ?ImportAsset $asset the original file of an attachment record (ADR-038) */
     public function __construct(private Connection $db, private Closure $asset, private ImportFileStore $files)
     {
@@ -32,6 +35,10 @@ final readonly class ImportAuxWriter
             $subject = self::text((string) $row['name'], 255);
             $body = ImportRecords::body($row['body']);
             $created = ImportText::timestamp($row['time']);
+            $chain = (string) ($row['chain'] ?? '');
+            if (preg_match('/^[A-Za-z0-9_-]{1,64}$/D', $chain) === 1) {
+                return $this->chained($job, $row, $owner, $chain, $subject, $body, $created);
+            }
             $this->db->insert('private_conversations', ['subject' => mb_substr($subject ?: (string) $row['id'], 0, 160),
                 'imported_subject' => $subject === '' ? null : $subject, 'import_job_id' => $job,
                 'created_at' => $created, 'updated_at' => $created]);
@@ -87,7 +94,7 @@ final readonly class ImportAuxWriter
                     'file_key' => $stored['key'], 'original_name' => mb_substr($safeName, 0, 160),
                     'imported_name' => $safeName, 'imported_retained' => $user === null ? 1 : 0,
                     'imported_visibility' => (int) $row['visible'] === 1 ? 'visible' : 'pending',
-                    'mime' => 'application/octet-stream', 'bytes' => $stored['bytes'],
+                    'mime' => $this->mime($stored['key']), 'bytes' => $stored['bytes'],
                     'created_at' => ImportText::timestamp($row['time'])]);
                 $this->db->insert('legacy_redirects', ['job_id' => $job, 'entity' => 'attachments',
                     'source_id' => (int) $row['id'], 'target_id' => $target]);
@@ -160,9 +167,63 @@ final readonly class ImportAuxWriter
         return ['target' => $target, 'meta' => $meta, 'parent' => $parent];
     }
 
-    public function hash(string $phase, string $target): string
+    /**
+     * One mailbox copy into its owner's archive of that conversation (beta.18): the copies an owner kept of one
+     * source conversation (SMF's head message, phpBB's root message, MyBB's participants and subject) share one
+     * read-only archive, which only that owner can open; hidden recipients therefore stay hidden. Copies arrive in
+     * source order, so the archive reads in the order the messages were written.
+     *
+     * @return array{target: string, meta: array, parent: int}
+     */
+    private function chained(
+        string $job,
+        array $row,
+        int $owner,
+        string $chain,
+        string $subject,
+        string $body,
+        string $created,
+    ): array {
+        $conversation = $this->db->fetchOne('SELECT conversation_id FROM import_private_chains '
+            . 'WHERE job_id = ? AND owner_id = ? AND chain_key = ?', [$job, (int) $row['owner'], $chain]);
+        if ($conversation === false) {
+            $this->db->insert('private_conversations', ['subject' => mb_substr($subject ?: (string) $row['id'], 0, 160),
+                'imported_subject' => $subject === '' ? null : $subject, 'import_job_id' => $job,
+                'created_at' => $created, 'updated_at' => $created]);
+            $conversation = (int) $this->db->lastInsertId();
+            $this->db->insert('private_conversation_members', ['conversation_id' => $conversation,
+                'user_id' => $owner]);
+            $this->db->insert('import_private_chains', ['job_id' => $job, 'owner_id' => (int) $row['owner'],
+                'chain_key' => $chain, 'conversation_id' => $conversation]);
+        } else {
+            $conversation = (int) $conversation;
+            $this->db->executeStatement(
+                'UPDATE private_conversations SET updated_at = ? WHERE id = ? AND updated_at < ?',
+                [$created, $conversation, $created]
+            );
+        }
+        $this->db->insert('private_messages', ['conversation_id' => $conversation,
+            'user_id' => $this->mapped($job, 'users', (int) $row['author']),
+            'content' => mb_substr($body, 0, 8000), 'imported_content' => $body, 'created_at' => $created]);
+        $message = (int) $this->db->lastInsertId();
+        return ['target' => (string) $conversation, 'meta' => ['kind' => 'owner_chain',
+            'owner' => (int) $row['owner'], 'message' => $message], 'parent' => (int) $row['id']];
+    }
+
+    public function hash(string $phase, string $target, array $meta = []): string
     {
-        if (str_starts_with($phase, 'private_') && $phase !== 'private_files') {
+        if (str_starts_with($phase, 'private_') && $phase !== 'private_files' && isset($meta['message'])) {
+            $row = $this->db->fetchAssociative(
+                'SELECT c.import_job_id, m.conversation_id, m.user_id, COALESCE(m.imported_content, m.content) '
+                . 'AS content, m.created_at FROM private_messages m INNER JOIN private_conversations c '
+                . 'ON c.id = m.conversation_id WHERE m.id = ? AND c.id = ?',
+                [(int) $meta['message'], (int) $target]
+            );
+            if ($row !== false) {
+                $row['members'] = $this->db->fetchFirstColumn('SELECT user_id FROM private_conversation_members '
+                    . 'WHERE conversation_id = ? ORDER BY user_id', [(int) $target]);
+            }
+        } elseif (str_starts_with($phase, 'private_') && $phase !== 'private_files') {
             $row = $this->db->fetchAssociative(
                 'SELECT c.subject, c.imported_subject, c.import_job_id, '
                 . 'm.user_id, COALESCE(m.imported_content, m.content) AS content, m.created_at FROM '
@@ -219,6 +280,18 @@ final readonly class ImportAuxWriter
         if (!hash_equals($meta['file_hash'] ?? '', $asset->digest())) {
             throw new RuntimeException('import_attachment_changed');
         }
+    }
+
+    /**
+     * The stored file's type when it is a raster image the forum shows inline (beta.18), so imported pictures are
+     * shown instead of offered for download; anything else (also SVG) stays a download.
+     */
+    private function mime(string $key): string
+    {
+        $path = $this->files->path($key);
+        $type = class_exists(\finfo::class) && is_file($path)
+            ? (string) (new \finfo(FILEINFO_MIME_TYPE))->file($path) : '';
+        return in_array($type, self::IMAGES, true) ? $type : 'application/octet-stream';
     }
 
     private function mapped(string $job, string $phase, int|string $source): ?int
