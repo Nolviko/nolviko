@@ -61,15 +61,19 @@ final class ForumVisibility
             return $this->memo[$memoKey];
         }
 
-        // Shared sets ignore forum passwords; each visitor's locked forums are removed afterwards (ADR-041).
-        $forums = $subject->hasUserOverrides()
-            ? self::compute($subject, $keys)
+        // Shared sets ignore forum passwords; each visitor's locked forums are removed afterwards (ADR-041). The
+        // cached entry also says whether any forum has a password (the rules version changes with passwords), so
+        // boards without passwords never read the forum tree for it.
+        $entry = $subject->hasUserOverrides()
+            ? ['forums' => self::compute($subject, $keys), 'protected' => $subject->anyProtected()]
             : $this->cache->remember(
-                'visible.' . sha1($groups . '|' . implode(',', $keys)) . '.v' . ($this->rulesVersion)(),
+                'visible2.' . sha1($groups . '|' . implode(',', $keys)) . '.v' . ($this->rulesVersion)(),
                 self::TTL_SECONDS,
-                static fn(): array => self::compute($subject, $keys),
+                static fn(): array => ['forums' => self::compute($subject, $keys),
+                    'protected' => $subject->anyProtected()],
             );
-        $locked = $keys === [self::VIEW] ? [] : $subject->lockedForums();
+        $forums = is_array($entry['forums'] ?? null) ? $entry['forums'] : self::compute($subject, $keys);
+        $locked = $keys === [self::VIEW] || ($entry['protected'] ?? true) === false ? [] : $subject->lockedForums();
 
         return $this->memo[$memoKey] = new ForumScope(
             $locked === [] ? $forums : array_values(array_diff($forums, $locked)),

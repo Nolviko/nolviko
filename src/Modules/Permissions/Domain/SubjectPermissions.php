@@ -126,6 +126,12 @@ final class SubjectPermissions
         return $this->lockedFor($forumId) ? $this->locks?->blocking($this->forums->ancestry($forumId)) : null;
     }
 
+    /** Whether any forum has a password at all (ADR-041); false without a password gate. */
+    public function anyProtected(): bool
+    {
+        return $this->locks?->any() ?? false;
+    }
+
     /**
      * @return list<int> Every forum locked for this visitor (empty when no forum has a password).
      */

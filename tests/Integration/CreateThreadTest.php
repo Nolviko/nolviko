@@ -265,7 +265,9 @@ final class CreateThreadTest extends TestCase
             $result['max_peak_bytes'] / 1048576,
             max($queries),
         ));
-        self::assertLessThanOrEqual(14, max($queries));
+        // 15 since beta.15: a member's first post creates their flood bucket (SELECT, then upsert); every later post
+        // only reads it (11 queries steady state). Measured equal on beta.17 and beta.18 (2026-11-22).
+        self::assertLessThanOrEqual(15, max($queries));
         self::assertLessThan(250.0, $result['p95_ms']);
     }
 

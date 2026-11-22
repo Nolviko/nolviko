@@ -62,15 +62,15 @@ final class DbalForumTree implements ProtectedForumTree
 
             if (!is_array($stored) || !is_array($stored['parents'] ?? null) || !is_array($stored['locked'] ?? null)) {
                 $stored = ['parents' => [], 'locked' => []];
-                $rows = $this->connection->fetchAllAssociative(
-                    'SELECT id, parent_id FROM forums ORDER BY sort_order, id',
-                );
 
-                foreach ($rows as $row) {
+                // One query for the parent map and the password fingerprints (beta.18 query budget).
+                foreach ($this->rows() as $row) {
                     $stored['parents'][(int) $row['id']] = $row['parent_id'] === null ? null : (int) $row['parent_id'];
-                }
 
-                $stored['locked'] = $this->passwords();
+                    if (is_string($row['password_hash'] ?? null) && $row['password_hash'] !== '') {
+                        $stored['locked'][(int) $row['id']] = ForumLocks::fingerprint($row['password_hash']);
+                    }
+                }
 
                 if ($key !== null) {
                     $this->cache?->set($key, $stored, self::CACHE_SECONDS);
@@ -84,45 +84,39 @@ final class DbalForumTree implements ProtectedForumTree
         return $this->tree;
     }
 
-    /** @return array<int, string> Before migration 0075 there is no password column: nothing is protected. */
-    private function passwords(): array
+    /**
+     * Every forum with its parent and password hash. Before migration 0075 there is no password column: the rows
+     * come without it and nothing is protected. Any other failure must not open protected forums.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function rows(): array
     {
-        if ($this->connection->isTransactionActive()) {
-            $exists = $this->connection->fetchOne(
-                "SELECT 1 FROM migration_history WHERE id = ? AND status = 'applied'",
-                [ForumExtrasColumns::ID],
-            );
+        $plain = 'SELECT id, parent_id FROM forums ORDER BY sort_order, id';
 
-            if ($exists === false) {
-                return [];
-            }
+        // Inside a transaction a failing statement would abort it (PostgreSQL): ask first.
+        if ($this->connection->isTransactionActive() && !$this->passwordsApplied()) {
+            return $this->connection->fetchAllAssociative($plain);
         }
 
         try {
-            $rows = $this->connection->fetchAllKeyValue(
-                "SELECT id, password_hash FROM forums WHERE password_hash IS NOT NULL AND password_hash <> ''",
+            return $this->connection->fetchAllAssociative(
+                'SELECT id, parent_id, password_hash FROM forums ORDER BY sort_order, id',
             );
         } catch (Throwable $failure) {
-            // Only a missing column (an update still running) means "no passwords"; any other failure must not
-            // open protected forums.
-            $applied = $this->connection->fetchOne(
-                "SELECT 1 FROM migration_history WHERE id = ? AND status = 'applied'",
-                [ForumExtrasColumns::ID],
-            );
-
-            if ($applied !== false) {
+            if ($this->passwordsApplied()) {
                 throw $failure;
             }
 
-            return [];
+            return $this->connection->fetchAllAssociative($plain);
         }
+    }
 
-        $locked = [];
-
-        foreach ($rows as $id => $hash) {
-            $locked[(int) $id] = ForumLocks::fingerprint((string) $hash);
-        }
-
-        return $locked;
+    private function passwordsApplied(): bool
+    {
+        return $this->connection->fetchOne(
+            "SELECT 1 FROM migration_history WHERE id = ? AND status = 'applied'",
+            [ForumExtrasColumns::ID],
+        ) !== false;
     }
 }
