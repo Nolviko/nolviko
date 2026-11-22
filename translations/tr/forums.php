@@ -39,4 +39,11 @@ return [
     'forums.index.subforums' => 'Alt forumlar:',
     'forums.index.stat_threads' => 'Konular',
     'forums.index.stat_posts' => 'İletiler',
+    'forums.index.mark_all_read' => 'Tüm forumları okundu işaretle',
+    'forums.show.sort' => 'Sırala',
+    'forums.show.sort_activity' => 'Son etkinlik',
+    'forums.show.sort_title' => 'Başlık',
+    'forums.show.sort_replies' => 'En çok yanıt',
+    'forums.show.sort_started' => 'En yeni konular',
+    'forums.show.sort_apply' => 'Uygula',
 ];

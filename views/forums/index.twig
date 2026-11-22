@@ -7,7 +7,17 @@
 {% block head %}{% if feed_url|default(null) %}<link rel="alternate" type="application/atom+xml" href="{{ feed_url|safe_url }}">{% endif %}{% endblock %}
 
 {% block content %}
+<div class="head-row">
 <h1 dir="auto">{{ title }}</h1>
+{% if csrf_token|default(null) %}<div class="actions">
+<a class="btn-s" href="{{ path('community.followed')|safe_url }}">{{ t('community.followed') }}</a>
+<a class="btn-s" href="{{ path('community.drafts')|safe_url }}">{{ t('community.drafts') }}</a>
+<form method="post" action="{{ path('forums.read_all')|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<button class="btn-s" type="submit">{{ t('forums.index.mark_all_read') }}</button>
+</form>
+</div>{% endif %}
+</div>
 {{ theme_slot('forum.list.before', {forums: forums}) }}
 {% if forums is empty %}
 <div class="panel empty">

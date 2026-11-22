@@ -26,6 +26,12 @@ final class AuthorizedExternalSearch implements PostSearch
     ) {
     }
 
+    /** Candidates come in the engine's own newest-first order; other orders need the native engine. */
+    public function sorts(): array
+    {
+        return [SearchFilters::NEWEST];
+    }
+
     public function find(
         ForumScope $scope,
         SearchQuery $query,
@@ -33,6 +39,11 @@ final class AuthorizedExternalSearch implements PostSearch
         ?SearchFilters $filters = null
     ): array {
         $filters ??= new SearchFilters();
+
+        // External engines index post bodies; titles-only search (beta.18) always uses the native title index.
+        if ($filters->titles) {
+            return (new DbalPostSearch($this->db))->find($scope, $query, $before, $filters);
+        }
 
         if ($scope->forumIds === []) {
             return ['rows' => [], 'count' => 0, 'capped' => false, 'next' => null, 'partial' => true];
@@ -60,7 +71,9 @@ final class AuthorizedExternalSearch implements PostSearch
             $types[] = ParameterType::INTEGER;
         }
 
-        foreach (['t.forum_id' => $filters->forum, 'p.user_id' => $filters->author] as $column => $value) {
+        $ids = ['t.forum_id' => $filters->forum, 'p.user_id' => $filters->author, 'p.thread_id' => $filters->thread];
+
+        foreach ($ids as $column => $value) {
             if ($value !== null) {
                 $where .= ' AND ' . $column . ' = ?';
                 $parameters[] = $value;
@@ -77,7 +90,7 @@ final class AuthorizedExternalSearch implements PostSearch
             }
         }
 
-        $rows = $this->db->fetchAllAssociative('SELECT p.id, p.thread_id, t.forum_id, t.title, p.created_at, '
+        $rows = $this->db->fetchAllAssociative('SELECT p.id, p.thread_id, t.forum_id, t.title, t.slug, p.created_at, '
             . 'LEFT(p.content, 2000) AS head, u.username AS author_name FROM posts p INNER JOIN threads t '
             . 'ON t.id = p.thread_id LEFT JOIN users u ON u.id = p.user_id WHERE ' . $where
             . ' ORDER BY p.id DESC LIMIT 21', $parameters, $types);
@@ -86,6 +99,7 @@ final class AuthorizedExternalSearch implements PostSearch
 
         foreach ($rows as &$row) {
             $row['excerpt'] = (string) grapheme_substr($row['head'], 0, 240);
+            $row['kind'] = 'post';
             unset($row['head']);
         }
 

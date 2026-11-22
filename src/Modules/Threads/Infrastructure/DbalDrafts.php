@@ -52,6 +52,20 @@ final class DbalDrafts implements Drafts
         ];
     }
 
+    public function forMember(int $userId, int $limit): array
+    {
+        return array_map(static fn(array $row): array => [
+            'context' => (string) $row['context'],
+            'title' => $row['title'] === null ? null : (string) $row['title'],
+            'content' => (string) $row['content'],
+            'updated_at' => (string) $row['updated_at'],
+        ], $this->connection->fetchAllAssociative(
+            'SELECT context, title, LEFT(content, 400) AS content, updated_at FROM drafts WHERE user_id = ? '
+                . 'ORDER BY updated_at DESC LIMIT ' . max(1, min($limit, 200)),
+            [$userId],
+        ));
+    }
+
     public function discard(int $userId, string $context): void
     {
         $this->connection->delete('drafts', ['user_id' => $userId, 'context' => $context]);

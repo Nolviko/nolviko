@@ -197,7 +197,18 @@ final class CommunityHandler implements RouteHandler
                     }
                 }
             } elseif ($section === 'members' || $section === 'online') {
-                $rows = $this->profiles->directory($subject, $after, $section === 'online');
+                $name = is_string($query['q'] ?? null) ? $query['q'] : '';
+                $sort = in_array($query['sort'] ?? null, ['name', 'joined'], true) ? $query['sort'] : '';
+                $page = max(1, min(100, (int) ($query['page'] ?? 1)));
+                $rows = $this->profiles->directory(
+                    $subject,
+                    $after,
+                    $section === 'online',
+                    $name,
+                    $sort,
+                    ($page - 1) * 25,
+                );
+                $context['directory'] = ['q' => $name, 'sort' => $sort, 'sorts' => ['name', 'joined']];
                 $context['items'] = array_map(
                     static fn(array $row): array => $row + ['joined' => is_string($row['joined_at'] ?? null)
                         ? new DateTimeImmutable($row['joined_at'], new DateTimeZone('UTC')) : null],
@@ -206,7 +217,8 @@ final class CommunityHandler implements RouteHandler
 
                 if (count($rows) > 25) {
                     $context['older'] = $this->urls->generate(CoreRoutes::COMMUNITY, ['section' => $section])
-                        . '?after=' . $context['items'][24]['id'];
+                        . ($sort === '' && $name === '' ? '?after=' . $context['items'][24]['id']
+                            : '?' . http_build_query(['q' => $name, 'sort' => $sort, 'page' => $page + 1]));
                 }
             } elseif ($section === 'notifications' || $section === 'bookmarks') {
                 $rows = $section === 'notifications' ? $this->notifications->page($subject, $before)

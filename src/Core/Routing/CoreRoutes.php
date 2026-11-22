@@ -158,6 +158,18 @@ final class CoreRoutes
 
     public const FORUM_READ = 'forums.read';
 
+    /** POST `/forums/read`: mark every forum read (beta.18, roadmap 12). */
+    public const FORUMS_READ_ALL = 'forums.read_all';
+
+    /** `/threads/{thread}/unread`: the member's first unread post of a thread (beta.18, roadmap 13). */
+    public const THREAD_UNREAD = 'threads.unread';
+
+    /** `/drafts`: the member's unsent thread and reply drafts (beta.18, roadmap 17). */
+    public const DRAFTS = 'community.drafts';
+
+    /** `/following`: the member's thread subscriptions and bookmarks (beta.18, roadmap 18). */
+    public const FOLLOWED = 'community.followed';
+
     public const POST_SHOW = 'posts.show';
 
     public const POST_REPORT = 'posts.report';
@@ -510,6 +522,15 @@ final class CoreRoutes
                 ['POST'],
                 ['forum' => '[1-9][0-9]{0,17}'],
             ),
+            new RouteDefinition(self::FORUMS_READ_ALL, '/forums/read', ['POST']),
+            new RouteDefinition(
+                self::THREAD_UNREAD,
+                '/threads/{thread}/unread',
+                ['GET'],
+                ['thread' => '[1-9][0-9]{0,17}'],
+            ),
+            new RouteDefinition(self::DRAFTS, '/drafts', ['GET', 'POST'], requiresHttps: true),
+            new RouteDefinition(self::FOLLOWED, '/following', ['GET', 'POST'], requiresHttps: true),
             new RouteDefinition(self::POST_SHOW, '/posts/{post}', ['GET'], ['post' => '[1-9][0-9]{0,17}']),
             new RouteDefinition(
                 self::POST_REPORT,

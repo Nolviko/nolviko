@@ -28,6 +28,13 @@ use Nolviko\Modules\Threads\Domain\ThreadStatus;
  */
 final class DbalThreadRepository implements ThreadRepository
 {
+    /** Member-chosen forum list orders (roadmap 14), each served by an index of migration 0066. */
+    private const SORTS = [
+        'title' => 'is_sticky DESC, title ASC, id ASC',
+        'replies' => 'is_sticky DESC, reply_count DESC, id DESC',
+        'started' => 'is_sticky DESC, created_at DESC, id DESC',
+    ];
+
     private const PAGE_COLUMNS = 't.id, t.forum_id, t.user_id, t.last_poster_id, t.title, t.slug, t.is_sticky, '
         . 't.is_locked, t.last_post_at, t.status, t.moved_to_thread_id, t.reply_count, t.view_count';
 
@@ -145,6 +152,38 @@ final class DbalThreadRepository implements ThreadRepository
         return $before === null ? $items : array_reverse($items);
     }
 
+    public function forumThreadsSorted(
+        ForumScope $scope,
+        int $forumId,
+        string $sort,
+        int $limit,
+        int $offset,
+        bool $withDeleted = false,
+    ): array {
+        $order = self::SORTS[$sort] ?? null;
+        if ($order === null || !$scope->contains($forumId) || $offset < 0) {
+            return [];
+        }
+
+        $parameters = [
+            $forumId,
+            ThreadStatus::Visible->value,
+            ...($withDeleted ? [ThreadStatus::Hidden->value] : []),
+        ];
+        $rows = $this->connection->fetchAllAssociative(
+            self::page(
+                'WHERE t.forum_id = ? AND t.status IN (?' . ($withDeleted ? ', ?' : '') . ')',
+                $order,
+                self::limit($limit),
+                $offset,
+            ),
+            $parameters,
+            self::types($parameters),
+        );
+
+        return array_map(self::hydrate(...), $rows);
+    }
+
     public function latest(ForumScope $scope, int $limit, ?ThreadCursor $after = null, ?int $tagId = null): array
     {
         [$condition, $parameters, $types] = ScopeSql::forums($scope, 't.forum_id');
@@ -208,13 +247,14 @@ final class DbalThreadRepository implements ThreadRepository
     /**
      * @param string $order Columns without table alias; applied to the page and again to the joined result.
      */
-    private static function page(string $where, string $order, int $limit): string
+    private static function page(string $where, string $order, int $limit, int $offset = 0): string
     {
         $inner = 't.' . str_replace(', ', ', t.', $order);
         $outer = 'page.' . str_replace(', ', ', page.', $order);
 
         return 'SELECT ' . self::LIST_COLUMNS . ' FROM (SELECT ' . self::PAGE_COLUMNS . ' FROM threads t '
-            . $where . ' ORDER BY ' . $inner . ' LIMIT ' . $limit . ') page' . self::LIST_JOINS
+            . $where . ' ORDER BY ' . $inner . ' LIMIT ' . $limit . ($offset > 0 ? ' OFFSET ' . $offset : '')
+            . ') page' . self::LIST_JOINS
             . ' ORDER BY ' . $outer;
     }
 

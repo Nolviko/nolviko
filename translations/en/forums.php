@@ -43,4 +43,11 @@ return [
     'forums.index.subforums' => 'Subforums:',
     'forums.index.stat_threads' => 'Threads',
     'forums.index.stat_posts' => 'Posts',
+    'forums.index.mark_all_read' => 'Mark all forums read',
+    'forums.show.sort' => 'Sort by',
+    'forums.show.sort_activity' => 'Last activity',
+    'forums.show.sort_title' => 'Title',
+    'forums.show.sort_replies' => 'Most replies',
+    'forums.show.sort_started' => 'Newest threads',
+    'forums.show.sort_apply' => 'Apply',
 ];

@@ -215,6 +215,9 @@ use Nolviko\Modules\Threads\Http\CreateReplyHandler;
 use Nolviko\Modules\Threads\Http\CreateThreadHandler;
 use Nolviko\Modules\Threads\Http\EditPostHandler;
 use Nolviko\Modules\Threads\Http\ForumReadHandler;
+use Nolviko\Modules\Community\Http\FollowedHandler;
+use Nolviko\Modules\Threads\Http\DraftsHandler;
+use Nolviko\Modules\Threads\Http\ThreadUnreadHandler;
 use Nolviko\Modules\Threads\Http\ForumThreadsHandler;
 use Nolviko\Modules\Threads\Http\ModerationHandler;
 use Nolviko\Modules\Threads\Http\PostHistoryHandler;
@@ -1686,6 +1689,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Router $router,
                 SiteSettings $settings,
                 DiscussionFeed $feed,
+                CsrfTokens $csrf,
             ): ForumIndexHandler => new ForumIndexHandler(
                 $translator,
                 $views,
@@ -1695,6 +1699,7 @@ final class CoreServiceProvider implements ServiceProvider
                 $router,
                 $settings,
                 $feed,
+                $csrf,
             ),
             [
                 MessageTranslator::class,
@@ -1705,6 +1710,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Router::class,
                 SiteSettings::class,
                 DiscussionFeed::class,
+                CsrfTokens::class,
             ],
         );
         $services->factory(
@@ -1823,6 +1829,80 @@ final class CoreServiceProvider implements ServiceProvider
                 ErrorResponder $errors,
             ): ForumReadHandler => new ForumReadHandler($subjects, $visibility, $reads, $router, $errors),
             [RequestSubject::class, ForumVisibility::class, ReadTracker::class, Router::class, ErrorResponder::class],
+        );
+        // Roadmap 13, 17, 18 (beta.18).
+        $services->factory(
+            ThreadUnreadHandler::class,
+            static fn(
+                RequestSubject $subjects,
+                ThreadRepository $threads,
+                PostRepository $posts,
+                ForumVisibility $visibility,
+                ReadTracker $reads,
+                Router $router,
+                ErrorResponder $errors,
+                ?Config $config,
+            ): ThreadUnreadHandler => new ThreadUnreadHandler(
+                $subjects,
+                $threads,
+                $posts,
+                $visibility,
+                $reads,
+                $router,
+                $errors,
+                $config?->threadsPerPage ?? ThreadPageHandler::DEFAULT_PER_PAGE,
+            ),
+            [RequestSubject::class, ThreadRepository::class, PostRepository::class, ForumVisibility::class,
+                ReadTracker::class, Router::class, ErrorResponder::class, CompositionRoot::CONFIG],
+        );
+        $services->factory(
+            DraftsHandler::class,
+            static fn(
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                RequestSubject $subjects,
+                Drafts $drafts,
+                ForumRepository $forums,
+                ThreadRepository $threads,
+                ForumVisibility $visibility,
+                CsrfTokens $csrf,
+                Router $router,
+            ): DraftsHandler => new DraftsHandler(
+                $translator,
+                $views,
+                $subjects,
+                $drafts,
+                $forums,
+                $threads,
+                $visibility,
+                $csrf,
+                $router,
+            ),
+            [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class, Drafts::class,
+                ForumRepository::class, ThreadRepository::class, ForumVisibility::class, CsrfTokens::class,
+                Router::class],
+        );
+        $services->factory(
+            FollowedHandler::class,
+            static fn(
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                RequestSubject $subjects,
+                CommunityInteractions $interactions,
+                CsrfTokens $csrf,
+                Router $router,
+                ErrorResponder $errors,
+            ): FollowedHandler => new FollowedHandler(
+                $translator,
+                $views,
+                $subjects,
+                $interactions,
+                $csrf,
+                $router,
+                $errors,
+            ),
+            [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class, CommunityInteractions::class,
+                CsrfTokens::class, Router::class, ErrorResponder::class],
         );
         $services->factory(
             ForumThreadsHandler::class,
@@ -2712,6 +2792,7 @@ final class CoreServiceProvider implements ServiceProvider
                 ForumRepository $forums,
                 UserRepository $users,
                 Closure $settings,
+                ThreadRepository $threads,
             ): SearchHandler => new SearchHandler(
                 $translator,
                 $views,
@@ -2723,10 +2804,11 @@ final class CoreServiceProvider implements ServiceProvider
                 $forums,
                 $users,
                 (int) ($settings()->peek('limits.search_seconds') ?? SiteSettings::DEFAULTS['limits.search_seconds']),
+                $threads,
             ),
             [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class,
                 ForumVisibility::class, Connection::class, Router::class, ForumRepository::class,
-                UserRepository::class, new Lazy(SiteSettings::class)],
+                UserRepository::class, new Lazy(SiteSettings::class), ThreadRepository::class],
         );
         $services->factory(
             PrivacyHandler::class,
@@ -3607,6 +3689,9 @@ final class CoreServiceProvider implements ServiceProvider
                 Closure $externalRegister,
                 Closure $externalUnlink,
                 Closure $externalLink,
+                Closure $threadUnread,
+                Closure $drafts,
+                Closure $followed,
             ): Kernel => new Kernel(
                 $router,
                 [
@@ -3699,6 +3784,10 @@ final class CoreServiceProvider implements ServiceProvider
                     CoreRoutes::ACCOUNT_PREFERENCES => $accountPreferences,
                     CoreRoutes::ADMIN_AUDIT => $auditLog,
                     CoreRoutes::FORUM_READ => $forumRead,
+                    CoreRoutes::FORUMS_READ_ALL => $forumRead,
+                    CoreRoutes::THREAD_UNREAD => $threadUnread,
+                    CoreRoutes::DRAFTS => $drafts,
+                    CoreRoutes::FOLLOWED => $followed,
                     CoreRoutes::ADMIN_PERMISSIONS => $permissionSimulator,
                     CoreRoutes::ADMIN_MEMBERS => $members,
                     CoreRoutes::ADMIN_MEMBERS_BULK => $membersBulk,
@@ -3839,6 +3928,9 @@ final class CoreServiceProvider implements ServiceProvider
                 new Lazy(ExternalAuthHandler::class . '.' . ExternalAuthHandler::REGISTER),
                 new Lazy(ExternalAuthHandler::class . '.' . ExternalAuthHandler::UNLINK),
                 new Lazy(ExternalAuthHandler::class . '.' . ExternalAuthHandler::LINK),
+                new Lazy(ThreadUnreadHandler::class),
+                new Lazy(DraftsHandler::class),
+                new Lazy(FollowedHandler::class),
             ],
         );
     }

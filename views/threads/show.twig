@@ -29,9 +29,17 @@
 <h1 dir="auto">{% if labels.prefix|default(null) %}<span class="{{ labels.prefix.class }} title-prefix"><bdi>{{ labels.prefix.label }}</bdi></span> {% endif %}{{ title|censor }}</h1>
 <div class="actions">
 {% if community_url|default(null) %}<a class="btn btn-s" href="{{ community_url|safe_url }}">{{ t('community.thread') }}</a>{% endif %}
+{% if csrf_token|default(null) and thread_id|default(null) %}<a class="btn btn-s" href="{{ path('threads.unread', {thread: thread_id})|safe_url }}">{{ t('threads.show.first_unread') }}</a>{% endif %}
 {% if reply_url is not null %}<a class="btn" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>{% endif %}
 </div>
 </div>
+{% if thread_id|default(null) and thread_status|default(null) is null %}
+<form class="row thread-search" method="get" action="{{ path('search.posts')|safe_url }}" role="search" aria-label="{{ t('threads.show.search') }}">
+<input type="hidden" name="thread" value="{{ thread_id }}">
+<input type="search" name="q" required maxlength="120" dir="auto" aria-label="{{ t('threads.show.search') }}" placeholder="{{ t('threads.show.search') }}">
+<button type="submit" class="btn-s">{{ t('search.submit') }}</button>
+</form>
+{% endif %}
 {% if moderation|default(null) %}
 <div class="row thread-moderation">
 {% for command in [moderation.sticky, moderation.lock] %}{% if command %}<form method="post" action="{{ moderation.action|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="command" value="{{ command }}"><button type="submit" class="btn btn-s">{% if command == 'sticky' %}{{ t('threads.show.command.sticky') }}{% elseif command == 'unsticky' %}{{ t('threads.show.command.unsticky') }}{% elseif command == 'lock' %}{{ t('threads.show.command.lock') }}{% else %}{{ t('threads.show.command.unlock') }}{% endif %}</button></form>{% endif %}{% endfor %}

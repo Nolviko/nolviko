@@ -23,4 +23,11 @@ return [
     'search.filter_until' => 'Through date (UTC)',
     'search.filter_forum_any' => 'All forums',
     'search.author_unknown' => 'No member has that username.',
+    'search.titles_only' => 'Search titles only',
+    'search.sort' => 'Sort by',
+    'search.sort_newest' => 'Newest first',
+    'search.sort_oldest' => 'Oldest first',
+    'search.sort_relevance' => 'Relevance',
+    'search.in_thread' => 'Searching in:',
+    'search.in_thread_unknown' => 'Searching in one thread',
 ];

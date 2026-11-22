@@ -84,26 +84,42 @@ final class MemberProfiles
         (new MemberStanding($this->db))->saveValues($actor, $fields);
     }
 
-    public function directory(SubjectPermissions $subject, int $after, bool $online): array
-    {
+    /**
+     * Roadmap 24 (beta.18): `$name` keeps usernames that start with it; `$sort` `name` or `joined` (newest first, index
+     * ix_users_directory_joined) pages by `$offset`, the default member-number order keeps its keyset.
+     */
+    public function directory(
+        SubjectPermissions $subject,
+        int $after,
+        bool $online,
+        string $name = '',
+        string $sort = '',
+        int $offset = 0,
+    ): array {
         if (!$subject->allows('user.directory.view') || !$subject->allows('user.profile.view')) {
             throw new RegistrationRejected(['community_denied']);
         }
 
         $actor = $subject->userId ?? 0;
+        $order = ['name' => 'u.username, u.id', 'joined' => 'u.created_at DESC, u.id DESC'][$sort] ?? null;
+        $name = trim($name);
+        $filter = $name === '' ? '' : 'AND LOWER(u.username) LIKE ? ';
+        $like = mb_strtolower(addcslashes(mb_substr($name, 0, 50), '%_\\')) . '%';
 
         return $this->db->fetchAllAssociative(
             'SELECT u.id, u.username, u.created_at AS joined_at FROM users u '
                 . 'LEFT JOIN member_profiles p ON p.user_id = u.id '
                 . ($online ? 'INNER JOIN member_activity a ON a.user_id = u.id ' : '')
-                . "WHERE u.status = 'active' AND u.id > ? AND (p.user_id IS NULL OR p.visibility = 'everyone' "
+                . "WHERE u.status = 'active' AND u.id > ? " . $filter
+                . "AND (p.user_id IS NULL OR p.visibility = 'everyone' "
                 . "OR (p.visibility = 'members' AND ? > 0)) "
                 . 'AND NOT EXISTS (SELECT 1 FROM member_blocks b WHERE '
                 . '(b.user_id = ? AND b.target_id = u.id) OR (b.target_id = ? AND b.user_id = u.id)) '
                 . ($online ? 'AND COALESCE(p.show_online, 1) = 1 '
                     . "AND a.last_seen_at >= utc_timestamp(6) - INTERVAL '15' MINUTE " : '')
-                . 'ORDER BY u.id LIMIT 26',
-            [$after, $actor, $actor, $actor],
+                . 'ORDER BY ' . ($order ?? 'u.id') . ' LIMIT 26' . ($order !== null && $offset > 0
+                    ? ' OFFSET ' . max(0, min($offset, 2600)) : ''),
+            [$order === null ? $after : 0, ...($filter === '' ? [] : [$like]), $actor, $actor, $actor],
         );
     }
 

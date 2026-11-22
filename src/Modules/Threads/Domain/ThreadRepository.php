@@ -55,6 +55,21 @@ interface ThreadRepository
     ): array;
 
     /**
+     * A forum's threads in a member-chosen order (beta.18, roadmap 14): `title`, `replies` or `started`, sticky
+     * threads first. Numbered pages (offset): the default last-activity order keeps keyset pagination.
+     *
+     * @return list<ThreadListItem>
+     */
+    public function forumThreadsSorted(
+        ForumScope $scope,
+        int $forumId,
+        string $sort,
+        int $limit,
+        int $offset,
+        bool $withDeleted = false,
+    ): array;
+
+    /**
      * The most recently active visible threads across the readable forums (index `ix_threads_latest`), without
      * moved-thread stubs. `$after` continues the list after that position (ADR-014 keyset; the cursor's sticky
      * flag is ignored because this list is not grouped by it). `$tagId` keeps the threads with that tag.
