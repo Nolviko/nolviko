@@ -39,7 +39,8 @@ final class ForumSubscriptionsTable implements Migration
                 . 'created_at DATETIME(6) NOT NULL, '
                 . 'PRIMARY KEY (user_id, forum_id), '
                 . 'INDEX ix_forum_subscriptions_forum (forum_id, user_id), '
-                . 'CONSTRAINT fk_forum_subscriptions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, '
+                . 'CONSTRAINT fk_forum_subscriptions_user FOREIGN KEY (user_id) REFERENCES users (id) '
+                . 'ON DELETE CASCADE, '
                 . 'CONSTRAINT fk_forum_subscriptions_forum FOREIGN KEY (forum_id) REFERENCES forums (id) '
                 . 'ON DELETE CASCADE'
                 . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci',

@@ -94,4 +94,5 @@ return [
     'community.stat_reputation' => 'Reputation',
     'community.stat_joined' => 'Joined',
     'community.stat_seen' => 'Last seen',
+    'community.notice_forum_thread' => 'A new thread in a forum you subscribed to',
 ];

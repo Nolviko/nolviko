@@ -77,4 +77,6 @@ return [
     'core.editor.image_busy' => 'Resim yükleniyor…',
     'core.editor.image_full' => 'Bu iletide izin verilen en fazla resim zaten var ({max}).',
     'core.error.home' => 'Ana sayfaya dön',
+    'core.closed.title' => 'Forum şu an kapalı',
+    'core.closed.body' => 'Yöneticiler forumu bir süreliğine kapattı. Lütfen daha sonra tekrar gelin.',
 ];

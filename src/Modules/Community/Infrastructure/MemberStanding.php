@@ -184,7 +184,10 @@ final readonly class MemberStanding
         }
 
         $posts = $this->db->fetchAllKeyValue(
-            "SELECT user_id, COUNT(*) FROM posts WHERE user_id IN (?) AND status = 'visible' GROUP BY user_id",
+            // beta.18 roadmap 32: posts in forums with "counts posts" off do not raise the count or the rank.
+            'SELECT p.user_id, COUNT(*) FROM posts p INNER JOIN threads t ON t.id = p.thread_id '
+                . "INNER JOIN forums f ON f.id = t.forum_id WHERE p.user_id IN (?) AND p.status = 'visible' "
+                . 'AND f.counts_posts = 1 GROUP BY p.user_id',
             [$userIds],
             [ArrayParameterType::INTEGER],
         );

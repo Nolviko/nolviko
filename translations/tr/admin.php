@@ -816,4 +816,36 @@ return [
     'admin.dashboard.second_factor_off' => '{count, plural, one {# üyenin} other {# üyenin}} iki adımlı doğrulaması '
         . 'kapalı bir eklentiye ait; eklenti yeniden açılana kadar yalnızca parolayla giriş yapıyorlar.',
     'admin.extensions.settings' => 'Ayarlar',
+    'admin.forums.link' => 'Bağlantı bölümü',
+    'admin.forums.kind' => 'Tür',
+    'admin.forums.extras' => 'Diğer seçenekler',
+    'admin.forums.link_url' => 'Bağlantı adresi (http veya https)',
+    'admin.forums.link_counts' => 'Tıklamaları say (şimdiye kadar {clicks})',
+    'admin.forums.counts_posts' => 'Buradaki iletiler üyelerin ileti sayısına ve rütbesine katılır',
+    'admin.forums.password' => 'Forum parolası',
+    'admin.forums.password_set' => 'Parola var',
+    'admin.forums.password_keep' => 'Olduğu gibi kalsın',
+    'admin.forums.password_new' => 'Yeni parola belirle',
+    'admin.forums.password_clear' => 'Parolayı kaldır',
+    'admin.forums.password_hint' => 'En az 4 karakter. Ziyaretçiler bölüm adını görür ve oturum başına bir kez parola '
+        . 'girer; yöneticiler ve bölüm moderatörleri her zaman girer. Değiştirmek için yönetici oturumunun yeni '
+        . 'doğrulanmış olması gerekir.',
+    'admin.forums.mod_actions' => 'Kayıtlı moderasyon işlemleri',
+    'admin.forums.mod_actions_hint' => 'Moderatörler bu adımları konu yönetim sayfasından tek seferde uygular. Her '
+        . 'adım yine moderatörün kendi iznini ister.',
+    'admin.forums.mod_title' => 'Ad',
+    'admin.forums.mod_lock' => 'Kilit',
+    'admin.forums.mod_sticky' => 'Sabit',
+    'admin.forums.mod_keep' => 'Değiştirme',
+    'admin.forums.mod_stick' => 'Sabitle',
+    'admin.forums.mod_unstick' => 'Sabitlemeyi kaldır',
+    'admin.forums.mod_move' => 'Bölüme taşı (yönlendirme bırakır)',
+    'admin.forums.mod_prefix' => 'Önek numarası (isteğe bağlı)',
+    'admin.forums.mod_reply' => 'Moderatör adına yanıt (isteğe bağlı)',
+    'admin.forums.mod_add' => 'İşlemi kaydet',
+    'admin.site.field.site_closed' => 'Site ziyaretçilere kapalı',
+    'admin.site.hint.site_closed' => 'Açık: tüm sayfalar aşağıdaki mesajı 503 ile gösterir; giriş ve yönetim paneli '
+        . 'çalışır, yöneticiler siteyi normal gezer.',
+    'admin.site.field.site_closed_message' => 'Site kapalıyken gösterilecek mesaj',
+    'admin.site.hint.site_closed_message' => 'Düz metin, en çok 500 karakter.',
 ];

@@ -94,4 +94,5 @@ return [
     'community.stat_reputation' => 'İtibar',
     'community.stat_joined' => 'Katılım',
     'community.stat_seen' => 'Son görülme',
+    'community.notice_forum_thread' => 'Abone olduğunuz bölümde yeni konu',
 ];

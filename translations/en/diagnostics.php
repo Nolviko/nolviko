@@ -301,4 +301,6 @@ return [
     'diagnostics.external_banned' => 'Accounts cannot be created from this address.',
     'diagnostics.external_pending_approval' => 'Your account was created and waits for an administrator\'s approval.',
     'diagnostics.external_link_password' => 'The password is not correct.',
+    'diagnostics.forum_link_invalid' => 'Enter a full http or https address for the link section.',
+    'diagnostics.forum_password_invalid' => 'A forum password needs 4 to 200 characters.',
 ];

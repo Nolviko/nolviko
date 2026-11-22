@@ -120,7 +120,8 @@ final readonly class SiteSettingsHandler implements RouteHandler
                         'registration.challenge' => 'admin.site.challenge',
                         'home.layout' => 'admin.site.layout',
                         'appearance.accent' => 'admin.site.accent',
-                        'gallery.enabled', 'gallery.approval', 'api.enabled', 'seo.indexnow', 'posting.images'
+                        'gallery.enabled', 'gallery.approval', 'api.enabled', 'seo.indexnow', 'posting.images',
+                            'site.closed'
                             => 'admin.site.switch',
                         default => 'admin.site.mode',
                     }, ['mode' => $option])], $limit) : []),

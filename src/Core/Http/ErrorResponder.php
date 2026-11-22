@@ -63,6 +63,21 @@ final class ErrorResponder
         return $response;
     }
 
+    /** The site closed from the panel (beta.18 roadmap 36), with the administrator's message when one is set. */
+    public function closed(string $message): Response
+    {
+        $response = $this->page(
+            Response::HTTP_SERVICE_UNAVAILABLE,
+            'core.closed.title',
+            'core.closed.body',
+            [],
+            $message === '' ? [] : [$message],
+        );
+        $response->headers->set('Retry-After', '3600');
+
+        return $response;
+    }
+
     public function notFound(): Response
     {
         return $this->page(Response::HTTP_NOT_FOUND, 'core.error.not_found.title', 'core.error.not_found.body');

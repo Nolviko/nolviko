@@ -34,7 +34,7 @@ final class CommunityMail
             . "WHERE n.id = ? AND u.status = 'active' AND p.email_notifications = 1 "
             . "AND ((n.kind = 'follow' AND p.notify_follows = 1) "
             . "OR (n.kind = 'reaction' AND p.notify_reactions = 1) "
-            . "OR (n.kind IN ('reply', 'mention') AND p.notify_replies = 1)) "
+            . "OR (n.kind IN ('reply', 'mention', 'forum_thread') AND p.notify_replies = 1)) "
             . 'AND n.read_at IS NULL AND NOT EXISTS (SELECT 1 FROM member_blocks b WHERE '
             . '(b.user_id = n.user_id AND b.target_id = n.actor_id) '
             . 'OR (b.target_id = n.user_id AND b.user_id = n.actor_id))', [$id]);

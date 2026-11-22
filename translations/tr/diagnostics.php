@@ -304,4 +304,6 @@ return [
     'diagnostics.external_banned' => 'Bu adresle hesap oluşturulamaz.',
     'diagnostics.external_pending_approval' => 'Hesabınız oluşturuldu; bir yöneticinin onayını bekliyor.',
     'diagnostics.external_link_password' => 'Parola doğru değil.',
+    'diagnostics.forum_link_invalid' => 'Bağlantı bölümü için tam bir http veya https adresi girin.',
+    'diagnostics.forum_password_invalid' => 'Forum parolası 4 ile 200 karakter arasında olmalı.',
 ];

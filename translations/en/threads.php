@@ -96,4 +96,5 @@ return [
     'threads.show.embed_play' => 'Play video',
     'threads.show.embed_notice' => 'Playing loads the video from its site, which may set cookies.',
     'threads.show.edit' => 'Edit',
+    'threads.manage.saved_action' => 'Saved action: {title}',
 ];

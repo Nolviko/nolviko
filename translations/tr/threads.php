@@ -93,4 +93,5 @@ return [
     'threads.show.embed_play' => 'Videoyu oynat',
     'threads.show.embed_notice' => 'Oynatınca video kendi sitesinden yüklenir; o site çerez kullanabilir.',
     'threads.show.edit' => 'Düzenle',
+    'threads.manage.saved_action' => 'Kayıtlı işlem: {title}',
 ];

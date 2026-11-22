@@ -30,7 +30,8 @@ final class SiteSettings
     public const DEFAULTS = ['registration.mode' => 'verify', 'registration.challenge' => 'none',
         'home.layout' => 'classic', 'appearance.accent' => 'green', 'gallery.enabled' => 'off',
         'gallery.approval' => 'off', 'api.enabled' => 'on', 'posting.images' => 'off',
-        'seo.indexnow' => 'off', 'limits.search_seconds' => '1', 'limits.message_seconds' => '10'];
+        'seo.indexnow' => 'off', 'limits.search_seconds' => '1', 'limits.message_seconds' => '10',
+        'site.closed' => 'off'];
 
     /** Key => [type, limit] (string/email: max length, int: [min, max], enum: options). */
     public const KEYS = [
@@ -75,6 +76,9 @@ final class SiteSettings
         // messages per member; 0 switches the limit off. Empty means the built-in default.
         'limits.search_seconds' => ['int', [0, 60]],
         'limits.message_seconds' => ['int', [0, 600]],
+        // beta.18 roadmap 36: close the site for visitors (administrators and sign-in keep working).
+        'site.closed' => ['enum', ['off', 'on']],
+        'site.closed_message' => ['string', 500],
     ];
 
     private const CACHE_KEY = 'site-settings-v1';

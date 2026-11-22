@@ -26,6 +26,10 @@
 <div class="stack"><h1 dir="auto">{{ title }}</h1>
 {% if description|default(null) %}<p class="lead" dir="auto">{{ description }}</p>{% endif %}</div>
 <div class="actions">
+{% if subscribe_url|default(null) %}<form method="post" action="{{ subscribe_url|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="enable" value="{{ subscribed ? '0' : '1' }}">
+<button class="btn-s" type="submit">{{ subscribed ? t('forums.show.unsubscribe') : t('forums.show.subscribe') }}</button>
+</form>{% endif %}
 {% if mark_read_url is not null %}
 <form method="post" action="{{ mark_read_url|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">

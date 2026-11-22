@@ -158,6 +158,13 @@ final class CoreRoutes
 
     public const FORUM_READ = 'forums.read';
 
+    /** beta.18 (G4): link sections (06), forum passwords (43, ADR-041), forum subscriptions (01). */
+    public const FORUM_LINK = 'forums.link';
+
+    public const FORUM_UNLOCK = 'forums.unlock';
+
+    public const FORUM_SUBSCRIBE = 'forums.subscribe';
+
     public const POST_SHOW = 'posts.show';
 
     public const POST_REPORT = 'posts.report';
@@ -502,6 +509,19 @@ final class CoreRoutes
             new RouteDefinition(
                 self::FORUM_READ,
                 '/forums/{forum}/read',
+                ['POST'],
+                ['forum' => '[1-9][0-9]{0,17}'],
+            ),
+            new RouteDefinition(self::FORUM_LINK, '/forums/{forum}/go', ['GET'], ['forum' => '[1-9][0-9]{0,17}']),
+            new RouteDefinition(
+                self::FORUM_UNLOCK,
+                '/forums/{forum}/unlock',
+                ['GET', 'POST'],
+                ['forum' => '[1-9][0-9]{0,17}'],
+            ),
+            new RouteDefinition(
+                self::FORUM_SUBSCRIBE,
+                '/forums/{forum}/subscribe',
                 ['POST'],
                 ['forum' => '[1-9][0-9]{0,17}'],
             ),

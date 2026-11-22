@@ -43,4 +43,12 @@ return [
     'forums.index.subforums' => 'Subforums:',
     'forums.index.stat_threads' => 'Threads',
     'forums.index.stat_posts' => 'Posts',
+    'forums.unlock.title' => 'Password for {forum}',
+    'forums.unlock.intro' => 'This forum is protected. Enter its password to read it during this visit.',
+    'forums.unlock.password' => 'Password',
+    'forums.unlock.submit' => 'Open',
+    'forums.unlock.wrong' => 'That password is not right.',
+    'forums.unlock.wait' => 'Wait {seconds} seconds before trying again.',
+    'forums.show.subscribe' => 'Subscribe to new threads',
+    'forums.show.unsubscribe' => 'Stop new-thread notices',
 ];

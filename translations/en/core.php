@@ -80,4 +80,6 @@ return [
     'core.editor.image_busy' => 'Uploading the image…',
     'core.editor.image_full' => 'This post already has the most images allowed ({max}).',
     'core.error.home' => 'Back to the home page',
+    'core.closed.title' => 'The forum is closed for now',
+    'core.closed.body' => 'The administrators closed the forum for a while. Please come back later.',
 ];

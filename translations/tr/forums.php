@@ -39,4 +39,12 @@ return [
     'forums.index.subforums' => 'Alt forumlar:',
     'forums.index.stat_threads' => 'Konular',
     'forums.index.stat_posts' => 'İletiler',
+    'forums.unlock.title' => '{forum} parolası',
+    'forums.unlock.intro' => 'Bu bölüm korumalı. Bu ziyarette okumak için parolasını girin.',
+    'forums.unlock.password' => 'Parola',
+    'forums.unlock.submit' => 'Aç',
+    'forums.unlock.wrong' => 'Parola doğru değil.',
+    'forums.unlock.wait' => 'Tekrar denemeden önce {seconds} saniye bekleyin.',
+    'forums.show.subscribe' => 'Yeni konulara abone ol',
+    'forums.show.unsubscribe' => 'Yeni konu bildirimlerini durdur',
 ];
