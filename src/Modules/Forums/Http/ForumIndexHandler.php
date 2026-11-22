@@ -129,9 +129,11 @@ final class ForumIndexHandler implements RouteHandler
         $forum = $entry->type === ForumType::Forum;
         $mayCreate = $forum && $subject->userId !== null && $subject->allows(CreateThread::CREATE, $entry->id);
 
+        $link = $entry->type === ForumType::Link;
+
         return new ForumRowView(
             $entry->id,
-            !$forum,
+            !$forum && !$link,
             $entry->title,
             $entry->depth,
             $entry->threadCount,
@@ -140,7 +142,8 @@ final class ForumIndexHandler implements RouteHandler
             $entry->lastThreadTitle,
             $entry->lastPosterName,
             $mayCreate ? $this->urls->generate(CoreRoutes::THREAD_CREATE, ['forum' => (string) $entry->id]) : null,
-            $forum ? $this->urls->generate(CoreRoutes::FORUM_SHOW, ['forum' => (string) $entry->id]) : null,
+            $forum ? $this->urls->generate(CoreRoutes::FORUM_SHOW, ['forum' => (string) $entry->id])
+                : ($link ? $this->urls->generate(CoreRoutes::FORUM_LINK, ['forum' => (string) $entry->id]) : null),
             $entry->lastThreadId === null
                 ? null
                 : $this->urls->generate(

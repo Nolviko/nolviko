@@ -57,14 +57,22 @@ final class ForumVisibility
         $groups = implode(',', $subject->groupIds);
         $memoKey = ($subject->userId ?? 'guest') . ':' . $groups . ':' . implode(',', $keys);
 
-        return $this->memo[$memoKey] ??= new ForumScope(
-            $subject->hasUserOverrides()
-                ? self::compute($subject, $keys)
-                : $this->cache->remember(
-                    'visible.' . sha1($groups . '|' . implode(',', $keys)) . '.v' . ($this->rulesVersion)(),
-                    self::TTL_SECONDS,
-                    static fn(): array => self::compute($subject, $keys),
-                ),
+        if (isset($this->memo[$memoKey])) {
+            return $this->memo[$memoKey];
+        }
+
+        // Shared sets ignore forum passwords; each visitor's locked forums are removed afterwards (ADR-041).
+        $forums = $subject->hasUserOverrides()
+            ? self::compute($subject, $keys)
+            : $this->cache->remember(
+                'visible.' . sha1($groups . '|' . implode(',', $keys)) . '.v' . ($this->rulesVersion)(),
+                self::TTL_SECONDS,
+                static fn(): array => self::compute($subject, $keys),
+            );
+        $locked = $keys === [self::VIEW] ? [] : $subject->lockedForums();
+
+        return $this->memo[$memoKey] = new ForumScope(
+            $locked === [] ? $forums : array_values(array_diff($forums, $locked)),
         );
     }
 
@@ -78,7 +86,7 @@ final class ForumVisibility
         $forums = null;
 
         foreach ($keys as $key) {
-            $allowed = $subject->forumsAllowing($key);
+            $allowed = $subject->forumsAllowingUngated($key);
             $forums = $forums === null ? $allowed : array_values(array_intersect($forums, $allowed));
         }
 

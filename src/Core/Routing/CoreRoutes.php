@@ -169,6 +169,12 @@ final class CoreRoutes
 
     /** `/following`: the member's thread subscriptions and bookmarks (beta.18, roadmap 18). */
     public const FOLLOWED = 'community.followed';
+    /** beta.18 (G4): link sections (06), forum passwords (43, ADR-041), forum subscriptions (01). */
+    public const FORUM_LINK = 'forums.link';
+
+    public const FORUM_UNLOCK = 'forums.unlock';
+
+    public const FORUM_SUBSCRIBE = 'forums.subscribe';
 
     public const POST_SHOW = 'posts.show';
 
@@ -537,6 +543,19 @@ final class CoreRoutes
             ),
             new RouteDefinition(self::DRAFTS, '/drafts', ['GET', 'POST'], requiresHttps: true),
             new RouteDefinition(self::FOLLOWED, '/following', ['GET', 'POST'], requiresHttps: true),
+            new RouteDefinition(self::FORUM_LINK, '/forums/{forum}/go', ['GET'], ['forum' => '[1-9][0-9]{0,17}']),
+            new RouteDefinition(
+                self::FORUM_UNLOCK,
+                '/forums/{forum}/unlock',
+                ['GET', 'POST'],
+                ['forum' => '[1-9][0-9]{0,17}'],
+            ),
+            new RouteDefinition(
+                self::FORUM_SUBSCRIBE,
+                '/forums/{forum}/subscribe',
+                ['POST'],
+                ['forum' => '[1-9][0-9]{0,17}'],
+            ),
             new RouteDefinition(self::POST_SHOW, '/posts/{post}', ['GET'], ['post' => '[1-9][0-9]{0,17}']),
             new RouteDefinition(
                 self::POST_REPORT,

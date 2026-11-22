@@ -1,0 +1,16 @@
+{# Password form of a protected forum (beta.18 roadmap 43, ADR-041). Context: title, action, error, csrf_field,
+   csrf_token. #}
+{% extends 'layouts/page.twig' %}
+{% block content %}
+<section class="panel panel-pad">
+<h1 dir="auto">{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<p>{{ t('forums.unlock.intro') }}</p>
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="forum-password">{{ t('forums.unlock.password') }}</label>
+<input id="forum-password" name="password" type="password" required maxlength="200" autocomplete="current-password"></p>
+<p><button type="submit">{{ t('forums.unlock.submit') }}</button></p>
+</form>
+</section>
+{% endblock %}

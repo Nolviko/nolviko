@@ -4,7 +4,7 @@
 {% extends 'layouts/page.twig' %}
 {% block content %}
 {% set undo_labels = {follow: t('community.undo_follow'), block: t('community.undo_block'), bookmark: t('community.undo_bookmark'), subscribe: t('community.undo_subscribe')} %}
-{% set notice_labels = {reply: t('community.notice_reply'), reaction: t('community.notice_reaction'), follow: t('community.notice_follow'), mention: t('community.notice_mention')} %}
+{% set notice_labels = {reply: t('community.notice_reply'), reaction: t('community.notice_reaction'), follow: t('community.notice_follow'), mention: t('community.notice_mention'), forum_thread: t('community.notice_forum_thread')} %}
 <h1>{{ title }}</h1>
 <nav class="tabs" aria-label="{{ t('community.navigation') }}">
 {% for name in ['members', 'online', 'settings', 'notifications', 'bookmarks'] %}

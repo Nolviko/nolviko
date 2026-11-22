@@ -33,7 +33,8 @@ final class SiteSettings
         'seo.indexnow' => 'off', 'limits.search_seconds' => '1', 'limits.message_seconds' => '10',
         'limits.message_recipients' => '10',
         'membership.questions' => 'on', 'membership.birth_date' => 'off', 'membership.birthdays_list' => 'on',
-        'membership.member_themes' => 'off'];
+        'membership.member_themes' => 'off',
+        'site.closed' => 'off'];
 
     /** Key => [type, limit] (string/email: max length, int: [min, max], enum: options). */
     public const KEYS = [
@@ -88,6 +89,9 @@ final class SiteSettings
         'membership.birth_date' => ['enum', ['off', 'on']],
         'membership.birthdays_list' => ['enum', ['on', 'off']],
         'membership.member_themes' => ['enum', ['off', 'on']],
+        // beta.18 roadmap 36: close the site for visitors (administrators and sign-in keep working).
+        'site.closed' => ['enum', ['off', 'on']],
+        'site.closed_message' => ['string', 500],
     ];
 
     private const CACHE_KEY = 'site-settings-v1';

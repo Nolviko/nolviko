@@ -46,4 +46,12 @@ return [
     'forums.show.sort_replies' => 'En çok yanıt',
     'forums.show.sort_started' => 'En yeni konular',
     'forums.show.sort_apply' => 'Uygula',
+    'forums.unlock.title' => '{forum} parolası',
+    'forums.unlock.intro' => 'Bu bölüm korumalı. Bu ziyarette okumak için parolasını girin.',
+    'forums.unlock.password' => 'Parola',
+    'forums.unlock.submit' => 'Aç',
+    'forums.unlock.wrong' => 'Parola doğru değil.',
+    'forums.unlock.wait' => 'Tekrar denemeden önce {seconds} saniye bekleyin.',
+    'forums.show.subscribe' => 'Yeni konulara abone ol',
+    'forums.show.unsubscribe' => 'Yeni konu bildirimlerini durdur',
 ];

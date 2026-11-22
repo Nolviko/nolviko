@@ -16,6 +16,7 @@ use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Community\Infrastructure\CommunityRead;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Domain\ForumType;
+use Nolviko\Modules\Forums\Infrastructure\ForumSubscriptions;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use Nolviko\Modules\Threads\Domain\CreateThread;
 use Nolviko\Modules\Threads\Domain\ModerateContent;
@@ -57,6 +58,7 @@ final class ForumThreadsHandler implements RouteHandler
         private readonly ?CsrfTokens $csrf = null,
         private readonly ?ThreadTaxonomy $taxonomy = null,
         private readonly ?CommunityRead $community = null,
+        private readonly ?ForumSubscriptions $subscriptions = null,
     ) {
     }
 
@@ -80,7 +82,22 @@ final class ForumThreadsHandler implements RouteHandler
         $forum = $this->forums->find($forumId);
         $scope = $this->visibility->readable($subject);
 
+        if ($forum !== null && $forum->type === ForumType::Link) {
+            return new Response('', Response::HTTP_SEE_OTHER, ['Location' => $this->urls->generate(
+                CoreRoutes::FORUM_LINK,
+                ['forum' => (string) $forumId],
+            )]);
+        }
+
         if ($forum === null || $forum->type !== ForumType::Forum || !$scope->contains($forumId)) {
+            // ADR-041: a visible forum behind a password the visitor has not entered shows its password form.
+            if ($forum !== null && $subject->lockingForum($forumId) !== null) {
+                return new Response('', Response::HTTP_SEE_OTHER, ['Location' => $this->urls->generate(
+                    CoreRoutes::FORUM_UNLOCK,
+                    ['forum' => (string) $forumId],
+                ), 'Cache-Control' => 'private, no-store']);
+            }
+
             return $this->errors->notFound();
         }
 
@@ -198,6 +215,10 @@ final class ForumThreadsHandler implements RouteHandler
             'mark_read_url' => $this->reads !== null && $this->csrf !== null && $subject->userId !== null
                 ? $this->urls->generate(CoreRoutes::FORUM_READ, ['forum' => (string) $forumId])
                 : null,
+            // beta.18 roadmap 01: subscribe to new threads of this forum.
+            'subscribe_url' => $this->subscriptions !== null && $this->csrf !== null && $subject->userId !== null
+                ? $this->urls->generate(CoreRoutes::FORUM_SUBSCRIBE, ['forum' => (string) $forumId]) : null,
+            'subscribed' => $subject->userId !== null && $this->subscriptions?->has($subject->userId, $forumId),
             'csrf_field' => CsrfTokens::FIELD,
             'csrf_token' => $this->csrf !== null && $subject->userId !== null ? $this->csrf->token() : '',
             'newer' => $newerUrl,

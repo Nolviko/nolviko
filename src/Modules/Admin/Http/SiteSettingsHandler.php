@@ -122,7 +122,8 @@ final readonly class SiteSettingsHandler implements RouteHandler
                         'appearance.accent' => 'admin.site.accent',
                         'gallery.enabled', 'gallery.approval', 'api.enabled', 'seo.indexnow', 'posting.images',
                             'membership.questions', 'membership.birth_date', 'membership.birthdays_list',
-                            'membership.member_themes'
+                            'membership.member_themes',
+                            'site.closed'
                             => 'admin.site.switch',
                         default => 'admin.site.mode',
                     }, ['mode' => $option])], $limit) : []),

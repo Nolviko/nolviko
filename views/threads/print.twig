@@ -1,0 +1,18 @@
+{# Print view of one thread page (beta.18 roadmap 34): title and visible posts only, no forms or navigation.
+   Context: the thread page context (title, canonical, page, pages, posts). Answered with `X-Robots-Tag: noindex`. #}
+{% extends 'layouts/page.twig' %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<article class="print-view">
+<h1 dir="auto">{{ title }}</h1>
+{% if pages > 1 %}<p class="meta">{{ t('threads.show.pages', {page: page, pages: pages}) }}</p>{% endif %}
+{% for post in posts %}{% if post.status is null %}
+<section class="print-post">
+<p class="meta"><b><bdi>{{ post.authorName ?? t('threads.show.removed_account') }}</bdi></b> · <time datetime="{{ post.createdAt|date('c') }}">{{ post.createdAt|format_datetime }}</time></p>
+<div class="post-body" dir="auto">{{ post.html }}</div>
+</section>
+{% endif %}{% endfor %}
+<p class="meta"><bdi>{{ canonical }}</bdi></p>
+</article>
+{% endblock %}

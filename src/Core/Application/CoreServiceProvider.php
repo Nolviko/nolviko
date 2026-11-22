@@ -49,6 +49,7 @@ use Nolviko\Core\Http\Kernel;
 use Nolviko\Core\Http\MaintenanceGuard;
 use Nolviko\Core\Http\ResponseCookies;
 use Nolviko\Core\Http\SeoMetadata;
+use Nolviko\Core\Http\SiteClosedGuard;
 use Nolviko\Core\Http\ThemeRequest;
 use Nolviko\Core\Installer\DatabaseSetup;
 use Nolviko\Core\Installer\FreshInstallDefaults;
@@ -153,11 +154,14 @@ use Nolviko\Modules\Conversations\Infrastructure\PrivateFolders;
 use Nolviko\Modules\Forums\Domain\ForumIndex;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Http\DiscussionFeed;
+use Nolviko\Modules\Forums\Http\ForumGateHandler;
 use Nolviko\Modules\Forums\Http\ForumIndexHandler;
 use Nolviko\Modules\Forums\Http\TagPageHandler;
 use Nolviko\Modules\Forums\Infrastructure\DbalForumIndex;
 use Nolviko\Modules\Forums\Infrastructure\DbalForumRepository;
 use Nolviko\Modules\Forums\Infrastructure\DbalForumTree;
+use Nolviko\Modules\Forums\Infrastructure\ForumExtras;
+use Nolviko\Modules\Forums\Infrastructure\ForumSubscriptions;
 use Nolviko\Modules\Gallery\Http\GalleryHandler;
 use Nolviko\Modules\Gallery\Infrastructure\Gallery;
 use Nolviko\Modules\Gallery\Infrastructure\GalleryImages;
@@ -193,6 +197,8 @@ use Nolviko\Modules\Moderation\Infrastructure\DbalModerationQueue;
 use Nolviko\Modules\Moderation\Infrastructure\DbalReportDecisions;
 use Nolviko\Modules\Moderation\Infrastructure\DbalReportWriter;
 use Nolviko\Modules\Moderation\Infrastructure\DbalUserSanctions;
+use Nolviko\Modules\Moderation\Infrastructure\ModerationActions;
+use Nolviko\Modules\Permissions\Domain\ForumLocks;
 use Nolviko\Modules\Permissions\Domain\ForumTree;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use Nolviko\Modules\Permissions\Domain\PermissionCatalog;
@@ -842,6 +848,7 @@ final class CoreServiceProvider implements ServiceProvider
                 ForumTree $forums,
                 CacheFactory $caches,
                 PermissionRulesVersion $version,
+                Closure $session,
             ): PermissionResolver => new PermissionResolver(
                 $catalog,
                 new DbalPermissionRuleStore(
@@ -851,9 +858,11 @@ final class CoreServiceProvider implements ServiceProvider
                     $version->current(...),
                 ),
                 $forums,
+                // ADR-041: forums unlocked in this session; reading never starts a session.
+                static fn(): mixed => $session()->get(ForumLocks::SESSION_KEY),
             ),
             [Connection::class, PermissionCatalog::class, ForumTree::class, CacheFactory::class,
-                PermissionRulesVersion::class],
+                PermissionRulesVersion::class, new Lazy(Session::class)],
         );
         $services->factory(
             PermissionCatalog::class,
@@ -1368,6 +1377,10 @@ final class CoreServiceProvider implements ServiceProvider
                 ErrorResponder $errors,
                 ForumRepository $forums,
                 ForumVisibility $visibility,
+                Connection $db,
+                ThreadRepository $threads,
+                ThreadTaxonomy $taxonomy,
+                CreateReply $replies,
             ): ThreadCommandHandler => new ThreadCommandHandler(
                 $translator,
                 $views,
@@ -1378,6 +1391,10 @@ final class CoreServiceProvider implements ServiceProvider
                 $errors,
                 $forums,
                 $visibility,
+                new ModerationActions($db),
+                $threads,
+                $taxonomy,
+                $replies,
             ),
             [
                 MessageTranslator::class,
@@ -1389,6 +1406,10 @@ final class CoreServiceProvider implements ServiceProvider
                 ErrorResponder::class,
                 ForumRepository::class,
                 ForumVisibility::class,
+                Connection::class,
+                ThreadRepository::class,
+                ThreadTaxonomy::class,
+                CreateReply::class,
             ],
         );
         $services->factory(
@@ -2012,6 +2033,7 @@ final class CoreServiceProvider implements ServiceProvider
                 CsrfTokens $csrf,
                 ThreadTaxonomy $taxonomy,
                 CommunityRead $community,
+                Connection $db,
             ): ForumThreadsHandler => new ForumThreadsHandler(
                 $translator,
                 $views,
@@ -2025,6 +2047,7 @@ final class CoreServiceProvider implements ServiceProvider
                 $csrf,
                 taxonomy: $taxonomy,
                 community: $community,
+                subscriptions: new ForumSubscriptions($db),
             ),
             [
                 MessageTranslator::class,
@@ -2039,7 +2062,39 @@ final class CoreServiceProvider implements ServiceProvider
                 CsrfTokens::class,
                 ThreadTaxonomy::class,
                 CommunityRead::class,
+                Connection::class,
             ],
+        );
+        $services->factory(
+            ForumGateHandler::class,
+            static fn(
+                ForumRepository $forums,
+                ForumVisibility $visibility,
+                RequestSubject $subjects,
+                Connection $db,
+                Session $session,
+                CsrfTokens $csrf,
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                Router $router,
+                ErrorResponder $errors,
+            ): ForumGateHandler => new ForumGateHandler(
+                $forums,
+                $visibility,
+                $subjects,
+                new ForumExtras($db),
+                new ForumSubscriptions($db),
+                new RateBuckets($db),
+                $session,
+                $csrf,
+                $translator,
+                $views,
+                $router,
+                $errors,
+            ),
+            [ForumRepository::class, ForumVisibility::class, RequestSubject::class, Connection::class, Session::class,
+                CsrfTokens::class, MessageTranslator::class, TemplateRenderer::class, Router::class,
+                ErrorResponder::class],
         );
         $services->factory(
             PostPermalinkHandler::class,
@@ -2491,6 +2546,8 @@ final class CoreServiceProvider implements ServiceProvider
                     $act,
                     new ForumGuestVisibility($connection, new DbalPermissionRuleStore($connection, $catalog)),
                     $resolver,
+                    new ForumExtras($connection),
+                    new ModerationActions($connection),
                 ),
                 [
                     MessageTranslator::class,
@@ -3802,6 +3859,9 @@ final class CoreServiceProvider implements ServiceProvider
                 Closure $followed,
                 Closure $membershipAdmin,
                 Closure $groupsPage,
+                Closure $forumGate,
+                Closure $closedSettings,
+                InstallationState $installedState,
             ): Kernel => new Kernel(
                 $router,
                 [
@@ -3852,6 +3912,9 @@ final class CoreServiceProvider implements ServiceProvider
                     CoreRoutes::AUTH_EXTERNAL_LINK => $externalLink,
                     CoreRoutes::ADMIN_MEMBERSHIP => $membershipAdmin,
                     CoreRoutes::GROUPS => $groupsPage,
+                    CoreRoutes::FORUM_LINK => $forumGate,
+                    CoreRoutes::FORUM_UNLOCK => $forumGate,
+                    CoreRoutes::FORUM_SUBSCRIBE => $forumGate,
                     CoreRoutes::ADMIN_DASHBOARD => $adminDashboard,
                     CoreRoutes::ADMIN_UPDATES => $adminUpdates,
                     CoreRoutes::ADMIN_IMPORTS => $imports,
@@ -3922,6 +3985,13 @@ final class CoreServiceProvider implements ServiceProvider
                 $errors,
                 $reporter,
                 [$installation, $https, $csrf, $secondFactorGuard, $admin,
+                    new SiteClosedGuard(
+                        static fn(): ?string => $installedState->isInstalled()
+                            && $closedSettings()->get('site.closed') === 'on'
+                            ? (string) $closedSettings()->get('site.closed_message') : null,
+                        static fn(Request $request): bool => $extensionSubjects()->of($request)->allows('admin.access'),
+                        $errors,
+                    ),
                     new ExtensionRouteGuard($extensions, $extensionSubjects, $errors)],
                 $session,
                 $cookies,
@@ -4045,6 +4115,9 @@ final class CoreServiceProvider implements ServiceProvider
                 new Lazy(FollowedHandler::class),
                 new Lazy(MembershipAdminHandler::class),
                 new Lazy(MemberGroupsHandler::class),
+                new Lazy(ForumGateHandler::class),
+                new Lazy(SiteSettings::class),
+                InstallationState::class,
             ],
         );
     }

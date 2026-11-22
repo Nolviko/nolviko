@@ -149,4 +149,5 @@ return [
     'community.birthdays' => 'Birthdays',
     'community.birthday_today' => 'today',
     'community.birthday_age' => '{age}',
+    'community.notice_forum_thread' => 'A new thread in a forum you subscribed to',
 ];

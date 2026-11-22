@@ -83,6 +83,14 @@ final class ThreadPageHandler implements RouteHandler
         $readable = $this->visibility->readable($subject);
 
         if ($thread === null || !$readable->contains($thread->forumId)) {
+            // ADR-041: a thread of a forum behind a password the visitor has not entered leads to its form.
+            if ($thread !== null && $subject->lockingForum($thread->forumId) !== null) {
+                return new Response('', Response::HTTP_SEE_OTHER, ['Location' => $this->urls->generate(
+                    CoreRoutes::FORUM_UNLOCK,
+                    ['forum' => (string) $thread->forumId],
+                ), 'Cache-Control' => 'private, no-store']);
+            }
+
             return $this->errors->notFound();
         }
 
@@ -228,7 +236,9 @@ final class ThreadPageHandler implements RouteHandler
             $thread->id,
             $subject->userId,
         );
-        $html = $this->views->render('threads/show.twig', $forms + [
+        // beta.18 roadmap 34: `?print=1` renders the same page without forms or navigation.
+        $print = $request->query->get('print') === '1';
+        $html = $this->views->render($print ? 'threads/print.twig' : 'threads/show.twig', $forms + [
             'tools' => $tools,
             'thread_id' => $thread->id,
             'community_url' => $this->community === null ? null
@@ -258,7 +268,7 @@ final class ThreadPageHandler implements RouteHandler
         return new Response($html, Response::HTTP_OK, [
             'Content-Type' => 'text/html; charset=UTF-8',
             'Cache-Control' => 'private, no-cache',
-        ]);
+        ] + ($print ? ['X-Robots-Tag' => 'noindex'] : []));
     }
 
     /**

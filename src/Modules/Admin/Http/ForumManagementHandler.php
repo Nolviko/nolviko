@@ -18,9 +18,12 @@ use Nolviko\Modules\Forums\Domain\Forum;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Domain\ForumRuleViolation;
 use Nolviko\Modules\Forums\Domain\ForumType;
+use Nolviko\Modules\Forums\Infrastructure\ForumExtras;
+use Nolviko\Modules\Moderation\Infrastructure\ModerationActions;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use Nolviko\Modules\Permissions\Domain\PermissionResolver;
 use Nolviko\Modules\Threads\Domain\CreateThread;
+use Nolviko\Modules\Threads\Domain\ThreadRuleViolation;
 use Nolviko\Modules\Users\Http\RequestSubject;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,6 +54,9 @@ final class ForumManagementHandler implements RouteHandler
     /** Site-wide default visibility for guests (beta.10). */
     public const SITE_VISIBILITY = 'site_visibility';
 
+    /** beta.18 (G4): link target, post counting, guest posting and the forum password. */
+    public const EXTRAS = 'extras';
+
     private const ID = '/^[1-9][0-9]{0,17}$/D';
 
     public function __construct(
@@ -65,6 +71,8 @@ final class ForumManagementHandler implements RouteHandler
         private readonly bool $action,
         private readonly ?ForumGuestVisibility $visibility = null,
         private readonly ?PermissionResolver $resolver = null,
+        private readonly ?ForumExtras $extras = null,
+        private readonly ?ModerationActions $modActions = null,
     ) {
     }
 
@@ -113,6 +121,19 @@ final class ForumManagementHandler implements RouteHandler
                         $this->visibility?->apply($forum, $text('visibility'));
                     }
                 }),
+                // A password change needs a fresh administrator session, like deleting a forum.
+                self::EXTRAS => ($text('password_action') === 'keep' || $text('password_action') === ''
+                    || $this->session->isFresh()) ? $this->extras?->save($forum, $input)
+                    : throw new ForumRuleViolation('admin_reauth_required'),
+                'mod_action_add' => $this->modActions?->add(
+                    $text('mod_title'),
+                    $id('mod_move'),
+                    $text('mod_lock'),
+                    $text('mod_sticky'),
+                    $id('mod_prefix'),
+                    $text('mod_reply'),
+                ),
+                'mod_action_delete' => $this->modActions?->delete($id('mod_id') ?? 0),
                 self::LOCK => $this->admin->setLocked($actor, $forum, true),
                 self::UNLOCK => $this->admin->setLocked($actor, $forum, false),
                 self::DELETE => $this->session->isFresh()
@@ -120,7 +141,7 @@ final class ForumManagementHandler implements RouteHandler
                     : throw new ForumRuleViolation('admin_reauth_required'),
                 default => throw new ForumRuleViolation('moderation_action_invalid'),
             };
-        } catch (ForumRuleViolation $violation) {
+        } catch (ForumRuleViolation | ThreadRuleViolation $violation) {
             $status = $violation->diagnostic === 'admin_reauth_required'
                 ? Response::HTTP_FORBIDDEN
                 : Response::HTTP_UNPROCESSABLE_ENTITY;
@@ -185,13 +206,23 @@ final class ForumManagementHandler implements RouteHandler
                 'title' => $forum->title,
                 'indent' => $forum->depth,
                 'kind' => $this->translator->translate(
-                    $forum->type === ForumType::Category ? 'admin.forums.category' : 'admin.forums.forum',
+                    match ($forum->type) {
+                        ForumType::Category => 'admin.forums.category',
+                        ForumType::Link => 'admin.forums.link',
+                        default => 'admin.forums.forum',
+                    },
                 ),
                 'locked' => $forum->isLocked,
                 'parent' => $forum->parentId === null ? '' : (string) $forum->parentId,
                 'slug' => $forum->slug,
                 'description' => $forum->description ?? '',
                 'is_forum' => $forum->type === ForumType::Forum,
+                'is_link' => $forum->type === ForumType::Link,
+                'link_url' => $forum->linkUrl ?? '',
+                'link_counts' => $forum->linkCounts,
+                'link_clicks' => $forum->linkClicks,
+                'counts_posts' => $forum->countsPosts,
+                'has_password' => $forum->hasPassword,
                 'questions' => $forum->questions,
                 'visibility' => $presets[$forum->id] ?? '',
                 'guest_sees' => $this->guestSees($forum->id),
@@ -214,6 +245,7 @@ final class ForumManagementHandler implements RouteHandler
                     'value' => ForumType::Category->value,
                     'label' => $this->translator->translate('admin.forums.category'),
                 ],
+                ['value' => ForumType::Link->value, 'label' => $this->translator->translate('admin.forums.link')],
             ],
             'choices' => [
                 'create' => self::CREATE,
@@ -224,7 +256,10 @@ final class ForumManagementHandler implements RouteHandler
                 'lock' => self::LOCK,
                 'unlock' => self::UNLOCK,
                 'delete' => self::DELETE,
+                'extras' => self::EXTRAS,
             ],
+            'mod_actions' => $this->modActions?->all(),
+            'mod_forums' => $hosts,
             'visibility' => $this->visibility === null ? null : [
                 'site' => $presets[0] ?? ForumGuestVisibility::PUBLIC,
                 'forum_choices' => ForumGuestVisibility::FORUM_CHOICES,

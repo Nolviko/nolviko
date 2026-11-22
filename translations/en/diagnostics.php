@@ -326,4 +326,6 @@ return [
     'diagnostics.group_mail_invalid' => 'Write a subject and a message.',
     'diagnostics.question_invalid' => 'Write a question, at least one answer and choose an installed language.',
     'diagnostics.membership_invalid' => 'That action is not available.',
+    'diagnostics.forum_link_invalid' => 'Enter a full http or https address for the link section.',
+    'diagnostics.forum_password_invalid' => 'A forum password needs 4 to 200 characters.',
 ];

@@ -14,10 +14,14 @@ use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Http\ForumOptions;
+use Nolviko\Modules\Moderation\Infrastructure\ModerationActions;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
+use Nolviko\Modules\Threads\Domain\CreateReply;
 use Nolviko\Modules\Threads\Domain\EditPost;
 use Nolviko\Modules\Threads\Domain\ThreadCommands;
+use Nolviko\Modules\Threads\Domain\ThreadRepository;
 use Nolviko\Modules\Threads\Domain\ThreadRuleViolation;
+use Nolviko\Modules\Threads\Infrastructure\ThreadTaxonomy;
 use Nolviko\Modules\Users\Http\RequestSubject;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,6 +49,10 @@ final class ThreadCommandHandler implements RouteHandler
         private readonly ErrorResponder $errors,
         private readonly ?ForumRepository $forums = null,
         private readonly ?ForumVisibility $visibility = null,
+        private readonly ?ModerationActions $actions = null,
+        private readonly ?ThreadRepository $threads = null,
+        private readonly ?ThreadTaxonomy $taxonomy = null,
+        private readonly ?CreateReply $replies = null,
     ) {
     }
 
@@ -71,14 +79,28 @@ final class ThreadCommandHandler implements RouteHandler
         $reason = is_string($input['reason'] ?? null) ? $input['reason'] : '';
 
         try {
-            $this->commands->run(
-                $this->subjects->of($request),
-                $threadId,
-                $command,
-                $forum,
-                ($input['stub'] ?? '') === '1',
-                $reason,
-            );
+            // beta.18 roadmap 40: `action:<id>` runs a saved moderation action step by step.
+            if (str_starts_with($command, 'action:') && $this->actions !== null && $this->threads !== null) {
+                $this->actions->apply(
+                    $this->subjects->of($request),
+                    $threadId,
+                    (int) substr($command, 7),
+                    $this->commands,
+                    $this->threads,
+                    $this->taxonomy,
+                    $this->replies,
+                    $request->getClientIp(),
+                );
+            } else {
+                $this->commands->run(
+                    $this->subjects->of($request),
+                    $threadId,
+                    $command,
+                    $forum,
+                    ($input['stub'] ?? '') === '1',
+                    $reason,
+                );
+            }
         } catch (ThreadRuleViolation $violation) {
             return $violation->diagnostic === 'thread_not_found'
                 ? $this->errors->notFound()
@@ -108,6 +130,7 @@ final class ThreadCommandHandler implements RouteHandler
                 'move' => ThreadCommands::MOVE,
             ],
             'reason' => $reason,
+            'saved_actions' => $this->actions?->all() ?? [],
             'forum_options' => $options,
             'posts_url' => $this->urls->generate(CoreRoutes::THREAD_POSTS, ['thread' => (string) $threadId]),
             'labels_url' => $this->urls->generate(CoreRoutes::THREAD_LABELS, ['thread' => (string) $threadId]),

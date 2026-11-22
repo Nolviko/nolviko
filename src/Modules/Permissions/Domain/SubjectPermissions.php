@@ -15,13 +15,27 @@ final class SubjectPermissions
 {
     public const UNKNOWN = 'unknown';
 
+    /** Reason of a decision denied by the forum password gate (ADR-041). */
+    public const PASSWORD = 'forum_password';
+
+    private const FORUM_VIEW = 'forum.view';
+
+    private const ADMIN_ACCESS = 'admin.access';
+
     /** @var array<string, PermissionTrace> */
     private array $memo = [];
+
+    /** @var array<int, bool> */
+    private array $locked = [];
+
+    /** @var list<int>|null */
+    private ?array $lockedList = null;
 
     private ?string $cacheIdentity = null;
 
     /**
      * @param list<int> $groupIds
+     * @param ForumLocks|null $locks Null: no password gate (tests, trees without passwords).
      */
     public function __construct(
         private readonly PermissionCatalog $catalog,
@@ -29,6 +43,7 @@ final class SubjectPermissions
         private readonly RuleSnapshot $rules,
         public readonly array $groupIds,
         public readonly ?int $userId,
+        private readonly ?ForumLocks $locks = null,
     ) {
     }
 
@@ -50,9 +65,23 @@ final class SubjectPermissions
         return $this->explain($key, $forumId)->decision->value;
     }
 
+    /**
+     * The decision with the forum password gate (ADR-041): in a forum behind a password the visitor has not
+     * entered, every allowed forum permission except seeing the forum's name is denied with reason PASSWORD.
+     * Administrators and the forum's moderators are never gated.
+     */
     public function explain(string $key, ?int $forumId = null): PermissionTrace
     {
-        return $this->memo[$key . '@' . ($forumId ?? '')] ??= $this->resolve($key, $forumId);
+        $trace = $this->raw($key, $forumId);
+
+        if (
+            $forumId === null || $this->locks === null || $key === self::FORUM_VIEW
+            || !$trace->decision->allowed() || !$this->lockedFor($forumId)
+        ) {
+            return $trace;
+        }
+
+        return new PermissionTrace($key, $forumId, new PermissionDecision(false, self::PASSWORD), $trace->rules);
     }
 
     /**
@@ -66,6 +95,52 @@ final class SubjectPermissions
         ));
     }
 
+    /**
+     * Like forumsAllowing() but without the password gate: only for sets that are shared between visitors of the
+     * same groups (ForumVisibility caches them and removes lockedForums() per visitor afterwards).
+     *
+     * @return list<int>
+     */
+    public function forumsAllowingUngated(string $key): array
+    {
+        return array_values(array_filter(
+            $this->forums->forumIds(),
+            fn(int $forumId): bool => $this->raw($key, $forumId)->decision->allowed(),
+        ));
+    }
+
+    /** Whether the forum is behind a password this visitor has not entered and may not bypass (ADR-041). */
+    public function lockedFor(int $forumId): bool
+    {
+        if ($this->locks === null) {
+            return false;
+        }
+
+        return $this->locked[$forumId] ??= $this->locks->blocking($this->forums->ancestry($forumId)) !== null
+            && !$this->bypasses($forumId);
+    }
+
+    /** The forum whose password opens $forumId for this visitor, or null when nothing blocks it. */
+    public function lockingForum(int $forumId): ?int
+    {
+        return $this->lockedFor($forumId) ? $this->locks?->blocking($this->forums->ancestry($forumId)) : null;
+    }
+
+    /**
+     * @return list<int> Every forum locked for this visitor (empty when no forum has a password).
+     */
+    public function lockedForums(): array
+    {
+        if ($this->locks === null || !$this->locks->any()) {
+            return [];
+        }
+
+        return $this->lockedList ??= array_values(array_filter(
+            $this->forums->forumIds(),
+            fn(int $forumId): bool => $this->lockedFor($forumId),
+        ));
+    }
+
     public function cacheIdentity(): string
     {
         if ($this->cacheIdentity !== null) {
@@ -75,7 +150,33 @@ final class SubjectPermissions
         foreach ($this->forums->forumIds() as $id) {
             $tree[$id] = $this->forums->ancestry($id);
         }
-        return $this->cacheIdentity = hash('sha256', serialize([$this->userId, $this->groupIds, $this->rules, $tree]));
+        return $this->cacheIdentity = hash('sha256', serialize([$this->userId, $this->groupIds, $this->rules, $tree,
+            $this->locks?->identity() ?? '']));
+    }
+
+    private function raw(string $key, ?int $forumId): PermissionTrace
+    {
+        return $this->memo[$key . '@' . ($forumId ?? '')] ??= $this->resolve($key, $forumId);
+    }
+
+    /** Administrators, and members with a local moderator capability in the forum, are never gated. */
+    private function bypasses(int $forumId): bool
+    {
+        if ($this->userId === null) {
+            return false;
+        }
+
+        if ($this->raw(self::ADMIN_ACCESS, null)->decision->allowed()) {
+            return true;
+        }
+
+        foreach (ForumModeratorCapabilities::KEYS as $key) {
+            if ($this->raw($key, $forumId)->decision->allowed()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolve(string $key, ?int $forumId): PermissionTrace

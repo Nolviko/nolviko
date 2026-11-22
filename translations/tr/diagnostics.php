@@ -330,4 +330,6 @@ return [
     'diagnostics.group_mail_invalid' => 'Bir konu ve mesaj yazın.',
     'diagnostics.question_invalid' => 'Bir soru, en az bir cevap yazın ve yüklü bir dil seçin.',
     'diagnostics.membership_invalid' => 'Bu işlem kullanılamıyor.',
+    'diagnostics.forum_link_invalid' => 'Bağlantı bölümü için tam bir http veya https adresi girin.',
+    'diagnostics.forum_password_invalid' => 'Forum parolası 4 ile 200 karakter arasında olmalı.',
 ];

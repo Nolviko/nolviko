@@ -149,4 +149,5 @@ return [
     'community.birthdays' => 'Doğum günleri',
     'community.birthday_today' => 'bugün',
     'community.birthday_age' => '{age}',
+    'community.notice_forum_thread' => 'Abone olduğunuz bölümde yeni konu',
 ];

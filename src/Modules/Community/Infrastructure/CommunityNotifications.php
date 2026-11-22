@@ -13,6 +13,7 @@ use Nolviko\Core\Events\OutboxLease;
 use Nolviko\Modules\Community\Domain\Mentions;
 use Nolviko\Modules\Permissions\Domain\SubjectPermissions;
 use Nolviko\Modules\Users\Domain\IdentityNormalizer;
+use Throwable;
 
 /** Durable inbox, reauthorized before LIMIT. Only identifiers are stored, never content snapshots. */
 final class CommunityNotifications
@@ -161,9 +162,45 @@ final class CommunityNotifications
             [$threadId, $cutoff, $cursor, $actor, $actor, $cutoff, $cursor, $actor]
         );
 
+        // beta.18 roadmap 01: a new thread also reaches the members subscribed to its forum. Readability is checked
+        // when the inbox is read, so a member who lost access never sees it.
+        $forumRows = [];
+
+        if (in_array($lease->type, ['thread.created', 'thread.approved'], true)) {
+            try {
+                $forumRows = $this->db->fetchFirstColumn('SELECT s.user_id FROM forum_subscriptions s '
+                    . 'INNER JOIN threads t ON t.forum_id = s.forum_id INNER JOIN users u ON u.id = s.user_id '
+                    . 'WHERE t.id = ? AND s.created_at <= ? AND s.user_id > ? AND s.user_id <> ? '
+                    . "AND u.status = 'active' "
+                    . 'ORDER BY s.user_id LIMIT 26', [$threadId, $cutoff, $cursor, $actor]);
+            } catch (Throwable) {
+                $forumRows = [];
+            }
+        }
+
+        $kinds = [];
+
+        foreach ($rows as $recipient) {
+            $kinds[(int) $recipient] = 'reply';
+        }
+
+        foreach ($forumRows as $recipient) {
+            $kinds[(int) $recipient] ??= 'forum_thread';
+        }
+
+        ksort($kinds);
+        $rows = array_keys($kinds);
+
         foreach (array_slice($rows, 0, 25) as $recipient) {
             $guard();
-            $this->interactions->notify((int) $recipient, $actor, 'reply', $threadId, $postId, 'event:' . $lease->id);
+            $this->interactions->notify(
+                (int) $recipient,
+                $actor,
+                $kinds[$recipient],
+                $threadId,
+                $postId,
+                'event:' . $lease->id,
+            );
             $cursor = (int) $recipient;
         }
 

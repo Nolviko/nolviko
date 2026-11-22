@@ -21,6 +21,8 @@
 <label for="manage-lock">{{ t('threads.manage.command.lock') }}</label></p>
 <p><input id="manage-unlock" name="command" type="radio" value="{{ choices.unlock }}">
 <label for="manage-unlock">{{ t('threads.manage.command.unlock') }}</label></p>
+{% for saved in saved_actions|default([]) %}<p><input id="manage-action-{{ saved.id }}" name="command" type="radio" value="action:{{ saved.id }}">
+<label for="manage-action-{{ saved.id }}" dir="auto">{{ t('threads.manage.saved_action', {title: saved.title}) }}</label></p>{% endfor %}
 <p><input id="manage-move" name="command" type="radio" value="{{ choices.move }}">
 <label for="manage-move">{{ t('threads.manage.command.move') }}</label></p>
 </fieldset>

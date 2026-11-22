@@ -44,7 +44,8 @@
 <h2 id="new-forum">{{ t('admin.forums.new_forum') }}</h2>
 <form method="post" action="{{ action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<input type="hidden" name="type" value="{{ types[0].value }}">
+<p><label for="forum-type">{{ t('admin.forums.kind') }}</label>
+<select id="forum-type" name="type"><option value="{{ types[0].value }}">{{ types[0].label }}</option><option value="{{ types[2].value }}">{{ types[2].label }}</option></select></p>
 <p><label for="forum-title">{{ t('admin.forums.name') }}</label>
 <input id="forum-title" name="title" required maxlength="100" dir="auto"></p>
 <p><label for="forum-parent">{{ t('admin.forums.in_category') }}</label>
@@ -114,9 +115,42 @@
 </select></p>{% endif %}
 <p><button type="submit" name="action" value="{{ choices.edit }}">{{ t('admin.forums.save') }}</button></p>
 </form>
+<form method="post" action="{{ action|safe_url }}" class="forum-edit-form">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="forum" value="{{ row.id }}">
+<h3>{{ t('admin.forums.extras') }}</h3>
+{% if row.is_link %}<p><label for="link-url-{{ row.id }}">{{ t('admin.forums.link_url') }}</label>
+<input id="link-url-{{ row.id }}" name="link_url" type="url" required maxlength="2000" value="{{ row.link_url }}"></p>
+<p><label class="row"><input type="checkbox" name="link_counts" value="1"{% if row.link_counts %} checked{% endif %}> {{ t('admin.forums.link_counts', {clicks: row.link_clicks}) }}</label></p>{% endif %}
+{% if not row.is_link %}<p><label class="row"><input type="checkbox" name="counts_posts" value="1"{% if row.counts_posts %} checked{% endif %}> {{ t('admin.forums.counts_posts') }}</label></p>{% else %}<input type="hidden" name="counts_posts" value="1">{% endif %}
+{% if not row.is_link %}<p><label for="pw-action-{{ row.id }}">{{ t('admin.forums.password') }}{% if row.has_password %} <span class="chip">{{ t('admin.forums.password_set') }}</span>{% endif %}</label>
+<select id="pw-action-{{ row.id }}" name="password_action"><option value="keep">{{ t('admin.forums.password_keep') }}</option><option value="set">{{ t('admin.forums.password_new') }}</option>{% if row.has_password %}<option value="clear">{{ t('admin.forums.password_clear') }}</option>{% endif %}</select>
+<input name="password" type="password" autocomplete="new-password" maxlength="200" aria-label="{{ t('admin.forums.password') }}">
+<span class="meta">{{ t('admin.forums.password_hint') }}</span></p>{% endif %}
+<p><button type="submit" name="action" value="{{ choices.extras }}">{{ t('admin.forums.save') }}</button></p>
+</form>
 </details>
 </li>
 {% endfor %}
 </ul>
+{% endif %}
+{% if mod_actions is not null %}
+<section class="panel panel-pad" aria-labelledby="mod-actions">
+<h2 id="mod-actions">{{ t('admin.forums.mod_actions') }}</h2>
+<p class="hint">{{ t('admin.forums.mod_actions_hint') }}</p>
+{% if mod_actions is not empty %}<ul class="list">{% for saved in mod_actions %}<li><bdi>{{ saved.title }}</bdi>
+<form method="post" action="{{ action|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="mod_id" value="{{ saved.id }}">
+<button class="btn-s" type="submit" name="action" value="mod_action_delete">{{ t('admin.forums.delete') }}</button></form></li>{% endfor %}</ul>{% endif %}
+<form method="post" action="{{ action|safe_url }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<p><label for="mod-title">{{ t('admin.forums.mod_title') }}</label><input id="mod-title" name="mod_title" required maxlength="100" dir="auto"></p>
+<p><label for="mod-lock">{{ t('admin.forums.mod_lock') }}</label><select id="mod-lock" name="mod_lock"><option value="">{{ t('admin.forums.mod_keep') }}</option><option value="on">{{ t('admin.forums.lock') }}</option><option value="off">{{ t('admin.forums.unlock') }}</option></select></p>
+<p><label for="mod-sticky">{{ t('admin.forums.mod_sticky') }}</label><select id="mod-sticky" name="mod_sticky"><option value="">{{ t('admin.forums.mod_keep') }}</option><option value="on">{{ t('admin.forums.mod_stick') }}</option><option value="off">{{ t('admin.forums.mod_unstick') }}</option></select></p>
+<p><label for="mod-move">{{ t('admin.forums.mod_move') }}</label><select id="mod-move" name="mod_move"><option value="">{{ t('admin.forums.mod_keep') }}</option>{% for option in mod_forums %}<option value="{{ option.value }}">{{ option.label }}</option>{% endfor %}</select></p>
+<p><label for="mod-prefix">{{ t('admin.forums.mod_prefix') }}</label><input id="mod-prefix" name="mod_prefix" type="number" min="1" inputmode="numeric"></p>
+<p><label for="mod-reply">{{ t('admin.forums.mod_reply') }}</label><textarea id="mod-reply" name="mod_reply" rows="3" maxlength="20000" dir="auto"></textarea></p>
+<p><button type="submit" name="action" value="mod_action_add">{{ t('admin.forums.mod_add') }}</button></p>
+</form>
+</section>
 {% endif %}
 {% endblock %}

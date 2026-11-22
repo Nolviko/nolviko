@@ -95,4 +95,5 @@ return [
     'threads.show.edit' => 'Düzenle',
     'threads.show.first_unread' => 'İlk okunmamış ileti',
     'threads.show.search' => 'Bu konuda ara',
+    'threads.manage.saved_action' => 'Kayıtlı işlem: {title}',
 ];
