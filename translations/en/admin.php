@@ -820,4 +820,7 @@ return [
     'admin.dashboard.second_factor_off' => '{count, plural, one {# member has} other {# members have}} two-step '
         . 'verification from an extension that is off; they sign in with the password alone until it is on again.',
     'admin.extensions.settings' => 'Settings',
+    'admin.groups.perm.pm.max_conversations' => 'Message box size in conversations (0 = unlimited)',
+    'admin.site.field.limits_message_recipients' => 'Recipients of one private message',
+    'admin.site.hint.limits_message_recipients' => 'Visible and hidden together (1 to 50, default 10).',
 ];

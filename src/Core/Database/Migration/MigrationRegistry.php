@@ -18,6 +18,9 @@ use Nolviko\Modules\Admin\Infrastructure\ForumModeratorsTable;
 use Nolviko\Modules\Api\Infrastructure\WebhookTables;
 use Nolviko\Modules\Community\Infrastructure\CommunityTables;
 use Nolviko\Modules\Community\Infrastructure\MemberStandingTables;
+use Nolviko\Modules\Conversations\Infrastructure\ConversationBoxColumns;
+use Nolviko\Modules\Conversations\Infrastructure\ConversationDraftsTable;
+use Nolviko\Modules\Conversations\Infrastructure\ConversationFoldersTable;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationReadsColumn;
 use Nolviko\Modules\Conversations\Infrastructure\ConversationsTable;
 use Nolviko\Modules\Forums\Infrastructure\ForumQuestionMode;
@@ -159,6 +162,9 @@ final class MigrationRegistry
             new SecondFactorTables(),
             new ExternalIdentityTable(),
             new ImportPanelTables(),
+            new ConversationBoxColumns(),
+            new ConversationFoldersTable(),
+            new ConversationDraftsTable(),
         ]);
     }
 

@@ -366,7 +366,12 @@ final class CoreRoutes
                 ['GET', 'POST'],
                 requiresHttps: true
             ),
-            new RouteDefinition(self::CONVERSATIONS, '/conversations', ['GET'], requiresHttps: true),
+            new RouteDefinition(
+                self::CONVERSATIONS,
+                '/conversations',
+                ['GET', 'POST'],
+                requiresHttps: true
+            ),
             new RouteDefinition(
                 self::CONVERSATIONS_NEW,
                 '/conversations/new',

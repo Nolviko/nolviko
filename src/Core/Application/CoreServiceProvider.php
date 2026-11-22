@@ -145,6 +145,8 @@ use Nolviko\Modules\Community\Infrastructure\MemberStanding;
 use Nolviko\Modules\Community\Infrastructure\PrivateMedia;
 use Nolviko\Modules\Conversations\Http\ConversationsHandler;
 use Nolviko\Modules\Conversations\Infrastructure\PrivateConversations;
+use Nolviko\Modules\Conversations\Infrastructure\PrivateDrafts;
+use Nolviko\Modules\Conversations\Infrastructure\PrivateFolders;
 use Nolviko\Modules\Forums\Domain\ForumIndex;
 use Nolviko\Modules\Forums\Domain\ForumRepository;
 use Nolviko\Modules\Forums\Http\DiscussionFeed;
@@ -2677,6 +2679,8 @@ final class CoreServiceProvider implements ServiceProvider
                 $csrf,
                 $router,
                 $files,
+                new PrivateFolders($connection),
+                new PrivateDrafts($connection),
             ),
             [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class,
                 Connection::class, CsrfTokens::class, Router::class, PrivateConversations::class,
@@ -2691,6 +2695,8 @@ final class CoreServiceProvider implements ServiceProvider
                     $profiles,
                     (int) ($settings()->peek('limits.message_seconds')
                         ?? SiteSettings::DEFAULTS['limits.message_seconds']),
+                    (int) ($settings()->peek('limits.message_recipients')
+                        ?? SiteSettings::DEFAULTS['limits.message_recipients']),
                 ),
             [Connection::class, MemberProfiles::class, new Lazy(SiteSettings::class)],
         );

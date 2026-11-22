@@ -816,4 +816,7 @@ return [
     'admin.dashboard.second_factor_off' => '{count, plural, one {# üyenin} other {# üyenin}} iki adımlı doğrulaması '
         . 'kapalı bir eklentiye ait; eklenti yeniden açılana kadar yalnızca parolayla giriş yapıyorlar.',
     'admin.extensions.settings' => 'Ayarlar',
+    'admin.groups.perm.pm.max_conversations' => 'İleti kutusu kapasitesi, konuşma (0 = sınırsız)',
+    'admin.site.field.limits_message_recipients' => 'Bir özel iletinin alıcı sayısı',
+    'admin.site.hint.limits_message_recipients' => 'Görünür ve gizli birlikte (1-50, varsayılan 10).',
 ];
