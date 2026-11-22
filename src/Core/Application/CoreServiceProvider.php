@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Nolviko\Core\Application;
 
 use Closure;
+use DateTimeImmutable;
+use DateTimeZone;
 use Doctrine\DBAL\Connection;
 use Nolviko\Core\Cache\CacheFactory;
 use Nolviko\Core\Cache\RedisSettingsStore;
@@ -101,6 +103,7 @@ use Nolviko\Modules\Admin\Http\GroupHandler;
 use Nolviko\Modules\Admin\Http\GroupsHandler;
 use Nolviko\Modules\Admin\Http\MailSettingsHandler;
 use Nolviko\Modules\Admin\Http\MemberExtrasAdminHandler;
+use Nolviko\Modules\Admin\Http\MembershipAdminHandler;
 use Nolviko\Modules\Admin\Http\MemberHandler;
 use Nolviko\Modules\Admin\Http\MembersHandler;
 use Nolviko\Modules\Admin\Http\PermissionSimulatorHandler;
@@ -169,6 +172,11 @@ use Nolviko\Modules\Importers\Infrastructure\ImportTarget;
 use Nolviko\Modules\Importers\Infrastructure\InlineAttachments;
 use Nolviko\Modules\Importers\Infrastructure\LegacyRedirects;
 use Nolviko\Modules\Importers\Infrastructure\PrivateImportFiles;
+use Nolviko\Modules\Membership\Http\MemberGroupsHandler;
+use Nolviko\Modules\Membership\Infrastructure\GroupMembership;
+use Nolviko\Modules\Membership\Infrastructure\MemberOptions;
+use Nolviko\Modules\Membership\Infrastructure\MembershipRegistration;
+use Nolviko\Modules\Membership\Infrastructure\RegistrationQuestions;
 use Nolviko\Modules\Moderation\Domain\BulkModeration;
 use Nolviko\Modules\Moderation\Domain\ManageBans;
 use Nolviko\Modules\Moderation\Domain\ManageSanctions;
@@ -320,11 +328,19 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             LocaleFormatter::class,
-            static fn(LocaleContext $locale): LocaleFormatter => new LocaleFormatter(
-                $locale->locale(),
-                $locale->timeZone(),
-            ),
-            [LocaleContext::class],
+            static fn(LocaleContext $locale, Session $session, Closure $connection): LocaleFormatter
+                => new LocaleFormatter(
+                    $locale->locale(),
+                    $locale->timeZone(),
+                    // beta.18 roadmap 27: a signed-in member's own date and time format, read on first use.
+                    static function () use ($session, $connection): array {
+                        $user = $session->get('_user_id');
+
+                        return is_int($user) ? (new MemberOptions($connection()))->patterns($user)
+                            : ['date' => null, 'time' => null];
+                    },
+                ),
+            [LocaleContext::class, Session::class, new Lazy(Connection::class)],
         );
         $services->factory(
             MessageTranslator::class,
@@ -380,9 +396,23 @@ final class CoreServiceProvider implements ServiceProvider
         );
         $services->factory(
             ThemePresentation::class,
-            static fn(ThemeBuildStore $builds, Session $session, ThemeRequest $request): ThemePresentation
-                => new ThemePresentation($builds, $session, $request),
-            [ThemeBuildStore::class, Session::class, ThemeRequest::class],
+            static fn(
+                ThemeBuildStore $builds,
+                Session $session,
+                ThemeRequest $request,
+                Closure $settings,
+                Closure $connection,
+            ): ThemePresentation => new ThemePresentation(
+                $builds,
+                $session,
+                $request,
+                // beta.18 roadmap 28: only when Admin > Site settings lets members choose a theme.
+                static fn(): ?string => is_int($session->get('_user_id'))
+                    && $settings()->peek('membership.member_themes') === 'on'
+                    ? (new MemberOptions($connection()))->of($session->get('_user_id'))['site_theme'] : null,
+            ),
+            [ThemeBuildStore::class, Session::class, ThemeRequest::class, new Lazy(SiteSettings::class),
+                new Lazy(Connection::class)],
         );
         $services->factory(
             ThemeSlots::class,
@@ -1539,6 +1569,58 @@ final class CoreServiceProvider implements ServiceProvider
             ],
         );
         $services->factory(
+            MembershipAdminHandler::class,
+            static fn(
+                string $root,
+                Connection $db,
+                RequestSubject $subjects,
+                AdminSession $admin,
+                CsrfTokens $csrf,
+                Session $session,
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                Router $router,
+            ): MembershipAdminHandler => new MembershipAdminHandler(
+                new GroupMembership($db),
+                new RegistrationQuestions($db),
+                TranslatorFactory::supportedLocales($root . '/translations'),
+                $subjects,
+                $admin,
+                $csrf,
+                $session,
+                $translator,
+                $views,
+                $router,
+                new DbalAdminAudit($db),
+            ),
+            [CompositionRoot::ROOT, Connection::class, RequestSubject::class, AdminSession::class, CsrfTokens::class,
+                Session::class, MessageTranslator::class, TemplateRenderer::class, Router::class],
+        );
+        $services->factory(
+            MemberGroupsHandler::class,
+            static fn(
+                Connection $db,
+                RequestSubject $subjects,
+                CsrfTokens $csrf,
+                Session $session,
+                MessageTranslator $translator,
+                TemplateRenderer $views,
+                Router $router,
+                ErrorResponder $errors,
+            ): MemberGroupsHandler => new MemberGroupsHandler(
+                new GroupMembership($db),
+                $subjects,
+                $csrf,
+                $session,
+                $translator,
+                $views,
+                $router,
+                $errors,
+            ),
+            [Connection::class, RequestSubject::class, CsrfTokens::class, Session::class, MessageTranslator::class,
+                TemplateRenderer::class, Router::class, ErrorResponder::class],
+        );
+        $services->factory(
             ThreadTaxonomy::class,
             static fn(Connection $db): ThreadTaxonomy => new ThreadTaxonomy($db),
             [Connection::class],
@@ -1690,6 +1772,8 @@ final class CoreServiceProvider implements ServiceProvider
                 SiteSettings $settings,
                 DiscussionFeed $feed,
                 CsrfTokens $csrf,
+                CacheFactory $caches,
+                Closure $connection,
             ): ForumIndexHandler => new ForumIndexHandler(
                 $translator,
                 $views,
@@ -1700,6 +1784,13 @@ final class CoreServiceProvider implements ServiceProvider
                 $settings,
                 $feed,
                 $csrf,
+                static fn(): array => $settings->get('membership.birthdays_list') === 'off' ? []
+                    : $caches->namespace('birthdays')->remember('home.' . gmdate('Ymd'), 3600, static fn(): array
+                        => (new MemberOptions($connection()))->birthdays(
+                            new DateTimeImmutable('today', new DateTimeZone('UTC')),
+                            7,
+                            30,
+                        )),
             ),
             [
                 MessageTranslator::class,
@@ -1711,6 +1802,8 @@ final class CoreServiceProvider implements ServiceProvider
                 SiteSettings::class,
                 DiscussionFeed::class,
                 CsrfTokens::class,
+                CacheFactory::class,
+                new Lazy(Connection::class),
             ],
         );
         $services->factory(
@@ -2684,6 +2777,9 @@ final class CoreServiceProvider implements ServiceProvider
                 Router $router,
                 ?Config $config,
                 RegistrationRules $rules,
+                SiteSettings $settings,
+                Session $session,
+                LocaleContext $locale,
             ): AccountRegistration => new AccountRegistration(
                 $connection,
                 $users,
@@ -2694,6 +2790,8 @@ final class CoreServiceProvider implements ServiceProvider
                 new RateBuckets($connection),
                 new DbalBanList($connection, new Outbox($connection)),
                 rules: $rules,
+                // beta.18 roadmap 07, 10, 21, 22, 31: reserved names, terms, question pool, required fields.
+                extras: new MembershipRegistration($connection, $settings, $session, $locale->locale(...)),
             ),
             [
                 Connection::class,
@@ -2705,6 +2803,9 @@ final class CoreServiceProvider implements ServiceProvider
                 Router::class,
                 CompositionRoot::CONFIG,
                 RegistrationRules::class,
+                SiteSettings::class,
+                Session::class,
+                LocaleContext::class,
             ],
         );
         $services->factory(
@@ -3516,7 +3617,8 @@ final class CoreServiceProvider implements ServiceProvider
                 CommunityNotifications $notifications, CommunityActions $actions, PrivateMedia $media,
                 CsrfTokens $csrf, Router $urls, ErrorResponder $errors, CommunityActivity $activity,
                 UserRepository $users, PostRepository $posts, ForumVisibility $visibility,
-                MemberStanding $standing): CommunityHandler
+                MemberStanding $standing, Connection $db, SiteSettings $settings,
+                ThemeBuildStore $builds): CommunityHandler
                 => new CommunityHandler(
                     $translator,
                     $views,
@@ -3535,12 +3637,18 @@ final class CoreServiceProvider implements ServiceProvider
                     $posts,
                     $visibility,
                     $standing,
+                    new MemberOptions($db),
+                    // beta.18 roadmap 28 and 30: which themes and whether birthdays are offered in member settings.
+                    static fn(): array => ['themes' => $settings->get('membership.member_themes') === 'on'
+                        ? array_keys($builds->memberThemes()) : [],
+                        'birthdays' => $settings->get('membership.birthdays_list') !== 'off'
+                            || $settings->get('membership.birth_date') === 'on'],
                 ),
             [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class, MemberProfiles::class,
                 CommunityRead::class, CommunityInteractions::class, CommunityNotifications::class,
                 CommunityActions::class, PrivateMedia::class, CsrfTokens::class, Router::class, ErrorResponder::class,
                 CommunityActivity::class, UserRepository::class, PostRepository::class, ForumVisibility::class,
-                MemberStanding::class],
+                MemberStanding::class, Connection::class, SiteSettings::class, ThemeBuildStore::class],
         );
         $services->factory(
             TaskRuntime::class,
@@ -3692,6 +3800,8 @@ final class CoreServiceProvider implements ServiceProvider
                 Closure $threadUnread,
                 Closure $drafts,
                 Closure $followed,
+                Closure $membershipAdmin,
+                Closure $groupsPage,
             ): Kernel => new Kernel(
                 $router,
                 [
@@ -3740,6 +3850,8 @@ final class CoreServiceProvider implements ServiceProvider
                     CoreRoutes::AUTH_EXTERNAL_REGISTER => $externalRegister,
                     CoreRoutes::ACCOUNT_EXTERNAL => $externalUnlink,
                     CoreRoutes::AUTH_EXTERNAL_LINK => $externalLink,
+                    CoreRoutes::ADMIN_MEMBERSHIP => $membershipAdmin,
+                    CoreRoutes::GROUPS => $groupsPage,
                     CoreRoutes::ADMIN_DASHBOARD => $adminDashboard,
                     CoreRoutes::ADMIN_UPDATES => $adminUpdates,
                     CoreRoutes::ADMIN_IMPORTS => $imports,
@@ -3931,6 +4043,8 @@ final class CoreServiceProvider implements ServiceProvider
                 new Lazy(ThreadUnreadHandler::class),
                 new Lazy(DraftsHandler::class),
                 new Lazy(FollowedHandler::class),
+                new Lazy(MembershipAdminHandler::class),
+                new Lazy(MemberGroupsHandler::class),
             ],
         );
     }

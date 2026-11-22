@@ -4,8 +4,16 @@
 <p><label>{{ t('community.biography') }}<textarea name="biography" maxlength="4000">{{ profile.biography }}</textarea></label></p>
 <p><label>{{ t('community.location') }}<input name="location" maxlength="120" value="{{ profile.location }}"></label></p>
 <p><label>{{ t('community.signature') }}<textarea name="signature" maxlength="1000">{{ profile.signature }}</textarea></label></p>
+{% if missing_fields|default([]) is not empty %}<p role="status">{{ t('community.fields_missing', {fields: missing_fields|join(', ')}) }}</p>{% endif %}
 {% for field in profile_fields|default([]) %}
-<p><label>{{ field.label }}<input name="field_{{ field.id }}" maxlength="255" value="{{ field.value }}"{% if field.kind == 'url' %} type="url" inputmode="url"{% endif %} dir="auto"></label></p>
+{% if field.kind == 'choice' %}
+<p><label>{{ field.label }}{% if field.required|default(false) %} {{ t('community.field_required') }}{% endif %}<select name="field_{{ field.id }}"{% if field.required|default(false) %} required{% endif %}>
+<option value="">{{ t('community.field_none') }}</option>
+{% for option in field.options|default([]) %}<option value="{{ option.id }}"{% if field.value == option.id ~ '' %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select></label></p>
+{% else %}
+<p><label>{{ field.label }}{% if field.required|default(false) %} {{ t('community.field_required') }}{% endif %}<input name="field_{{ field.id }}" maxlength="255" value="{{ field.value }}"{% if field.kind == 'url' %} type="url" inputmode="url"{% endif %}{% if field.required|default(false) %} required{% endif %} dir="auto"></label></p>
+{% endif %}
 {% endfor %}
 <p>{{ t('community.plain_text') }}</p>
 <p><label>{{ t('community.visibility') }}<select name="visibility">
@@ -17,6 +25,18 @@
 <p><label><input type="checkbox" name="{{ key }}" value="1"{% if attribute(profile, key) %} checked{% endif %}> {{ t('community.' ~ key) }}</label></p>
 {% endfor %}
 <button>{{ t('community.save') }}</button></form>
+{% if options is defined and options and option_choices %}
+<h2 id="display">{{ t('community.display') }}</h2>
+<p><a href="{{ path('groups')|safe_url }}">{{ t('community.groups') }}</a></p>
+<form method="post" action="#display"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'options' }}">
+<p><label>{{ t('community.date_format') }}<select name="date_format">{% for value in option_choices.date_formats %}<option value="{{ value }}"{% if options.date_format == value %} selected{% endif %}>{{ t('community.date_format_' ~ value) }}</option>{% endfor %}</select></label></p>
+<p><label>{{ t('community.time_format') }}<select name="time_format">{% for value in option_choices.time_formats %}<option value="{{ value }}"{% if options.time_format == value %} selected{% endif %}>{{ t('community.time_format_' ~ value) }}</option>{% endfor %}</select></label></p>
+{% if option_choices.themes is not empty %}<p><label>{{ t('community.site_theme') }}<select name="site_theme"><option value="">{{ t('community.site_theme_default') }}</option>{% for theme in option_choices.themes %}<option value="{{ theme }}"{% if options.site_theme == theme %} selected{% endif %}>{{ theme }}</option>{% endfor %}</select></label></p>{% endif %}
+{% if option_choices.birthdays %}<p><label>{{ t('community.birth_date') }}<input type="date" name="birth_date" value="{{ options.birth_date }}"></label></p>
+<p><label><input type="checkbox" name="birth_hide_year" value="1"{% if options.birth_hide_year %} checked{% endif %}> {{ t('community.birth_hide_year') }}</label></p>{% endif %}
+<p><label><input type="checkbox" name="group_mail" value="1"{% if options.group_mail %} checked{% endif %}> {{ t('community.group_mail') }}</label></p>
+<button>{{ t('community.save') }}</button></form>
+{% endif %}
 <h2>{{ t('community.avatar') }}</h2><p>{{ t('community.upload_policy') }}</p>
 {% if avatar %}<img src="{{ path('community.media', {media: avatar})|safe_url }}" width="128" height="128" alt="{{ t('community.avatar') }}">
 <form method="post"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'remove_media' }}">

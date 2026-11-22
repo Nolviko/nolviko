@@ -238,6 +238,12 @@ final class CoreRoutes
 
     public const ADMIN_MEMBER_EXTRAS = 'admin.member_extras';
 
+    /** beta.18 (G3): group join settings, group mail, timed memberships, promotions, registration questions. */
+    public const ADMIN_MEMBERSHIP = 'admin.membership';
+
+    /** beta.18 roadmap 03: joinable groups and the leaders' application queue. */
+    public const GROUPS = 'groups';
+
     public const ADMIN_WEBHOOKS = 'admin.webhooks';
 
     public const API_FORUMS = 'api.forums';
@@ -613,6 +619,8 @@ final class CoreRoutes
             new RouteDefinition(self::API_THREADS, '/api/v1/threads', ['GET']),
             new RouteDefinition(self::API_THREAD, '/api/v1/threads/{thread}', ['GET'], ['thread'
                 => '[1-9][0-9]{0,17}']),
+            new RouteDefinition(self::ADMIN_MEMBERSHIP, '/admin/membership', ['GET', 'POST'], requiresHttps: true),
+            new RouteDefinition(self::GROUPS, '/groups', ['GET', 'POST']),
             new RouteDefinition(
                 self::ADMIN_MEMBER_EXTRAS,
                 '/admin/profile-fields',

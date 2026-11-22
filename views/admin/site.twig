@@ -15,6 +15,7 @@
 {% for option in field.options %}<option value="{{ option.value }}"{% if option.value == field.value or (field.value == '' and option.value == field.default) %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
 </select>
 {% elseif field.type == 'int' %}<input id="{{ field.id }}" name="setting[{{ field.key }}]" type="number" min="{{ field.min }}" max="{{ field.max }}" value="{{ field.value }}"{% if field.pinned %} disabled{% endif %}>
+{% elseif field.type == 'text' %}<textarea id="{{ field.id }}" name="setting[{{ field.key }}]" rows="6" maxlength="{{ field.max }}" dir="auto"{% if field.pinned %} disabled{% endif %}>{{ field.value }}</textarea>
 {% else %}<input id="{{ field.id }}" name="setting[{{ field.key }}]" type="{{ field.type == 'email' ? 'email' : 'text' }}" maxlength="{{ field.max }}" value="{{ field.value }}" dir="auto"{% if field.pinned %} disabled{% endif %}>
 {% endif %}
 {% if field.pinned %}<span class="hint">{{ t('admin.site.pinned') }}</span>{% elseif field.hint %}<span class="hint">{{ field.hint }}</span>{% endif %}</p>

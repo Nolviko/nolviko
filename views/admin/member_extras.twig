@@ -10,9 +10,19 @@
 <h2>{{ t('admin.extras.fields') }}</h2>
 {% if fields is empty %}<p class="hint">{{ t('admin.extras.no_fields') }}</p>{% else %}
 <ul class="panel list">
-{% for field in fields %}<li><b dir="auto">{{ field.label }}</b> <span class="meta">{{ t('admin.extras.kind', {kind: field.kind}) }}</span>
+{% for field in fields %}<li><b dir="auto">{{ field.label }}</b> <span class="meta">{{ t('admin.extras.kind', {kind: field.kind}) }}</span>{% if field.required|default(false) %} <span class="chip">{{ t('admin.extras.required') }}</span>{% endif %}
 <form method="post" action="{{ action|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ field.id }}">
-<button class="btn-s" type="submit" name="action" value="{{ 'delete_field' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>
+<button class="btn-s" type="submit" name="action" value="{{ field.required|default(false) ? 'optional_field' : 'require_field' }}"{% if not fresh %} disabled{% endif %}>{{ field.required|default(false) ? t('admin.extras.make_optional') : t('admin.extras.make_required') }}</button>
+<button class="btn-s" type="submit" name="action" value="{{ 'delete_field' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form>
+{% if field.kind == 'choice' %}
+<ul class="list">{% for option in field.options|default([]) %}<li><bdi>{{ option.label }}</bdi> <span class="meta">#{{ option.id }}</span>
+<form method="post" action="{{ action|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ option.id }}">
+<button class="btn-s" type="submit" name="action" value="{{ 'delete_option' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>
+{% endfor %}</ul>
+<form method="post" action="{{ action|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ field.id }}">
+<label for="option-{{ field.id }}">{{ t('admin.extras.option') }}</label> <input id="option-{{ field.id }}" name="option" type="text" maxlength="100" required dir="auto">
+<button class="btn-s" type="submit" name="action" value="{{ 'add_option' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.extras.add_option') }}</button></form>
+{% endif %}</li>
 {% endfor %}
 </ul>
 {% endif %}
@@ -22,6 +32,10 @@
 <input id="field-label" name="label" type="text" maxlength="60" required dir="auto"></p>
 <p><label for="field-kind">{{ t('admin.extras.type') }}</label>
 <select id="field-kind" name="kind">{% for kind in kinds %}<option value="{{ kind }}">{{ t('admin.extras.kind', {kind: kind}) }}</option>{% endfor %}</select></p>
+<p><label for="field-options">{{ t('admin.extras.options') }}</label>
+<textarea id="field-options" name="options" rows="4" maxlength="5000" dir="auto" aria-describedby="field-options-hint"></textarea>
+<span id="field-options-hint" class="hint">{{ t('admin.extras.options_hint') }}</span></p>
+<p><label><input type="checkbox" name="required" value="1"> {{ t('admin.extras.required_hint') }}</label></p>
 <p><button type="submit" name="action" value="{{ 'add_field' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.extras.add_field') }}</button></p>
 </form>
 

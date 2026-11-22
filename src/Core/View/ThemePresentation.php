@@ -4,24 +4,36 @@ declare(strict_types=1);
 
 namespace Nolviko\Core\View;
 
+use Closure;
 use Nolviko\Core\Http\ThemeRequest;
 use Nolviko\Core\Routing\ReleaseId;
 use Nolviko\Core\Session\Session;
 use Throwable;
 
-/** A signed, expiring server-session preview is owner-bound and never updates the shared activation pointer. */
+/**
+ * A signed, expiring server-session preview is owner-bound and never updates the shared activation pointer.
+ * `$memberTheme` (beta.18 roadmap 28) returns the theme a member chose, or null; that theme's last published build
+ * replaces the site's build for this member only.
+ */
 final readonly class ThemePresentation
 {
     public function __construct(
         private ThemeBuildStore $builds,
         private Session $session,
-        private ThemeRequest $request
+        private ThemeRequest $request,
+        private ?Closure $memberTheme = null,
     ) {
     }
 
     public function selection(): array
     {
         $build = $this->builds->active();
+        $chosen = $this->memberTheme === null ? null : ($this->memberTheme)();
+
+        if (is_string($chosen) && $chosen !== ($build['theme'] ?? 'default')) {
+            $build = $this->builds->memberBuild($chosen) ?? $build;
+        }
+
         $preview = false;
         $token = $this->session->get('_theme_preview');
         $secret = $this->session->get('_theme_preview_secret');

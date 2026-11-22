@@ -298,10 +298,22 @@ final class ExternalAuthHandler implements RouteHandler
 
         $username = self::suggestion((string) ($signup['name'] ?? ''), $signup['email']);
         $errors = [];
+        $input = $request->isMethod('POST') ? $request->request->all() : [];
+        $extras = ($this->registration)()->extras();
         if ($request->isMethod('POST')) {
-            $username = (string) ($request->request->all()['username'] ?? '');
+            $username = (string) ($input['username'] ?? '');
             try {
-                $user = ($this->registration)()->registerExternal($username, $signup['email'], $request->getClientIp());
+                // Terms and required fields (beta.18) on the first sign-in with an outside account too.
+                $missing = $extras?->check($input, true) ?? [];
+                if ($missing !== []) {
+                    throw new RegistrationRejected($missing);
+                }
+                $user = ($this->registration)()->registerExternal(
+                    $username,
+                    $signup['email'],
+                    $request->getClientIp(),
+                    $input,
+                );
                 $this->identities->link($user->id, new ExternalIdentity(
                     (string) $signup['provider'],
                     (string) $signup['subject'],
@@ -330,6 +342,7 @@ final class ExternalAuthHandler implements RouteHandler
                 'action' => $this->urls->generate(CoreRoutes::AUTH_EXTERNAL_REGISTER),
                 'email' => $signup['email'], 'username' => $username,
                 'csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token(),
+                'extras' => RegisterHandler::extrasView($extras?->form(true), $input),
             ],
             'errors' => $errors, 'message' => null, 'link' => null,
         ], $errors === [] ? 200 : 422);

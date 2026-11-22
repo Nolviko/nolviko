@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Forums\Http;
 
+use Closure;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Routing\CoreRoutes;
@@ -41,6 +42,7 @@ final class ForumIndexHandler implements RouteHandler
         private readonly ?SiteSettings $settings = null,
         private readonly ?DiscussionFeed $feed = null,
         private readonly ?CsrfTokens $csrf = null,
+        private readonly ?Closure $birthdays = null,
     ) {
     }
 
@@ -69,6 +71,12 @@ final class ForumIndexHandler implements RouteHandler
             // Member tools (beta.18, roadmap 12/17/18): "mark all forums read", drafts and followed threads.
             'csrf_field' => CsrfTokens::FIELD,
             'csrf_token' => $subject->userId !== null && $this->csrf !== null ? $this->csrf->token() : null,
+            // beta.18 roadmap 30: cached list of upcoming birthdays (empty when the site setting is off).
+            'birthdays' => array_map(fn(array $row): array => $row + ['url' => $this->urls->generate(
+                CoreRoutes::COMMUNITY,
+                ['section' => 'profile'],
+            ) . '?user=' . $row['id'], 'today' => $row['day'] === gmdate('Y-m-d')], $this->birthdays === null
+                ? [] : ($this->birthdays)()),
         ]);
 
         // Personal (the new-thread links and the scope depend on the reader), so never shared caches.

@@ -1,0 +1,28 @@
+{# Joinable groups and the leaders' queue (beta.18 roadmap 03). Context: title, action, groups (id, name,
+   description, state), queue (id, group, username, message, created_at), error, notice, csrf_field, csrf_token. #}
+{% extends 'layouts/page.twig' %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% elseif notice %}<p role="status">{{ notice }}</p>{% endif %}
+<p>{{ t('community.groups_intro') }}</p>
+{% if groups is empty %}<p class="hint">{{ t('community.groups_none') }}</p>{% else %}
+<ul class="panel list">
+{% for group in groups %}<li><b dir="auto">{{ group.name }}</b>{% if group.description %} <span class="meta" dir="auto">{{ group.description }}</span>{% endif %}
+{% if group.state == 'member' %}<span class="chip">{{ t('community.groups_member') }}</span>
+{% elseif group.state == 'pending' %}<span class="chip">{{ t('community.groups_pending') }}</span>
+{% else %}<form method="post" action="{{ action|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ group.id }}">
+<label for="apply-{{ group.id }}">{{ t('community.groups_message') }}</label>
+<textarea id="apply-{{ group.id }}" name="message" rows="2" maxlength="500" dir="auto"></textarea>
+<button type="submit" name="action" value="apply">{{ t('community.groups_apply') }}</button></form>{% endif %}</li>
+{% endfor %}</ul>
+{% endif %}
+{% if queue is not empty %}
+<h2>{{ t('community.groups_queue') }}</h2>
+<ul class="panel list">
+{% for application in queue %}<li><bdi>{{ application.username }}</bdi> · <bdi>{{ application.group }}</bdi>{% if application.message %}<p dir="auto">{{ application.message }}</p>{% endif %}
+<form method="post" action="{{ action|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="id" value="{{ application.id }}">
+<button class="btn-s" type="submit" name="action" value="approve">{{ t('community.groups_approve') }}</button>
+<button class="btn-s" type="submit" name="action" value="reject">{{ t('community.groups_reject') }}</button></form></li>
+{% endfor %}</ul>
+{% endif %}
+{% endblock %}

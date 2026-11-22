@@ -37,6 +37,7 @@ use Nolviko\Modules\Community\Infrastructure\PrivateMedia;
 use Nolviko\Modules\Forums\Infrastructure\DbalForumTree;
 use Nolviko\Modules\Gallery\Infrastructure\Gallery;
 use Nolviko\Modules\Gallery\Infrastructure\GalleryImages;
+use Nolviko\Modules\Membership\Infrastructure\GroupMembership;
 use Nolviko\Modules\Importers\Infrastructure\ImportFileStore;
 use Nolviko\Modules\Importers\Infrastructure\PrivateImportFiles;
 use Nolviko\Modules\Permissions\Domain\ForumVisibility;
@@ -169,7 +170,7 @@ final class TaskRuntime
         );
         $media = new PrivateMedia($db, $access, $profiles, new ImageProcessor(), $storage, $public);
         $optionalSchema = $db->fetchFirstColumn("SELECT id FROM migration_history WHERE id IN "
-            . "('0042_import_jobs', '0043_seo_sitemaps', '0047_media_gallery', '0049_webhooks') "
+            . "('0042_import_jobs', '0043_seo_sitemaps', '0047_media_gallery', '0049_webhooks', '0070_membership') "
             . "AND status = 'applied'");
         $sitemaps = null;
         if (in_array('0043_seo_sitemaps', $optionalSchema, true)) {
@@ -305,6 +306,18 @@ final class TaskRuntime
         // Gallery files left by deleted accounts (2026-11-08): one rotating key bucket per run.
         if (in_array('0047_media_gallery', $optionalSchema, true)) {
             (new Gallery($db, new GalleryImages(), $storage, $public))->collect(random_int(0, 255));
+        }
+
+        // beta.18 (G3): timed memberships end, promotion rules and group mail advance one small batch per run.
+        if (in_array('0070_membership', $optionalSchema, true)) {
+            try {
+                $groups = new GroupMembership($db);
+                $groups->expireDue();
+                $groups->promoteBatch();
+                $groups->sendMailBatch($mailer);
+            } catch (Throwable) {
+                // A failed step is retried on the next run.
+            }
         }
 
         return $result;

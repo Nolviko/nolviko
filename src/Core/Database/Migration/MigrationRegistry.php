@@ -39,6 +39,7 @@ use Nolviko\Modules\Permissions\Infrastructure\PermissionRulesTable;
 use Nolviko\Modules\Permissions\Infrastructure\PermissionsTable;
 use Nolviko\Modules\Posts\Infrastructure\PostsRenderedHtmlColumn;
 use Nolviko\Modules\Posts\Infrastructure\PostsTable;
+use Nolviko\Modules\Membership\Infrastructure\MembershipTables;
 use Nolviko\Modules\Posts\Infrastructure\RepliesTable;
 use Nolviko\Modules\Search\Infrastructure\SearchIndex;
 use Nolviko\Modules\Search\Infrastructure\TitleSearchIndex;
@@ -174,6 +175,7 @@ final class MigrationRegistry
             new ThreadSortIndexes(),
             new MemberReadCutoffTable(),
             new MemberDirectoryIndex(),
+            new MembershipTables(),
         ]);
     }
 

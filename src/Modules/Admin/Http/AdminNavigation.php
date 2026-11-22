@@ -36,6 +36,7 @@ final class AdminNavigation
             CoreRoutes::ADMIN_MEMBERS => 'admin.nav.members',
             CoreRoutes::ADMIN_GROUPS => 'admin.nav.groups',
             CoreRoutes::ADMIN_MEMBER_EXTRAS => 'admin.nav.member_extras',
+            CoreRoutes::ADMIN_MEMBERSHIP => 'admin.nav.membership',
             CoreRoutes::ADMIN_BANS => 'admin.nav.bans',
             CoreRoutes::ADMIN_PRIVACY => 'admin.nav.privacy',
         ],

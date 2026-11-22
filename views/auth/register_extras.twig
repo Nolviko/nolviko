@@ -1,0 +1,30 @@
+{# Sign-up additions of the site (beta.18). Context: extras (null, or terms, fields with value, birth_date,
+   birth_value, hide_year, question, accepted). Shared by the registration form and the outside-account form. #}
+{% if extras|default(null) %}
+{% for field in extras.fields %}
+{% if field.kind == 'choice' %}
+<p><label for="register-field-{{ field.id }}">{{ field.label }}</label>
+<select id="register-field-{{ field.id }}" name="field_{{ field.id }}" required>
+<option value="">{{ t('community.field_none') }}</option>
+{% for option in field.options %}<option value="{{ option.id }}"{% if field.value == option.id ~ '' %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+</select></p>
+{% else %}
+<p><label for="register-field-{{ field.id }}">{{ field.label }}</label>
+<input id="register-field-{{ field.id }}" name="field_{{ field.id }}" maxlength="255" required value="{{ field.value }}"{% if field.kind == 'url' %} type="url" inputmode="url"{% else %} type="text"{% endif %} dir="auto"></p>
+{% endif %}
+{% endfor %}
+{% if extras.birth_date %}
+<p><label for="register-birth">{{ t('membership.birth_date') }}</label>
+<input id="register-birth" name="birth_date" type="date" value="{{ extras.birth_value }}"></p>
+<p><label><input type="checkbox" name="birth_hide_year" value="1"{% if extras.hide_year %} checked{% endif %}> {{ t('membership.birth_hide_year') }}</label></p>
+{% endif %}
+{% if extras.question %}
+<p><label for="register-question">{{ extras.question }}</label>
+<input id="register-question" name="pool_answer" type="text" required autocomplete="off" maxlength="100" dir="auto"></p>
+{% endif %}
+{% if extras.terms %}
+<details class="panel-pad" open><summary>{{ t('membership.terms_title') }}</summary>
+<div class="terms-text" dir="auto">{% for line in extras.terms_lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div></details>
+<p><label><input type="checkbox" name="accept_terms" value="1" required{% if extras.accepted %} checked{% endif %}> {{ t('membership.terms_accept') }}</label></p>
+{% endif %}
+{% endif %}
