@@ -247,7 +247,7 @@ final class TaskManagementTest extends TestCase
         $scope = new ForumScope([1]);
         $this->counter->count = 0;
         self::assertSame(2, $search->find($scope, $query)['count']);
-        self::assertSame(2, $this->counter->count);
+        self::assertSame(1, $this->counter->count, 'A complete first page does not need a separate count query.');
         self::assertSame(1, $search->find($scope, $query, filters: new SearchFilters(author: 1))['count']);
         self::assertSame(0, $search->find($scope, $query, filters: new SearchFilters(forum: 2))['count']);
         self::assertSame(0, $search->find($scope, $query, filters: new SearchFilters(from: '2099-01-01'))['count']);
