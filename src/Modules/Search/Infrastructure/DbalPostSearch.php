@@ -41,26 +41,28 @@ final class DbalPostSearch implements PostSearch
         ?int $before = null,
         ?SearchFilters $filters = null
     ): array {
-        if ($scope->forumIds === []) {
+        $filters ??= new SearchFilters();
+
+        if ($scope->forumIds === [] || ($filters->forum !== null && !$scope->contains($filters->forum))) {
             return ['rows' => [], 'count' => 0, 'capped' => false, 'next' => null];
         }
 
-        $filters ??= new SearchFilters();
         $postgres = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform;
         $titles = $filters->titles;
         $relevance = $filters->sort === SearchFilters::RELEVANCE;
         $oldest = $filters->sort === SearchFilters::OLDEST;
         // In titles mode the row is the thread: its starter is the author and its start the date.
         $alias = $titles ? 't' : 'p';
-        [$scopeSql, $parameters, $types] = ScopeSql::forums($scope, 't.forum_id');
+        [$scopeSql, $parameters, $types] = $filters->forum === null
+            ? ScopeSql::forums($scope, 't.forum_id')
+            : ['t.forum_id = ?', [$filters->forum], [ParameterType::INTEGER]];
         $where = "t.status = 'visible' AND t.moved_to_thread_id IS NULL AND " . $scopeSql . ' AND '
             . SearchDialect::match($postgres, $titles ? 't.title' : 'p.content') . ' AND t.deleted_at IS NULL'
             . ($titles ? '' : " AND p.status = 'visible' AND p.deleted_at IS NULL");
         $value = SearchDialect::value($query, $postgres);
         $parameters[] = $value;
         $types[] = ParameterType::STRING;
-        $ids = ['t.forum_id' => $filters->forum, $alias . '.user_id' => $filters->author,
-            'p.thread_id' => $titles ? null : $filters->thread];
+        $ids = [$alias . '.user_id' => $filters->author, 'p.thread_id' => $titles ? null : $filters->thread];
 
         foreach ($ids as $column => $id) {
             if ($id !== null) {
@@ -80,12 +82,9 @@ final class DbalPostSearch implements PostSearch
         }
 
         $from = $titles ? 'threads t' : 'posts p INNER JOIN threads t ON t.id = p.thread_id';
-        $count = (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM (SELECT ' . $alias . '.id FROM ' . $from . ' WHERE ' . $where
-                . ' LIMIT 1001) authorized_matches',
-            $parameters,
-            $types,
-        );
+        $matchWhere = $where;
+        $matchParameters = $parameters;
+        $matchTypes = $types;
         $offset = $relevance ? min(max(0, $before ?? 0), self::RELEVANCE_WINDOW) : 0;
 
         if (!$relevance && $before !== null) {
@@ -124,6 +123,18 @@ final class DbalPostSearch implements PostSearch
             $types,
         );
         $more = count($rows) > 20;
+        $count = count($rows);
+
+        // A complete first page already contains every match. Later pages still need the global count.
+        if ($more || $before !== null) {
+            $count = (int) $this->connection->fetchOne(
+                'SELECT COUNT(*) FROM (SELECT ' . $alias . '.id FROM ' . $from . ' WHERE ' . $matchWhere
+                    . ' LIMIT 1001) authorized_matches',
+                $matchParameters,
+                $matchTypes,
+            );
+        }
+
         $rows = array_slice($rows, 0, 20);
 
         foreach ($rows as &$row) {
