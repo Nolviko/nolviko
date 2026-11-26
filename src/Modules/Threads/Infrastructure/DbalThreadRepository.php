@@ -88,12 +88,15 @@ final class DbalThreadRepository implements ThreadRepository
         return (int) $this->connection->lastInsertId();
     }
 
-    public function find(int $id): ?Thread
+    public function find(int $id, ?int $reader = null): ?Thread
     {
+        $readMark = $reader === null ? '' : ', r.last_read_post_id';
+        $readJoin = $reader === null ? '' : 'LEFT JOIN thread_reads r ON r.thread_id = t.id AND r.user_id = ? ';
         $row = $this->connection->fetchAssociative(
-            'SELECT id, forum_id, user_id, title, slug, status, is_locked, is_sticky, reply_count, first_post_id, '
-                . 'last_post_id, moved_to_thread_id FROM threads WHERE id = ?',
-            [$id],
+            'SELECT t.id, t.forum_id, t.user_id, t.title, t.slug, t.status, t.is_locked, t.is_sticky, '
+                . 't.reply_count, t.first_post_id, t.last_post_id, t.moved_to_thread_id' . $readMark
+                . ' FROM threads t ' . $readJoin . 'WHERE t.id = ?',
+            $reader === null ? [$id] : [$reader, $id],
         );
 
         if ($row === false) {
@@ -113,6 +116,7 @@ final class DbalThreadRepository implements ThreadRepository
             $row['first_post_id'] === null ? null : (int) $row['first_post_id'],
             $row['last_post_id'] === null ? null : (int) $row['last_post_id'],
             $row['moved_to_thread_id'] === null ? null : (int) $row['moved_to_thread_id'],
+            isset($row['last_read_post_id']) ? (int) $row['last_read_post_id'] : null,
         );
     }
 

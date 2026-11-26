@@ -38,6 +38,26 @@ final class PrivateFolders
         );
     }
 
+    /** @return list<array{id: int, name: string, filed: bool}> */
+    public function forConversation(int $user, int $conversation): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT folder.id, folder.name, item.conversation_id FROM private_folders folder '
+                . 'LEFT JOIN private_folder_items item ON item.folder_id = folder.id AND item.conversation_id = ? '
+                . 'WHERE folder.user_id = ? ORDER BY folder.name, folder.id LIMIT ' . self::MAX_FOLDERS,
+            [$conversation, $user],
+        );
+
+        return array_map(
+            static fn(array $row): array => [
+                'id' => (int) $row['id'],
+                'name' => (string) $row['name'],
+                'filed' => $row['conversation_id'] !== null,
+            ],
+            $rows,
+        );
+    }
+
     public function name(int $user, int $folder): ?string
     {
         $name = $this->connection->fetchOne(

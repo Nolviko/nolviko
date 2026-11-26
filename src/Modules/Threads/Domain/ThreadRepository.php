@@ -32,7 +32,8 @@ interface ThreadRepository
     /**
      * Any thread by ID, whatever its status; callers check visibility and permissions.
      */
-    public function find(int $id): ?Thread;
+    /** Optionally include the member's current read position in the returned thread. */
+    public function find(int $id, ?int $reader = null): ?Thread;
 
     /**
      * Visible threads of one forum: sticky first, then by last activity (index `ix_threads_forum_list`).

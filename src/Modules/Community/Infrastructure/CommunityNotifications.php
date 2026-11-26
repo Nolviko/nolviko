@@ -46,15 +46,23 @@ final class CommunityNotifications
      */
     public function unreadCount(SubjectPermissions $subject): int
     {
+        [$sql, $params, $types] = $this->unreadCountQuery($subject);
+
+        return (int) $this->db->fetchOne($sql, $params, $types);
+    }
+
+    /** @return array{string, list<mixed>, list<mixed>} */
+    public function unreadCountQuery(SubjectPermissions $subject): array
+    {
         $actor = $this->access->actor($subject);
         [$visible, $params, $types] = $this->visible($subject);
 
-        return (int) $this->db->fetchOne(
+        return [
             'SELECT COUNT(*) FROM (SELECT n.id ' . $visible . 'AND n.read_at IS NULL LIMIT '
                 . self::UNREAD_CAP . ') unread',
             [$actor, ...$params],
             [ParameterType::INTEGER, ...$types],
-        );
+        ];
     }
 
     /**

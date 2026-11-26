@@ -18,8 +18,8 @@ use Nolviko\Modules\Permissions\Domain\PermissionRuleStore;
 use Nolviko\Modules\Permissions\Domain\RuleSnapshot;
 
 /**
- * PermissionRuleStore on DBAL. load() runs one query per table that can apply: two for a guest, four for a
- * logged-in user, independent of the number of forums and keys asked about afterwards.
+ * PermissionRuleStore on DBAL. load() reads group rules in at most two queries and live member overrides in
+ * one query, independent of the number of forums and keys asked about afterwards.
  */
 final class DbalPermissionRuleStore implements PermissionRuleStore
 {
@@ -114,32 +114,30 @@ final class DbalPermissionRuleStore implements PermissionRuleStore
             $postgres ??= SqlDialect::postgres($this->connection);
             $capabilityRows ??= MysqlModeratorProjection::rows($postgres);
             $rows = $this->connection->fetchAllAssociative(
-                'SELECT permission_key, value FROM user_permission_overrides WHERE user_id = ?',
-                [$userId],
-            );
-
-            foreach ($rows as $row) {
-                $user[(string) $row['permission_key']] = (string) $row['value'];
-            }
-
-            $rows = $this->connection->fetchAllAssociative(
-                "SELECT forum_id, permission_key, value, 0 AS moderator_assignment "
-                    . 'FROM user_forum_permission_overrides WHERE user_id = ? UNION ALL '
+                'SELECT NULL AS forum_id, permission_key, value, 0 AS moderator_assignment '
+                    . 'FROM user_permission_overrides WHERE user_id = ? UNION ALL '
+                    . 'SELECT forum_id, permission_key, value, 0 FROM user_forum_permission_overrides '
+                    . 'WHERE user_id = ? UNION ALL '
                     . 'SELECT m.forum_id, p.permission_key, ' . MysqlModeratorProjection::allow($postgres)
                     . ', 1 FROM forum_moderators m '
                     . 'INNER JOIN (' . $capabilityRows . ') p ON 1 = 1 '
                     . 'WHERE m.user_id = ? AND NOT EXISTS '
                     . '(SELECT 1 FROM user_forum_permission_overrides r WHERE r.forum_id = m.forum_id '
                     . 'AND r.user_id = m.user_id AND r.permission_key = p.permission_key)',
-                [$userId, ...ForumModeratorCapabilities::KEYS, $userId],
-                [ParameterType::INTEGER, ...array_fill(
+                [$userId, $userId, ...ForumModeratorCapabilities::KEYS, $userId],
+                [ParameterType::INTEGER, ParameterType::INTEGER, ...array_fill(
                     0,
                     count(ForumModeratorCapabilities::KEYS),
-                    ParameterType::STRING
+                    ParameterType::STRING,
                 ), ParameterType::INTEGER],
             );
 
             foreach ($rows as $row) {
+                if ($row['forum_id'] === null) {
+                    $user[(string) $row['permission_key']] = (string) $row['value'];
+                    continue;
+                }
+
                 $userForum[(int) $row['forum_id']][(string) $row['permission_key']] = (string) $row['value'];
                 if ((int) $row['moderator_assignment'] === 1) {
                     $moderatorSources[(int) $row['forum_id']][(string) $row['permission_key']]['user'] = true;

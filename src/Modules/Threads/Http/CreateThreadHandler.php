@@ -174,7 +174,7 @@ final class CreateThreadHandler implements RouteHandler
 
         // The new thread, or its forum while it waits for approval (a pending thread is not shown to its author).
         return InstallerPage::redirect($created->status === ThreadStatus::Visible
-            ? $this->urls->generate(CoreRoutes::THREAD_ID, ['thread' => (string) $created->threadId])
+            ? ThreadPageHandler::url($this->urls, $created->threadId, 1, $created->slug)
             : $this->urls->generate(CoreRoutes::FORUM_SHOW, ['forum' => (string) $forumId]));
     }
 

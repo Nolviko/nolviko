@@ -302,7 +302,7 @@ final class CreateThreadTest extends TestCase
         self::assertSame(Response::HTTP_SEE_OTHER, $created->getStatusCode());
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM threads'));
         self::assertSame(
-            '/threads/' . $this->connection->fetchOne('SELECT id FROM threads'),
+            '/threads/from-the-form-' . $this->connection->fetchOne('SELECT id FROM threads'),
             $created->headers->get('Location'),
             'a visible new thread opens on its own page',
         );

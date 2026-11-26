@@ -7,6 +7,7 @@ namespace Nolviko\Modules\Conversations\Infrastructure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Nolviko\Core\Database\RateBuckets;
 use Nolviko\Modules\Community\Infrastructure\MemberProfiles;
 use Nolviko\Modules\Conversations\Domain\ConversationRefused;
@@ -57,13 +58,22 @@ final class PrivateConversations
     /** Header badge: conversations with unread messages, counted only up to UNREAD_CAP. */
     public function unreadCount(int $actor): int
     {
-        return (int) $this->connection->fetchOne(
+        [$sql, $parameters, $types] = self::unreadCountQuery($actor);
+
+        return (int) $this->connection->fetchOne($sql, $parameters, $types);
+    }
+
+    /** @return array{string, list<int>, list<ParameterType>} */
+    public static function unreadCountQuery(int $actor): array
+    {
+        return [
             'SELECT COUNT(*) FROM (SELECT member.conversation_id FROM private_conversation_members member '
                 . 'INNER JOIN private_conversations c ON c.id = member.conversation_id WHERE member.user_id = ? '
                 . 'AND member.removed_at IS NULL AND ' . self::UNREAD . ' LIMIT ' . self::UNREAD_CAP
                 . ') unread_conversations',
             [$actor],
-        );
+            [ParameterType::INTEGER],
+        ];
     }
 
     /**
@@ -103,18 +113,25 @@ final class PrivateConversations
     /** @return array<string, mixed>|null */
     public function show(int $actor, int $id, ?int $before): ?array
     {
-        $conversation = $this->connection->fetchAssociative(
+        $members = $this->connection->fetchAllAssociative(
             'SELECT c.id, COALESCE(c.imported_subject, c.subject) AS subject, c.import_job_id, member.hidden, '
-                . 'member.invited_by FROM private_conversations c INNER JOIN private_conversation_members member '
-                . 'ON member.conversation_id = c.id WHERE c.id = ? AND member.user_id = ? '
-                . 'AND member.removed_at IS NULL AND ' . self::PUBLISHED,
+                . 'member.last_read_message_id, member.invited_by, '
+                . 'participant.user_id, participant.hidden AS participant_hidden, participant_user.username '
+                . 'FROM private_conversations c INNER JOIN private_conversation_members member '
+                . 'ON member.conversation_id = c.id INNER JOIN private_conversation_members participant '
+                . 'ON participant.conversation_id = c.id AND (participant.hidden = 0 '
+                . 'OR participant.user_id = member.user_id OR participant.invited_by = member.user_id) '
+                . 'LEFT JOIN users participant_user ON participant_user.id = participant.user_id '
+                . 'WHERE c.id = ? AND member.user_id = ? AND member.removed_at IS NULL AND ' . self::PUBLISHED
+                . ' ORDER BY participant.hidden, participant_user.username',
             [$id, $actor],
         );
 
-        if ($conversation === false) {
+        if ($members === []) {
             return null;
         }
 
+        $conversation = $members[0];
         // Membership and per-message visibility are repeated in message SQL, not trusted from the check above.
         $parameters = [$id, $actor, $actor, $actor];
 
@@ -123,24 +140,22 @@ final class PrivateConversations
         }
 
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT page.id, page.content, page.created_at, page.visible_to, author.username AS author FROM ('
-                . 'SELECT message.id, COALESCE(message.imported_content, message.content) AS content, '
-                . 'message.created_at, message.user_id, message.visible_to '
-                . 'FROM private_messages message '
-                . 'WHERE message.conversation_id = ? AND EXISTS (SELECT 1 FROM private_conversation_members member '
-                . 'WHERE member.conversation_id = message.conversation_id AND member.user_id = ? '
-                . 'AND member.removed_at IS NULL) '
+            'SELECT message.id, COALESCE(message.imported_content, message.content) AS content, '
+                . 'message.created_at, message.visible_to, author.username AS author '
+                . 'FROM private_messages message INNER JOIN private_conversation_members member '
+                . 'ON member.conversation_id = message.conversation_id '
+                . 'LEFT JOIN users author ON author.id = message.user_id '
+                . 'WHERE message.conversation_id = ? AND member.user_id = ? AND member.removed_at IS NULL '
                 . 'AND (message.visible_to IS NULL OR message.visible_to = ? OR message.user_id = ?) '
-                . ($before === null ? '' : 'AND message.id < ? ') . 'ORDER BY message.id DESC LIMIT 51) page '
-                . 'LEFT JOIN users author ON author.id = page.user_id ORDER BY page.id DESC',
+                . ($before === null ? '' : 'AND message.id < ? ') . 'ORDER BY message.id DESC LIMIT 51',
             $parameters,
         );
         $older = count($rows) > 50;
         $rows = array_slice($rows, 0, 50);
 
-        if ($before === null && $rows !== []) {
+        $latest = (int) ($rows[0]['id'] ?? 0);
+        if ($before === null && $latest > (int) $conversation['last_read_message_id']) {
             // The newest page was shown: everything up to its latest message is read. Never moves backwards.
-            $latest = (int) $rows[0]['id'];
             $this->connection->executeStatement(
                 'UPDATE private_conversation_members SET last_read_message_id = ? '
                     . 'WHERE conversation_id = ? AND user_id = ? AND last_read_message_id < ?',
@@ -157,9 +172,21 @@ final class PrivateConversations
         $conversation['older'] = $older ? (int) $rows[count($rows) - 1]['id'] : null;
         $conversation['messages'] = array_reverse($rows);
         $conversation['hidden'] = (int) $conversation['hidden'] === 1;
-        $conversation['participants'] = $this->participants($actor, $id);
-        $conversation['reply'] = $this->replyTarget($this->connection, $actor, $id, $conversation) !== false;
-        unset($conversation['invited_by']);
+        $conversation['participants'] = array_map(
+            static fn(array $row): array => self::participant($row, $actor),
+            $members,
+        );
+        // The common case already has another visible participant. Only query the full membership when
+        // the visible subset cannot determine whether a reply is possible.
+        $conversation['reply'] = (!$conversation['hidden'] && count($members) > 1)
+            || $this->replyTarget($this->connection, $actor, $id, $conversation) !== false;
+        unset(
+            $conversation['invited_by'],
+            $conversation['last_read_message_id'],
+            $conversation['user_id'],
+            $conversation['participant_hidden'],
+            $conversation['username'],
+        );
 
         return $conversation;
     }
@@ -173,7 +200,8 @@ final class PrivateConversations
     public function participants(int $actor, int $id): array
     {
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT member.user_id, member.hidden, u.username FROM private_conversation_members member '
+            'SELECT member.user_id, member.hidden AS participant_hidden, u.username '
+                . 'FROM private_conversation_members member '
                 . 'LEFT JOIN users u ON u.id = member.user_id WHERE member.conversation_id = ? '
                 . 'AND (member.hidden = 0 OR member.user_id = ? OR member.invited_by = ?) '
                 . 'AND EXISTS (SELECT 1 FROM private_conversation_members me WHERE me.conversation_id = ? '
@@ -181,11 +209,17 @@ final class PrivateConversations
             [$id, $actor, $actor, $id, $actor],
         );
 
-        return array_map(static fn(array $row): array => [
+        return array_map(static fn(array $row): array => self::participant($row, $actor), $rows);
+    }
+
+    /** @return array{name: ?string, hidden: bool, self: bool} */
+    private static function participant(array $row, int $actor): array
+    {
+        return [
             'name' => $row['username'] === null ? null : (string) $row['username'],
-            'hidden' => (int) $row['hidden'] === 1,
+            'hidden' => (int) $row['participant_hidden'] === 1,
             'self' => (int) $row['user_id'] === $actor,
-        ], $rows);
+        ];
     }
 
     /**
@@ -272,17 +306,33 @@ final class PrivateConversations
                 'updated_at' => $now,
             ]);
             $id = (int) $db->lastInsertId();
-            $db->insert('private_conversation_members', ['conversation_id' => $id, 'user_id' => $actor]);
+            $db->insert('private_messages', ['conversation_id' => $id, 'user_id' => $actor,
+                'content' => $content, 'created_at' => $now]);
+            // The only message is the sender's own. Their first open does not need a separate read-marker write.
+            $members = [$id, $actor, 0, null, (int) $db->lastInsertId()];
+            $types = [ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER,
+                ParameterType::NULL, ParameterType::INTEGER];
 
             foreach ($ids as $key => $user) {
                 $secret = isset($lists['hidden'][$key]);
-                $db->insert('private_conversation_members', ['conversation_id' => $id, 'user_id' => $user,
-                    'hidden' => $secret ? 1 : 0, 'invited_by' => $secret ? $actor : null]);
+                array_push($members, $id, $user, $secret ? 1 : 0, $secret ? $actor : null, 0);
+                array_push(
+                    $types,
+                    ParameterType::INTEGER,
+                    ParameterType::INTEGER,
+                    ParameterType::INTEGER,
+                    $secret ? ParameterType::INTEGER : ParameterType::NULL,
+                    ParameterType::INTEGER,
+                );
             }
 
-            $db->insert('private_messages', ['conversation_id' => $id, 'user_id' => $actor,
-                'content' => $content, 'created_at' => $now]);
-
+            $db->executeStatement(
+                'INSERT INTO private_conversation_members '
+                    . '(conversation_id, user_id, hidden, invited_by, last_read_message_id) VALUES '
+                    . implode(', ', array_fill(0, count($ids) + 1, '(?, ?, ?, ?, ?)')),
+                $members,
+                $types,
+            );
             return $id;
         });
     }
@@ -362,23 +412,25 @@ final class PrivateConversations
      */
     public static function boxLimit(Connection $db, int $user): int
     {
-        $own = $db->fetchOne(
-            'SELECT value FROM user_permission_overrides WHERE user_id = ? AND permission_key = ?',
-            [$user, self::CAPACITY],
-        );
-
-        if ($own !== false && ctype_digit((string) $own)) {
-            return (int) $own;
-        }
-
-        $values = $db->fetchFirstColumn(
-            'SELECT p.value FROM usergroup_members m LEFT JOIN usergroup_permissions p '
-                . 'ON p.usergroup_id = m.usergroup_id AND p.permission_key = ? WHERE m.user_id = ?',
-            [self::CAPACITY, $user],
+        $rules = $db->fetchAllAssociative(
+            'SELECT 0 AS source_kind, value FROM user_permission_overrides WHERE user_id = ? AND permission_key = ? '
+                . 'UNION ALL SELECT 1, p.value FROM usergroup_members m LEFT JOIN usergroup_permissions p '
+                . 'ON p.usergroup_id = m.usergroup_id AND p.permission_key = ? WHERE m.user_id = ? '
+                . 'ORDER BY source_kind',
+            [$user, self::CAPACITY, self::CAPACITY, $user],
         );
         $limit = 0;
 
-        foreach ($values as $value) {
+        foreach ($rules as $rule) {
+            $value = $rule['value'];
+            if ((int) $rule['source_kind'] === 0) {
+                if (ctype_digit((string) $value)) {
+                    return (int) $value;
+                }
+
+                continue;
+            }
+
             if ($value === null || !ctype_digit((string) $value) || (int) $value === 0) {
                 return 0;
             }
@@ -427,9 +479,7 @@ final class PrivateConversations
             return;
         }
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-        $key = 'conversation.send:' . $actor;
-        $this->buckets->ensure($key, $now);
-        $wait = $this->buckets->hit($key, $this->intervalSeconds, $now);
+        $wait = $this->buckets->hitStandalone('conversation.send:' . $actor, $this->intervalSeconds, $now);
 
         if ($wait > 0) {
             throw new RegistrationThrottled($wait);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nolviko\Core\View;
 
 use Closure;
+use DateTimeImmutable;
 use Nolviko\Core\Cache\Cache;
 use Nolviko\Core\Http\CspNonce;
 use Nolviko\Core\Http\SeoMetadata;
@@ -22,6 +23,9 @@ final class TwigRenderer implements TemplateRenderer
 
     /** Any form except an explicit GET form (the header search) may carry state or a token: never cache it. */
     private const UNCACHEABLE = '/<form\b(?![^>]*\bmethod="get")|_csrf_token/i';
+
+    /** A rapidly changing last page should not generate another cache file for every fresh post. */
+    private const FRESH_POST_SECONDS = 5;
 
     private const POLICY_DIAGNOSTICS = [TemplatePolicy::RAW_FORBIDDEN,
         TemplatePolicy::AUTOESCAPE_FORBIDDEN];
@@ -89,8 +93,12 @@ final class TwigRenderer implements TemplateRenderer
         ) {
             return $this->twig->render($name, $context);
         }
-        $identity = ($this->renderIdentity)();
         $memberFragment = $name === 'components/post.twig';
+        if ($memberFragment && self::freshPost($context['post'] ?? null)) {
+            return $this->twig->render($name, $context);
+        }
+
+        $identity = ($this->renderIdentity)();
         if (
             ($identity['preview'] ?? true) || ($identity['method'] ?? '') !== 'GET'
             || ($memberFragment ? ($identity['user'] ?? null) === null : ($identity['user'] ?? null) !== null)
@@ -124,8 +132,24 @@ final class TwigRenderer implements TemplateRenderer
         return $html;
     }
 
+    private static function freshPost(mixed $post): bool
+    {
+        if (!is_object($post)) {
+            return false;
+        }
+
+        $values = get_object_vars($post);
+        $changed = $values['editedAt'] ?? $values['createdAt'] ?? null;
+
+        return $changed instanceof DateTimeImmutable && $changed->getTimestamp() > time() - self::FRESH_POST_SECONDS;
+    }
+
     private static function nonceAttributes(string $html, string $from, string $to): string
     {
+        if (stripos($html, $from) === false) {
+            return $html;
+        }
+
         $pattern = '~(<(?:script|style)\\b[^>]*\\bnonce=")' . preg_quote($from, '~') . '(")~i';
         return preg_replace_callback(
             $pattern,

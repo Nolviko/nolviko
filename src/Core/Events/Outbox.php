@@ -43,6 +43,56 @@ final class Outbox
         ?string $dedupeKey = null,
         ?DateTimeImmutable $availableAt = null,
     ): bool {
+        $row = $this->eventRow($eventType, $aggregateType, $aggregateId, $payload, $dedupeKey, $availableAt);
+
+        // A nested transaction is a savepoint (DBAL 4), so a duplicate key leaves the caller's transaction
+        // usable on PostgreSQL too, where a failed statement otherwise aborts the whole transaction.
+        $this->connection->beginTransaction();
+
+        try {
+            $this->connection->insert('outbox_events', $row);
+        } catch (Throwable $exception) {
+            // Always close the savepoint, so the caller's own rollback reaches the real transaction.
+            $this->connection->rollBack();
+
+            if ($exception instanceof UniqueConstraintViolationException) {
+                return false;
+            }
+
+            throw $exception;
+        }
+
+        $this->connection->commit();
+
+        return true;
+    }
+
+    /**
+     * Records the event for a new aggregate inserted in the same transaction. A conflicting event must abort
+     * the write, so there is no savepoint and no swallowed duplicate.
+     *
+     * @param array<string, scalar|null|array<mixed>> $payload
+     */
+    public function recordNew(string $eventType, string $aggregateType, int $aggregateId, array $payload): void
+    {
+        $this->connection->insert(
+            'outbox_events',
+            $this->eventRow($eventType, $aggregateType, $aggregateId, $payload, null, null),
+        );
+    }
+
+    /**
+     * @param array<string, scalar|null|array<mixed>> $payload
+     * @return array<string, string|int>
+     */
+    private function eventRow(
+        string $eventType,
+        string $aggregateType,
+        int $aggregateId,
+        array $payload,
+        ?string $dedupeKey,
+        ?DateTimeImmutable $availableAt,
+    ): array {
         if (!$this->connection->isTransactionActive()) {
             throw new LogicException('outbox_requires_transaction');
         }
@@ -59,34 +109,15 @@ final class Outbox
 
         $now = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s.u');
 
-        // A nested transaction is a savepoint (DBAL 4), so a duplicate key leaves the caller's transaction
-        // usable on PostgreSQL too, where a failed statement otherwise aborts the whole transaction.
-        $this->connection->beginTransaction();
-
-        try {
-            $this->connection->insert('outbox_events', [
-                'event_type' => $eventType,
-                'aggregate_type' => $aggregateType,
-                'aggregate_id' => $aggregateId,
-                'payload' => $body,
-                'dedupe_key' => $dedupeKey ?? $eventType . ':' . $aggregateId,
-                'status' => self::PENDING,
-                'available_at' => $availableAt?->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s.u') ?? $now,
-                'created_at' => $now,
-            ]);
-        } catch (Throwable $exception) {
-            // Always close the savepoint, so the caller's own rollback reaches the real transaction.
-            $this->connection->rollBack();
-
-            if ($exception instanceof UniqueConstraintViolationException) {
-                return false;
-            }
-
-            throw $exception;
-        }
-
-        $this->connection->commit();
-
-        return true;
+        return [
+            'event_type' => $eventType,
+            'aggregate_type' => $aggregateType,
+            'aggregate_id' => $aggregateId,
+            'payload' => $body,
+            'dedupe_key' => $dedupeKey ?? $eventType . ':' . $aggregateId,
+            'status' => self::PENDING,
+            'available_at' => $availableAt?->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s.u') ?? $now,
+            'created_at' => $now,
+        ];
     }
 }

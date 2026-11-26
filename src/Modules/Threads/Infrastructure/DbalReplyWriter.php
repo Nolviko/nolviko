@@ -89,7 +89,7 @@ final class DbalReplyWriter implements ReplyWriter
             $reply->networkSeconds,
         );
         $thread = $connection->fetchAssociative(
-            'SELECT forum_id, status, is_locked FROM threads WHERE id = ? FOR UPDATE',
+            'SELECT forum_id, status, is_locked, slug, reply_count FROM threads WHERE id = ? FOR UPDATE',
             [$reply->threadId],
         );
 
@@ -133,7 +133,7 @@ final class DbalReplyWriter implements ReplyWriter
         }
 
         $connection->update('idempotency_keys', ['result_id' => $postId], ['id' => $keyId]);
-        $this->outbox->record(self::EVENT, 'post', $postId, [
+        $this->outbox->recordNew(self::EVENT, 'post', $postId, [
             'post_id' => $postId,
             'thread_id' => $reply->threadId,
             'forum_id' => $forumId,
@@ -141,7 +141,13 @@ final class DbalReplyWriter implements ReplyWriter
             'status' => $reply->status->value,
         ]);
 
-        return new CreatedReply($reply->threadId, $postId, $reply->status);
+        return new CreatedReply(
+            $reply->threadId,
+            $postId,
+            $reply->status,
+            visiblePosition: $reply->status === PostStatus::Visible ? (int) $thread['reply_count'] + 2 : null,
+            threadSlug: (string) $thread['slug'],
+        );
     }
 
     /**

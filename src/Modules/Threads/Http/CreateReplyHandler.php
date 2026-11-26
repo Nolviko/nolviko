@@ -19,6 +19,7 @@ use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Editor\Domain\MarkdownToBbcode;
 use Nolviko\Modules\Posts\Domain\PostRepository;
 use Nolviko\Modules\Posts\Domain\PostStatus;
+use Nolviko\Modules\Threads\Domain\CreatedReply;
 use Nolviko\Modules\Threads\Domain\CreateReply;
 use Nolviko\Modules\Threads\Domain\CreateThread;
 use Nolviko\Modules\Threads\Domain\DraftContext;
@@ -86,19 +87,25 @@ final class CreateReplyHandler implements RouteHandler
 
         $subject = $this->subjects->of($request);
         $threadId = (int) ($parameters['thread'] ?? 0);
+        $isPost = $request->isMethod('POST');
+        $input = $isPost ? $request->request->all() : [];
+        $preview = $isPost && ComposerPreview::requested($input);
+        $drafts = ($input['intent'] ?? '') === self::DRAFT ? $this->drafts : null;
+        $markdown = ($input['format'] ?? '') === MarkdownToBbcode::FORMAT;
+        $thread = null;
 
-        try {
-            $thread = $this->replies->authorize($subject, $threadId);
-        } catch (ThreadRuleViolation $violation) {
-            return $violation->diagnostic === 'thread_not_found'
-                ? $this->errors->notFound()
-                : $this->page(null, $violation, CreateReply::newToken(), '');
+        if (!$isPost || $preview || $drafts !== null || $markdown) {
+            try {
+                $thread = $this->replies->authorize($subject, $threadId);
+            } catch (ThreadRuleViolation $violation) {
+                return $this->authorizationFailure($violation);
+            }
         }
 
         $userId = (int) $subject->userId;
         $context = DraftContext::reply($threadId);
 
-        if (!$request->isMethod('POST')) {
+        if (!$isPost) {
             $draft = $this->drafts?->find($userId, $context);
             $quote = $this->quotes($threadId, $request->query->get('quote'));
 
@@ -114,30 +121,29 @@ final class CreateReplyHandler implements RouteHandler
                 );
         }
 
-        $input = $request->request->all();
         $token = is_string($input[self::TOKEN_FIELD] ?? null) ? $input[self::TOKEN_FIELD] : '';
         $content = is_string($input['content'] ?? null) ? $input['content'] : '';
 
         // Markdown chosen in the composer (2026-11-08) is stored as the equivalent BBCode.
-        if (($input['format'] ?? '') === MarkdownToBbcode::FORMAT) {
+        if ($markdown) {
             $content = MarkdownToBbcode::convert($content);
         }
 
-        if (ComposerPreview::requested($input)) {
-            $preview = ComposerPreview::html($this->translator, $content);
+        if ($preview) {
+            $previewHtml = ComposerPreview::html($this->translator, $content);
 
-            return $preview === null
+            return $previewHtml === null
                 ? $this->page($thread, new ThreadRuleViolation('post_content_invalid'), $token, $content)
-                : $this->page($thread, null, $token, $content, preview: $preview);
+                : $this->page($thread, null, $token, $content, preview: $previewHtml);
         }
 
         // M03.14: "Save draft" keeps the text for this thread and shows the form again; nothing is posted.
-        if ($this->drafts !== null && ($input['intent'] ?? '') === self::DRAFT) {
+        if ($drafts !== null) {
             if (mb_strlen($content) > Drafts::MAX_CONTENT || !mb_check_encoding($content, 'UTF-8')) {
                 return $this->page($thread, new ThreadRuleViolation('post_content_invalid'), $token, $content);
             }
 
-            $this->drafts->save($userId, $context, null, $content, $this->now());
+            $drafts->save($userId, $context, null, $content, $this->now());
 
             return $this->page($thread, null, $token, $content, 'threads.draft.saved');
         }
@@ -145,6 +151,12 @@ final class CreateReplyHandler implements RouteHandler
         try {
             $created = $this->replies->reply($subject, $threadId, $token, $content, $request->getClientIp());
         } catch (ThreadRuleViolation $violation) {
+            try {
+                $thread = $this->replies->authorize($subject, $threadId);
+            } catch (ThreadRuleViolation $denied) {
+                return $this->authorizationFailure($denied);
+            }
+
             // A rejected submit wrote nothing, so the same token stays valid; an invalid one is replaced.
             $retry = $violation->diagnostic === 'post_token_invalid' ? CreateReply::newToken() : $token;
 
@@ -153,9 +165,9 @@ final class CreateReplyHandler implements RouteHandler
 
         $this->drafts?->discard($userId, $context);
 
-        // The new reply (its permalink finds the right page), or the thread while the reply waits for approval.
+        // The new reply, or the thread while the reply waits for approval.
         $response = InstallerPage::redirect($created->status === PostStatus::Visible
-            ? $this->postLocation($created->postId)
+            ? $this->postLocation($created)
             : $this->urls->generate(CoreRoutes::THREAD_ID, ['thread' => (string) $threadId]));
         // Tells draft-keeper.js that this form's text was posted, so its browser copy is dropped (beta.10). The
         // value is the form's one-time idempotency token, not a secret.
@@ -172,6 +184,13 @@ final class CreateReplyHandler implements RouteHandler
         ));
 
         return $response;
+    }
+
+    private function authorizationFailure(ThreadRuleViolation $violation): Response
+    {
+        return $violation->diagnostic === 'thread_not_found'
+            ? $this->errors->notFound()
+            : $this->page(null, $violation, CreateReply::newToken(), '');
     }
 
     /**
@@ -218,11 +237,30 @@ final class CreateReplyHandler implements RouteHandler
      * longer makes a second full request through the permalink. Falls back to the permalink when a lookup is not
      * available.
      */
-    private function postLocation(int $postId): string
+    private function postLocation(CreatedReply $created): string
     {
+        $threadId = $created->threadId;
+        $postId = $created->postId;
+
+        if ($created->visiblePosition !== null && $created->threadSlug !== null) {
+            $page = ThreadPageHandler::pageCount($created->visiblePosition, $this->perPage);
+
+            return ThreadPageHandler::url($this->urls, $threadId, $page, $created->threadSlug) . '#post-' . $postId;
+        }
+
+        $thread = $this->threads?->find($threadId);
+
+        if ($thread !== null && $thread->lastPostId === $postId) {
+            $page = ThreadPageHandler::pageCount(ThreadPageHandler::visibleTotal($thread), $this->perPage);
+
+            return ThreadPageHandler::url($this->urls, $thread->id, $page, $thread->slug) . '#post-' . $postId;
+        }
+
         $permalink = $this->urls->generate(CoreRoutes::POST_SHOW, ['post' => (string) $postId]);
         $post = $this->posts?->find($postId);
-        $thread = $post === null ? null : $this->threads?->find($post->threadId);
+        if ($post !== null && $post->threadId !== $threadId) {
+            $thread = $this->threads?->find($post->threadId);
+        }
 
         if ($post === null || $thread === null) {
             return $permalink;

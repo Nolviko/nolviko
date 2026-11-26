@@ -64,6 +64,12 @@ final class VisitorTasks
                 return;
             }
 
+            // Most requests arrive before the next tick is due. The locked check below still decides who runs it.
+            $lastRun = self::lastRun($storage);
+            if ($lastRun !== null && $lastRun > time() - self::INTERVAL_SECONDS) {
+                return;
+            }
+
             $lock = fopen($directory . '/tick', 'c+b');
 
             if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {

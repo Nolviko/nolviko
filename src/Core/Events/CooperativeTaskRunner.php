@@ -25,6 +25,7 @@ final class CooperativeTaskRunner
         private readonly array $handlers,
         private readonly Closure $allowed,
         private readonly array $bulk = [],
+        private readonly bool $localBulk = false,
     ) {
     }
 
@@ -40,51 +41,74 @@ final class CooperativeTaskRunner
 
         $deadline = hrtime(true) + $milliseconds * 1000000;
         $result = ['completed' => 0, 'progress' => 0, 'failed' => 0];
+        $types = array_keys($this->handlers);
+        $bulk = array_values(array_intersect($types, $this->bulk));
+        $urgent = array_values(array_diff($types, $bulk));
 
         for ($step = 0; $step < $limit && hrtime(true) < $deadline; ++$step) {
-            if (($this->allowed)() !== true) {
+            if (($this->allowed)() !== true || ($step === 0 && !$this->queue->hasDue($types))) {
                 break;
             }
 
-            $types = array_keys($this->handlers);
-            $bulk = array_values(array_intersect($types, $this->bulk));
-            $urgent = array_values(array_diff($types, $bulk));
-            $lease = ($urgent === [] ? null : $this->queue->claim($urgent))
-                ?? ($bulk === [] ? null : $this->queue->claim($bulk));
+            $lease = $urgent === [] || ($bulk !== [] && !$this->queue->hasDue($urgent))
+                ? null : $this->queue->claim($urgent);
+
+            if ($lease === null && $bulk !== []) {
+                $status = null;
+                $lease = $this->queue->claim($bulk, $this->localBulk ? function (OutboxLease $local) use (
+                    &$status,
+                    $deadline,
+                ): void {
+                    $status = $this->finish($local, $deadline);
+                } : null);
+                if ($status !== null) {
+                    ++$result[$status];
+                    continue;
+                }
+            }
 
             if ($lease === null) {
                 break;
             }
 
-            $guard = function () use ($lease, $deadline): void {
-                if (hrtime(true) >= $deadline || ($this->allowed)() !== true) {
-                    throw new RuntimeException('outbox_budget_or_maintenance');
-                }
-
-                $this->queue->guard($lease);
-            };
-
-            try {
-                $finished = $this->connection->transactional(function () use ($lease, $guard): bool {
-                    $guard();
-                    $complete = ($this->handlers[$lease->type])($lease, $guard);
-                    $guard();
-
-                    if ($complete === false) {
-                        $this->queue->defer($lease);
-                    } else {
-                        $this->queue->complete($lease);
-                    }
-
-                    return $complete !== false;
-                });
-                ++$result[$finished ? 'completed' : 'progress'];
-            } catch (Throwable) {
-                $this->queue->retry($lease);
-                ++$result['failed'];
-            }
+            ++$result[$this->finish($lease, $deadline)];
         }
 
         return $result;
+    }
+
+    /** @return 'completed'|'progress'|'failed' */
+    private function finish(OutboxLease $lease, int $deadline): string
+    {
+        $guard = function () use ($lease, $deadline): void {
+            if (hrtime(true) >= $deadline || ($this->allowed)() !== true) {
+                throw new RuntimeException('outbox_budget_or_maintenance');
+            }
+
+            $this->queue->guard($lease);
+        };
+
+        try {
+            // Local claims use a savepoint, so a failed handler can roll back before the lease's retry is committed.
+            $finished = $this->connection->transactional(function () use ($lease, $guard): bool {
+                $guard();
+                $complete = ($this->handlers[$lease->type])($lease, $guard);
+                $guard();
+
+                if ($complete === false) {
+                    $this->queue->defer($lease);
+                } else {
+                    $this->queue->complete($lease);
+                }
+
+                return $complete !== false;
+            });
+
+            return $finished ? 'completed' : 'progress';
+        } catch (Throwable) {
+            $this->queue->retry($lease);
+
+            return 'failed';
+        }
     }
 }

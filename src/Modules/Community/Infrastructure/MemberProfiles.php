@@ -150,16 +150,16 @@ final class MemberProfiles
 
     public function contactAllowed(int $sender, int $recipient): bool
     {
-        if ($sender === $recipient || $this->access->blocked($sender, $recipient)) {
+        if ($sender === $recipient) {
             return false;
         }
 
-        $row = $this->db->fetchAssociative(
-            "SELECT u.id, COALESCE(p.allow_messages, 1) AS allowed FROM users u "
-                . "LEFT JOIN member_profiles p ON p.user_id = u.id WHERE u.id = ? AND u.status = 'active'",
-            [$recipient],
-        );
-
-        return $row !== false && (int) $row['allowed'] === 1;
+        return $this->db->fetchOne(
+            "SELECT 1 FROM users u LEFT JOIN member_profiles p ON p.user_id = u.id WHERE u.id = ? "
+                . "AND u.status = 'active' AND COALESCE(p.allow_messages, 1) = 1 "
+                . 'AND NOT EXISTS (SELECT 1 FROM member_blocks b WHERE (b.user_id = ? AND b.target_id = u.id) '
+                . 'OR (b.user_id = u.id AND b.target_id = ?))',
+            [$recipient, $sender, $sender],
+        ) !== false;
     }
 }

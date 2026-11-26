@@ -19,6 +19,7 @@ use Nolviko\Core\Extensions\ExtensionBootstrap;
 use Nolviko\Core\Extensions\ExtensionRegistry;
 use Nolviko\Core\Locale\TranslatorFactory;
 use Nolviko\Core\Mail\MailComposer;
+use Nolviko\Core\Mail\Mailer;
 use Nolviko\Core\Mail\StoredMailSettings;
 use Nolviko\Core\Mail\SymfonyMailer;
 use Nolviko\Core\Mail\TransportFactory;
@@ -150,24 +151,33 @@ final class TaskRuntime
         $profiles = new MemberProfiles($db, $access);
         $interactions = new CommunityInteractions($db, $access, $profiles);
         $notifications = new CommunityNotifications($db, $access, $interactions);
-        // Same precedence as the request mailer (ADR-034 amendment 2026-11-21): panel SMTP unless local.php sets it.
-        try {
-            $stored = array_map('strval', $db->fetchAllKeyValue(
-                "SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'mail.%'",
-            ));
-        } catch (Throwable) {
-            $stored = [];
-        }
-        $mailSettings = StoredMailSettings::resolve($config, $stored);
-        $mailer = new SymfonyMailer(TransportFactory::create($mailSettings, 2), $mailSettings, new NullLogger());
+        // Resolve stored mail settings only when the current tick actually sends mail.
+        $mailer = static function () use ($db, $config): Mailer {
+            static $resolved = null;
+            if ($resolved !== null) {
+                return $resolved;
+            }
+
+            try {
+                $stored = array_map('strval', $db->fetchAllKeyValue(
+                    "SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'mail.%'",
+                ));
+            } catch (Throwable) {
+                $stored = [];
+            }
+
+            $settings = StoredMailSettings::resolve($config, $stored);
+
+            return $resolved = new SymfonyMailer(TransportFactory::create($settings, 2), $settings, new NullLogger());
+        };
         $router = RouterFactory::create($root, $storage);
-        $mail = new CommunityMail(
+        $mail = static fn(OutboxLease $lease, Closure $guard): bool => (new CommunityMail(
             $db,
-            $mailer,
+            $mailer(),
             $config->appUrl ?? '',
             $router,
-            new CommunityMailTemplate($root, $storage)
-        );
+            new CommunityMailTemplate($root, $storage),
+        ))->deliver($lease, $guard);
         $media = new PrivateMedia($db, $access, $profiles, new ImageProcessor(), $storage, $public);
         $optionalSchema = $db->fetchFirstColumn("SELECT id FROM migration_history WHERE id IN "
             . "('0042_import_jobs', '0043_seo_sitemaps', '0047_media_gallery', '0049_webhooks', '0070_membership') "
@@ -185,7 +195,7 @@ final class TaskRuntime
                 $visibility,
                 $permissions->guest(...),
                 new SiteUrl($config->appUrl),
-                RouterFactory::create($root, $storage)
+                $router,
             );
         }
 
@@ -193,7 +203,7 @@ final class TaskRuntime
             'thread.created' => $notifications->fanout(...), 'post.created' => $notifications->fanout(...),
             'post.approved' => $notifications->fanout(...), 'thread.approved'
                 => $notifications->fanout(...),
-            'community.mail' => $mail->deliver(...)];
+            'community.mail' => $mail];
         $handlers[ResetMailQueue::EVENT] = static function (OutboxLease $lease) use (
             $db,
             $config,
@@ -207,15 +217,30 @@ final class TaskRuntime
             $composer = new MailComposer(TwigFactory::create($root, $storage, $translator), $translator);
             return (new ResetMailQueue($db, $config->appSecret))->deliver(
                 $lease,
-                new TemplatedAccountMail($mailer, $composer, $router, $config->appUrl)
+                new TemplatedAccountMail($mailer(), $composer, $router, $config->appUrl)
             );
         };
         if ($sitemaps !== null) {
             $handlers['seo.sitemap_requested'] = $sitemaps->build(...);
         }
 
+        $indexNowEnabled = $config->appUrl !== null && $config->appUrl !== '';
+        $webhooksEnabled = in_array('0049_webhooks', $optionalSchema, true);
+        try {
+            if ($indexNowEnabled) {
+                $indexNowEnabled = $db->fetchOne(
+                    "SELECT setting_value FROM settings WHERE setting_key = 'seo.indexnow'",
+                ) === 'on';
+            }
+            if ($webhooksEnabled) {
+                $webhooksEnabled = $db->fetchOne('SELECT 1 FROM webhooks WHERE active = 1 LIMIT 1') !== false;
+            }
+        } catch (Throwable) {
+            // Keep the existing external handler path if configuration cannot be determined.
+        }
+
         // IndexNow (2026-11-08): new public threads, when the administrator turned it on.
-        if ($config->appUrl !== null && $config->appUrl !== '') {
+        if ($indexNowEnabled) {
             $catalog = PermissionCatalog::core(true);
             $resolver = new PermissionResolver(
                 $catalog,
@@ -247,7 +272,7 @@ final class TaskRuntime
         }
 
         // Webhooks (2026-11-08): after the member notices of a new thread or reply are complete, once per event.
-        if (in_array('0049_webhooks', $optionalSchema, true)) {
+        if ($webhooksEnabled) {
             $catalog = PermissionCatalog::core(true);
             $guest = (new PermissionResolver(
                 $catalog,
@@ -288,12 +313,15 @@ final class TaskRuntime
 
         // Member notices (and the webhooks and IndexNow pings riding on them) can pile up after busy hours or an
         // import; the sitemap, password-reset mail, account deletion and exports must not wait behind them.
+        $bulk = ['thread.created', 'post.created', 'post.approved', 'thread.approved'];
         $result = (new CooperativeTaskRunner(
             $db,
             new OutboxQueue($db),
             $handlers,
             $allowed,
-            ['thread.created', 'post.created', 'post.approved', 'thread.approved'],
+            $bulk,
+            localBulk: !$indexNowEnabled && !$webhooksEnabled
+                && array_intersect($bulk, array_keys($extensionHandlers)) === [],
         ))->run($limit, $milliseconds);
         $exports->garbageCollect();
         (new OutboxQueue($db))->prune();

@@ -23,6 +23,7 @@ final class Thread
         public readonly ?int $firstPostId,
         public readonly ?int $lastPostId,
         public readonly ?int $movedToThreadId = null,
+        public readonly ?int $lastReadPostId = null,
     ) {
     }
 }

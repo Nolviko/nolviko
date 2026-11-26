@@ -88,22 +88,32 @@ final class RateBuckets
         }
     }
 
+    /** Accept an existing bucket in one autocommit statement. New or throttled buckets use the usual path. */
+    public function hitStandalone(string $key, int $seconds, DateTimeImmutable $now): int
+    {
+        if ($this->connection->isTransactionActive()) {
+            throw new RuntimeException('rate_bucket_prepare_in_transaction');
+        }
+
+        if ($this->tryHit($key, $seconds, $now)) {
+            if (random_int(1, self::PRUNE_ONE_IN) === 1) {
+                $this->prune($now);
+            }
+
+            return 0;
+        }
+
+        $this->ensure($key, $now);
+
+        return $this->hit($key, $seconds, $now);
+    }
+
     /**
      * @return int 0 when the hit was accepted (and recorded), otherwise the seconds still to wait.
      */
     public function hit(string $key, int $seconds, DateTimeImmutable $now): int
     {
-        $updated = $this->connection->executeStatement(
-            'UPDATE rate_limit_buckets SET last_hit_at = ?, expires_at = ? WHERE bucket_key = ? AND last_hit_at <= ?',
-            [
-                self::stamp($now),
-                self::stamp($now->modify('+' . $seconds . ' seconds')),
-                $key,
-                self::stamp($now->modify('-' . $seconds . ' seconds')),
-            ],
-        );
-
-        if ($updated === 1) {
+        if ($this->tryHit($key, $seconds, $now)) {
             return 0;
         }
 
@@ -118,6 +128,19 @@ final class RateBuckets
         $lastHit = new DateTimeImmutable((string) $last, new DateTimeZone('UTC'));
 
         return max(1, $lastHit->getTimestamp() + $seconds - $now->getTimestamp());
+    }
+
+    private function tryHit(string $key, int $seconds, DateTimeImmutable $now): bool
+    {
+        return $this->connection->executeStatement(
+            'UPDATE rate_limit_buckets SET last_hit_at = ?, expires_at = ? WHERE bucket_key = ? AND last_hit_at <= ?',
+            [
+                self::stamp($now),
+                self::stamp($now->modify('+' . $seconds . ' seconds')),
+                $key,
+                self::stamp($now->modify('-' . $seconds . ' seconds')),
+            ],
+        ) === 1;
     }
 
     /**

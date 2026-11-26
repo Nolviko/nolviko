@@ -373,11 +373,7 @@ final class ConversationsHandler implements RouteHandler
         }
 
         unset($message);
-        $holding = $this->folders?->holding($actor, $id) ?? [];
-        $context['folders'] = array_map(
-            static fn(array $folder): array => $folder + ['filed' => in_array($folder['id'], $holding, true)],
-            $this->folders?->all($actor) ?? [],
-        );
+        $context['folders'] = $this->folders?->forConversation($actor, $id) ?? [];
         $context['conversation'] = $conversation;
 
         if ($conversation['import_job_id'] !== null && $this->importedFiles !== null) {

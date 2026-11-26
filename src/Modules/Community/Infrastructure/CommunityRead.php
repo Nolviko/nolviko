@@ -103,29 +103,30 @@ final class CommunityRead
         }
 
         [$where, $params, $types] = $this->access->scope($subject, 't.forum_id');
-        $posts = $this->db->fetchAllAssociative('SELECT p.id, p.user_id, t.forum_id, u.username, '
-            . "COALESCE(profile.visibility, 'everyone') AS visibility, "
-            . "COALESCE(profile.imported_signature, profile.signature, '') AS signature "
-            . 'FROM posts p INNER JOIN threads t ON t.id = p.thread_id LEFT JOIN users u ON u.id = p.user_id '
-            . 'LEFT JOIN member_profiles profile ON profile.user_id = p.user_id WHERE p.id IN (?) '
-            . "AND p.status = 'visible' AND t.status = 'visible' AND p.deleted_at IS NULL AND t.deleted_at IS NULL "
-            . 'AND ' . $where, [$ids, ...$params], [ArrayParameterType::INTEGER, ...$types]);
+        $actor = $subject->userId;
+        $blocks = $actor === null ? '0' : '(EXISTS (SELECT 1 FROM member_blocks sent '
+            . 'WHERE sent.user_id = ? AND sent.target_id = p.user_id) '
+            . 'OR EXISTS (SELECT 1 FROM member_blocks received '
+            . 'WHERE received.user_id = p.user_id AND received.target_id = ?))';
+        $blockParams = $actor === null ? [] : [$actor, $actor];
+        $blockTypes = $actor === null ? [] : [ParameterType::INTEGER, ParameterType::INTEGER];
+        $posts = $this->db->fetchAllAssociative(
+            'SELECT p.id, p.user_id, t.forum_id, ' . $blocks . ' AS blocked, '
+                . "COALESCE(profile.visibility, 'everyone') AS visibility, "
+                . "COALESCE(profile.imported_signature, profile.signature, '') AS signature "
+                . 'FROM posts p INNER JOIN threads t ON t.id = p.thread_id '
+                . 'LEFT JOIN member_profiles profile ON profile.user_id = p.user_id WHERE p.id IN (?) '
+                . "AND p.status = 'visible' AND t.status = 'visible' "
+                . 'AND p.deleted_at IS NULL AND t.deleted_at IS NULL AND ' . $where,
+            [...$blockParams, $ids, ...$params],
+            [...$blockTypes, ArrayParameterType::INTEGER, ...$types],
+        );
         $result = [];
         $users = array_values(array_unique(array_filter(array_map(intval(...), array_column($posts, 'user_id')))));
-        $blocked = [];
-
-        if ($subject->userId !== null && $users !== []) {
-            $blocked = array_map(intval(...), $this->db->fetchFirstColumn(
-                'SELECT CASE WHEN user_id = ? THEN target_id ELSE user_id END AS id FROM member_blocks '
-                    . 'WHERE (user_id = ? AND target_id IN (?)) OR (target_id = ? AND user_id IN (?))',
-                [$subject->userId, $subject->userId, $users, $subject->userId, $users],
-                [ParameterType::INTEGER, ParameterType::INTEGER, ArrayParameterType::INTEGER,
-                    ParameterType::INTEGER, ArrayParameterType::INTEGER],
-            ));
-        }
+        $mayViewProfile = $subject->allows('user.profile.view');
 
         foreach ($posts as $post) {
-            $visible = $subject->allows('user.profile.view') && !in_array((int) $post['user_id'], $blocked, true)
+            $visible = $mayViewProfile && (int) $post['blocked'] === 0
                 && ((int) $post['user_id'] === $subject->userId || $post['visibility'] === 'everyone'
                     || ($post['visibility'] === 'members' && $subject->userId !== null));
             $result[(int) $post['id']] = ['profile_id' => $visible ? $post['user_id'] : null,

@@ -56,6 +56,11 @@ final class BbcodeRenderer
     public function render(string $source): string
     {
         $addons = $this->addons();
+
+        if (!str_contains($source, '[')) {
+            return $this->text(str_replace(["\r\n", "\r"], "\n", $source), autolink: true);
+        }
+
         $parser = $addons === null || $addons->tags === [] ? $this->parser
             : $this->customParser ??= new BbcodeParser($addons->tags);
 

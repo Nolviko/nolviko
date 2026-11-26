@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Membership\Infrastructure;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Connection;
@@ -380,8 +381,10 @@ final class GroupMembership
      * Background step: sends the next MAIL_BATCH messages of the oldest unfinished job to active members of the
      * group who did not turn group mail off. A failed send is skipped (the cursor still moves) so one bad address
      * never blocks the job.
+     *
+     * @param Mailer|(Closure(): Mailer) $mailer
      */
-    public function sendMailBatch(Mailer $mailer): int
+    public function sendMailBatch(Mailer|Closure $mailer): int
     {
         $job = $this->db->fetchAssociative("SELECT id, usergroup_id, subject, body, cursor_user_id FROM "
             . "group_mail_jobs WHERE status IN ('queued', 'sending') ORDER BY id LIMIT 1");
@@ -394,6 +397,10 @@ final class GroupMembership
             . 'INNER JOIN users u ON u.id = m.user_id LEFT JOIN member_options o ON o.user_id = u.id '
             . "WHERE m.usergroup_id = ? AND u.id > ? AND u.status = 'active' AND COALESCE(o.group_mail, 1) = 1 "
             . 'ORDER BY u.id LIMIT ' . self::MAIL_BATCH, [(int) $job['usergroup_id'], (int) $job['cursor_user_id']]);
+        if ($recipients !== [] && $mailer instanceof Closure) {
+            $mailer = $mailer();
+        }
+
         $html = nl2br(htmlspecialchars((string) $job['body'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
         $sent = 0;
 

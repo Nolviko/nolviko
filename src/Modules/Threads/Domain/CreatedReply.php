@@ -17,6 +17,8 @@ final class CreatedReply
         public readonly int $postId,
         public readonly PostStatus $status,
         public readonly bool $repeated = false,
+        public readonly ?int $visiblePosition = null,
+        public readonly ?string $threadSlug = null,
     ) {
     }
 }

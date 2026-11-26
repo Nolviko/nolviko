@@ -81,7 +81,7 @@ final class PermissionRuleStoreTest extends TestCase
         self::assertTrue($admin->allows('moderation.user.ban'));
     }
 
-    public function testQueryBudgetIsFourForAUserAndTwoForAGuestHoweverManyChecks(): void
+    public function testQueryBudgetIsThreeForAUserAndTwoForAGuestHoweverManyChecks(): void
     {
         $counter = new QueryCounter();
         $connection = self::connect([$counter]);
@@ -104,8 +104,8 @@ final class PermissionRuleStoreTest extends TestCase
         $afterUser = $counter->count;
         $resolver->guest()->forumsAllowing('forum.view');
 
-        self::assertSame(4, $afterUser, '50 forums x ' . count($catalog) . ' keys');
-        self::assertSame(6, $counter->count, 'a guest adds two');
+        self::assertSame(3, $afterUser, '50 forums x ' . count($catalog) . ' keys');
+        self::assertSame(5, $counter->count, 'a guest adds two');
         fwrite(STDERR, sprintf("permission_queries user=%d guest=%d\n", $afterUser, $counter->count - $afterUser));
     }
 

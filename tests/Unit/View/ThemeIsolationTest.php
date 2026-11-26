@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Tests\Unit\View;
 
+use DateTimeImmutable;
 use Nolviko\Core\Cache\CacheFactory;
 use Nolviko\Core\Http\CspNonce;
 use Nolviko\Core\Locale\TranslatorFactory;
@@ -12,6 +13,7 @@ use Nolviko\Core\View\TemplateException;
 use Nolviko\Core\View\ThemeSlots;
 use Nolviko\Core\View\TwigFactory;
 use Nolviko\Core\View\TwigRenderer;
+use Nolviko\Modules\Threads\Http\PostView;
 use Nolviko\Tests\Support\TemporaryDirectory;
 use Nolviko\Tests\Support\TrackingCache;
 use PHPUnit\Framework\TestCase;
@@ -94,6 +96,29 @@ final class ThemeIsolationTest extends TestCase
         $this->renderer('three', ['user' => 2])->fragment('components/post.twig', ['post' => 'Visible post']);
         self::assertSame(1, $this->cache->hits);
         self::assertSame(2, $this->cache->writes);
+    }
+
+    public function testFreshPostsRenderWithoutWritingAFragmentCacheFile(): void
+    {
+        $this->files->write('app/views/components/post.twig', '<p>{{ post.authorName }}</p>');
+        $fresh = new PostView(1, 'Author', new DateTimeImmutable('now'), null, new SafeHtml('Post'), null, '/posts/1');
+        $older = new PostView(
+            1,
+            'Author',
+            new DateTimeImmutable('-1 minute'),
+            null,
+            new SafeHtml('Post'),
+            null,
+            '/posts/1',
+        );
+        $first = $this->renderer('one', ['user' => 1]);
+        self::assertSame('<p>Author</p>', $first->fragment('components/post.twig', ['post' => $fresh])->html);
+        self::assertSame(0, $this->cache->writes);
+
+        $first->fragment('components/post.twig', ['post' => $older]);
+        self::assertSame(1, $this->cache->writes);
+        $this->renderer('two', ['user' => 1])->fragment('components/post.twig', ['post' => $older]);
+        self::assertSame(1, $this->cache->hits);
     }
 
     public function testFormsSecretsPreviewsAndMutationRequestsBypassCache(): void

@@ -59,6 +59,15 @@ final class ConversationBoxTest extends TestCase
         [$alice, $bob, $carol] = [$this->user('alice'), $this->user('bob'), $this->user('carol')];
         $id = $this->service->start($alice, 'bob, carol', 'Group', 'hello all');
 
+        self::assertSame(0, $this->service->unreadCount($alice));
+        self::assertSame(1, $this->service->unreadCount($bob));
+        self::assertSame(1, $this->service->unreadCount($carol));
+        $newMessage = $this->db->fetchOne('SELECT id FROM private_messages WHERE conversation_id = ?', [$id]);
+        self::assertSame((int) $newMessage, (int) $this->db->fetchOne(
+            'SELECT last_read_message_id FROM private_conversation_members WHERE conversation_id = ? AND user_id = ?',
+            [$id, $alice],
+        ));
+
         foreach ([$alice, $bob, $carol] as $member) {
             $names = array_column($this->service->show($member, $id, null)['participants'], 'name');
             sort($names);
@@ -136,6 +145,7 @@ final class ConversationBoxTest extends TestCase
         $id = $this->service->start($alice, 'bob', 'Filed', 'x');
         $work = $folders->create($alice, 'Work');
         $later = $folders->create($alice, 'Later');
+        $unfiled = $folders->create($alice, 'Unfiled');
         $folders->file($alice, $work, $id);
         $folders->file($alice, $later, $id);
         $folders->file($alice, $later, $id);
@@ -143,6 +153,12 @@ final class ConversationBoxTest extends TestCase
         self::assertCount(1, $this->service->inbox($alice, null, $work));
         self::assertCount(1, $this->service->inbox($alice, null, $later));
         self::assertSame([], $this->service->inbox($bob, null, $work));
+        self::assertSame([
+            ['id' => $later, 'name' => 'Later', 'filed' => true],
+            ['id' => $unfiled, 'name' => 'Unfiled', 'filed' => false],
+            ['id' => $work, 'name' => 'Work', 'filed' => true],
+        ], $folders->forConversation($alice, $id));
+        self::assertSame([], $folders->forConversation($bob, $id));
         self::assertSame($work, $folders->ensure($alice, 'Work', 'smf:folder:1'));
 
         foreach ([fn() => $folders->file($bob, $work, $id), fn() => $folders->create($alice, 'work ')] as $bad) {

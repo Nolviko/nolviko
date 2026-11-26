@@ -78,10 +78,6 @@ final class DbalThreadWriter implements ThreadWriter
                 ['id' => $threadId],
             );
 
-            if ($thread->postStatus === PostStatus::Visible) {
-                self::countVisible($connection, $thread->forumId, $postId, $at);
-            }
-
             $this->outbox->record(self::EVENT, 'thread', $threadId, [
                 'thread_id' => $threadId,
                 'post_id' => $postId,
@@ -89,6 +85,11 @@ final class DbalThreadWriter implements ThreadWriter
                 'user_id' => $thread->userId,
                 'status' => $thread->threadStatus->value,
             ]);
+
+            // Acquire the shared forum statistics lock immediately before committing.
+            if ($thread->postStatus === PostStatus::Visible) {
+                self::countVisible($connection, $thread->forumId, $postId, $at);
+            }
 
             return new CreatedThread($threadId, $postId, $thread->slug, $thread->threadStatus);
         });

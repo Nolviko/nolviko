@@ -42,6 +42,7 @@ use Nolviko\Modules\Threads\Domain\CreateThread;
 use Nolviko\Modules\Threads\Domain\NewReply;
 use Nolviko\Modules\Threads\Domain\ThreadRuleViolation;
 use Nolviko\Modules\Threads\Http\CreateReplyHandler;
+use Nolviko\Modules\Threads\Http\ThreadPageHandler;
 use Nolviko\Modules\Threads\Infrastructure\DbalReplyWriter;
 use Nolviko\Modules\Threads\Infrastructure\DbalThreadRepository;
 use Nolviko\Modules\Threads\Infrastructure\DbalThreadWriter;
@@ -342,6 +343,13 @@ final class CreateReplyTest extends TestCase
             $second->getStatusCode(),
         ]);
         self::assertSame(2, $this->postCount());
+        $slug = $this->connection->fetchOne('SELECT slug FROM threads WHERE id = ?', [$this->thread]);
+        $post = $this->connection->fetchOne('SELECT last_post_id FROM threads WHERE id = ?', [$this->thread]);
+        self::assertSame(
+            '/threads/' . $slug . '-' . $this->thread . '#post-' . $post,
+            $first->headers->get('Location'),
+        );
+        self::assertSame($first->headers->get('Location'), $second->headers->get('Location'));
         self::assertSame(
             '/login?return=%2Fthreads%2F1%2Freply',
             $guest->headers->get('Location'),
@@ -350,6 +358,25 @@ final class CreateReplyTest extends TestCase
         self::assertSame(Response::HTTP_FORBIDDEN, $locked->getStatusCode());
         self::assertStringContainsString('This thread is locked.', (string) $locked->getContent());
         self::assertStringNotContainsString('<textarea', (string) $locked->getContent());
+    }
+
+    public function testReplyLocationFollowsThePageBoundaryAndAnEarlierToken(): void
+    {
+        (new DbalUsergroupRepository($this->connection))->addMember($this->alice, BuiltInGroup::Registered->value);
+        $this->rules->setGroupRule(BuiltInGroup::Registered->value, 'forum.post.flood_interval_seconds', 0);
+        $session = new ArraySession();
+        $session->set('_user_id', $this->alice);
+        $handler = $this->handler($session, quotes: true, perPage: 2);
+        $parameters = ['thread' => (string) $this->thread];
+        $first = $this->request('POST', ['token' => CreateReply::newToken(), 'content' => 'First reply']);
+        $next = $this->request('POST', ['token' => CreateReply::newToken(), 'content' => 'Second reply']);
+        $onFirstPage = $handler->handle($first, $parameters)->headers->get('Location');
+        $onSecondPage = $handler->handle($next, $parameters)->headers->get('Location');
+
+        self::assertMatchesRegularExpression('~^/threads/[^/]+#post-\d+$~', (string) $onFirstPage);
+        self::assertMatchesRegularExpression('~^/threads/[^/]+/page-2#post-\d+$~', (string) $onSecondPage);
+        self::assertSame($onFirstPage, $handler->handle($first, $parameters)->headers->get('Location'));
+        self::assertSame(3, $this->postCount());
     }
 
     public function testQuoteLinkPrefillsOnlyVisiblePostsOfThisThread(): void
@@ -663,8 +690,11 @@ final class CreateReplyTest extends TestCase
         );
     }
 
-    private function handler(ArraySession $session, bool $quotes = false): CreateReplyHandler
-    {
+    private function handler(
+        ArraySession $session,
+        bool $quotes = false,
+        int $perPage = ThreadPageHandler::DEFAULT_PER_PAGE,
+    ): CreateReplyHandler {
         $app = dirname(__DIR__, 2);
         $translator = TranslatorFactory::create($app . '/translations', 'en');
         $csrf = new CsrfTokens($session);
@@ -683,6 +713,8 @@ final class CreateReplyTest extends TestCase
             new ErrorResponder($translator),
             posts: $quotes ? new DbalPostRepository($this->connection) : null,
             users: $quotes ? new DbalUserRepository($this->connection) : null,
+            threads: new DbalThreadRepository($this->connection),
+            perPage: $perPage,
         );
     }
 

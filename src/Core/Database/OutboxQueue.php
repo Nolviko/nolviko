@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Core\Database;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\ArrayParameterType;
@@ -21,8 +22,38 @@ final class OutboxQueue
     {
     }
 
-    /** @param list<string> $types Explicit registered handlers only; unknown work is left untouched. */
-    public function claim(array $types): ?OutboxLease
+    /**
+     * Queues with no work for these handlers need no claiming transaction.
+     *
+     * @param list<string> $types
+     */
+    public function hasDue(array $types): bool
+    {
+        if ($this->connection->isTransactionActive()) {
+            throw new RuntimeException('outbox_claim_transaction_active');
+        }
+
+        if ($types === []) {
+            return false;
+        }
+
+        $clock = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform
+            ? "(statement_timestamp() AT TIME ZONE 'UTC')" : 'CURRENT_TIMESTAMP(6)';
+
+        return (int) $this->connection->fetchOne(
+            "SELECT CASE WHEN EXISTS (SELECT 1 FROM outbox_events WHERE status = 'pending' AND event_type IN (?) "
+                . 'AND available_at <= ' . $clock . ") OR EXISTS (SELECT 1 FROM outbox_events WHERE status = 'running' "
+                . 'AND event_type IN (?) AND lease_expires_at <= ' . $clock . ') THEN 1 ELSE 0 END',
+            [$types, $types],
+            [ArrayParameterType::STRING, ArrayParameterType::STRING],
+        ) === 1;
+    }
+
+    /**
+     * @param list<string> $types Explicit registered handlers only; unknown work is left untouched.
+     * @param (Closure(OutboxLease): void)|null $localWork Database-only work to commit with the claim.
+     */
+    public function claim(array $types, ?Closure $localWork = null): ?OutboxLease
     {
         if ($this->connection->isTransactionActive()) {
             throw new RuntimeException('outbox_claim_transaction_active');
@@ -32,7 +63,7 @@ final class OutboxQueue
             return null;
         }
 
-        return $this->connection->transactional(function (Connection $db) use ($types): ?OutboxLease {
+        return $this->connection->transactional(function (Connection $db) use ($types, $localWork): ?OutboxLease {
             $now = $this->now();
             $stamp = $now->format('Y-m-d H:i:s.u');
             $slots = implode(', ', array_fill(0, count($types), '?'));
@@ -79,7 +110,7 @@ final class OutboxQueue
                 [$token, $now->modify('+120 seconds')->format('Y-m-d H:i:s.u'), $revision, $row['id']],
             );
 
-            return new OutboxLease(
+            $lease = new OutboxLease(
                 (int) $row['id'],
                 $row['event_type'],
                 (int) $row['aggregate_id'],
@@ -88,6 +119,11 @@ final class OutboxQueue
                 $revision,
                 (int) $row['attempts'] + 1
             );
+            if ($localWork !== null) {
+                $localWork($lease);
+            }
+
+            return $lease;
         });
     }
 

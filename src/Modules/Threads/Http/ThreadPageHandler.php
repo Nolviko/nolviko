@@ -78,7 +78,7 @@ final class ThreadPageHandler implements RouteHandler
         $threadId = (int) ($parameters['thread'] ?? 0);
         $page = (int) ($parameters['page'] ?? 1);
         $subject = $this->subjects->of($request);
-        $thread = $this->threads->find($threadId);
+        $thread = $this->threads->find($threadId, $this->reads === null ? null : $subject->userId);
 
         $readable = $this->visibility->readable($subject);
 
@@ -212,7 +212,9 @@ final class ThreadPageHandler implements RouteHandler
                 $newest = $item->post->createdAt > $newest->createdAt ? $item->post : $newest;
             }
 
-            $this->reads->markThread($subject->userId, $thread->id, $newest->id, $newest->createdAt);
+            if ($newest->id > ($thread->lastReadPostId ?? 0)) {
+                $this->reads->markThread($subject->userId, $thread->id, $newest->id, $newest->createdAt);
+            }
         }
         // Inline thread tools (bookmark, subscribe, poll, solution; 2026-11-07). Not for pending/hidden threads, which
         // the community layer refuses. The CSRF token only goes to members, so guest pages stay render-cacheable.

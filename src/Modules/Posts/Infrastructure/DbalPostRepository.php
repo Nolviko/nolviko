@@ -285,29 +285,51 @@ final class DbalPostRepository implements PostRepository
             return [];
         }
 
-        // One more ID than the page holds: the previous page's last visible post, the lower bound for hidden
-        // posts shown to moderators.
-        $before = $offset > 0 ? 1 : 0;
-        $ids = $offset + $count / 2 <= $visibleTotal / 2
-            ? $this->visibleIds($threadId, 'ASC', $count + $before, $offset - $before)
-            : array_reverse($this->visibleIds($threadId, 'DESC', $count + $before, $visibleTotal - $offset - $count));
-        $lower = $before === 1 ? (int) array_shift($ids) : 0;
         $last = $offset + $count >= $visibleTotal;
+        $forward = $offset + $count / 2 <= $visibleTotal / 2;
+        $select = 'SELECT p.' . str_replace(', ', ', p.', self::COLUMNS) . ', u.username AS author_name FROM posts p ';
+        $authors = 'LEFT JOIN users u ON u.id = p.user_id ';
+        $visible = 'SELECT id FROM posts WHERE thread_id = ? AND status = ? ORDER BY id '
+            . ($forward ? 'ASC' : 'DESC') . ' LIMIT ' . $count . ' OFFSET '
+            . ($forward ? $offset : $visibleTotal - $offset - $count);
+        $parameters = [$threadId, PostStatus::Visible->value];
 
-        if ($withHidden && $ids !== []) {
+        if (!$withHidden) {
+            $rows = $this->connection->fetchAllAssociative(
+                $select . 'INNER JOIN (' . $visible . ') page_posts ON page_posts.id = p.id '
+                    . $authors . 'ORDER BY p.id',
+                $parameters,
+            );
+        } elseif ($offset === 0) {
+            // The first page has no previous visible post. Its last visible ID bounds hidden posts until the
+            // next page, and selecting both sets in the same statement keeps their view of the thread consistent.
+            $rows = $this->connection->fetchAllAssociative(
+                'WITH visible_page AS (' . $visible . '), page_posts AS ('
+                    . 'SELECT id FROM visible_page UNION ALL '
+                    . 'SELECT id FROM posts WHERE thread_id = ? AND status IN (?, ?) '
+                    . 'AND EXISTS (SELECT 1 FROM visible_page)'
+                    . ($last ? '' : ' AND id <= (SELECT MAX(id) FROM visible_page)') . ') '
+                    . $select . 'INNER JOIN page_posts ON page_posts.id = p.id ' . $authors . 'ORDER BY p.id',
+                [...$parameters, $threadId, PostStatus::Pending->value, PostStatus::Hidden->value],
+            );
+        } else {
+            // Fetch one extra ID for the previous page's last visible post to bound the hidden posts.
+            $ids = $forward
+                ? $this->visibleIds($threadId, 'ASC', $count + 1, $offset - 1)
+                : array_reverse($this->visibleIds($threadId, 'DESC', $count + 1, $visibleTotal - $offset - $count));
+            $lower = (int) array_shift($ids);
+
+            if ($ids === []) {
+                return [];
+            }
+
             $ids = [...$ids, ...$this->hiddenIds($threadId, $lower, $last ? null : (int) end($ids))];
+            $rows = $this->connection->fetchAllAssociative(
+                $select . $authors . 'WHERE p.id IN (?) ORDER BY p.id',
+                [$ids],
+                [ArrayParameterType::INTEGER],
+            );
         }
-
-        if ($ids === []) {
-            return [];
-        }
-
-        $rows = $this->connection->fetchAllAssociative(
-            'SELECT p.' . str_replace(', ', ', p.', self::COLUMNS) . ', u.username AS author_name FROM posts p '
-                . 'LEFT JOIN users u ON u.id = p.user_id WHERE p.id IN (?) ORDER BY p.id',
-            [$ids],
-            [ArrayParameterType::INTEGER],
-        );
 
         return array_map(
             static fn(array $row): PagedPost => new PagedPost(

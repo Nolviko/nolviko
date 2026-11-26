@@ -680,6 +680,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Closure $conversations,
                 Closure $siteSettings,
                 Closure $adminNotices,
+                Closure $connection,
             ): TemplateRenderer {
                 $selection = $presentation->selection();
                 // Site accent colour (appearance.accent) over the theme's palette; part of the render-cache key.
@@ -728,7 +729,13 @@ final class CoreServiceProvider implements ServiceProvider
                     forumUrl: $urls->generate(CoreRoutes::HOME),
                     urls: $urls,
                     seo: $seo,
-                    viewer: static function () use ($subjects, $request, $notifications, $conversations): array {
+                    viewer: static function () use (
+                        $subjects,
+                        $request,
+                        $notifications,
+                        $conversations,
+                        $connection,
+                    ): array {
                         if ($request->request === null) {
                             return [];
                         }
@@ -738,16 +745,28 @@ final class CoreServiceProvider implements ServiceProvider
                             || $subject->forumsAllowing('moderation.report.handle') !== [];
                         $unread = ['notifications' => 0, 'messages' => 0];
                         if ($member) {
-                            // Badges only: a missing column/table or DB hiccup must not break the page.
                             try {
-                                $unread['notifications'] = $notifications()->unreadCount($subject);
+                                [$notificationSql, $notificationParams, $notificationTypes]
+                                    = $notifications()->unreadCountQuery($subject);
+                                [$messageSql, $messageParams, $messageTypes]
+                                    = PrivateConversations::unreadCountQuery((int) $subject->userId);
+                                $row = $connection()->fetchAssociative(
+                                    'SELECT (' . $notificationSql . ') AS notifications, '
+                                        . '(' . $messageSql . ') AS messages',
+                                    [...$notificationParams, ...$messageParams],
+                                    [...$notificationTypes, ...$messageTypes],
+                                );
+                                $unread = array_map('intval', $row ?: $unread);
                             } catch (Throwable) {
-                                $unread['notifications'] = 0;
-                            }
-                            try {
-                                $unread['messages'] = $conversations()->unreadCount((int) $subject->userId);
-                            } catch (Throwable) {
-                                $unread['messages'] = 0;
+                                // Keep each badge available if the other module's schema is missing.
+                                try {
+                                    $unread['notifications'] = $notifications()->unreadCount($subject);
+                                } catch (Throwable) {
+                                }
+                                try {
+                                    $unread['messages'] = $conversations()->unreadCount((int) $subject->userId);
+                                } catch (Throwable) {
+                                }
                             }
                         }
                         return ['signed_in' => $member, 'admin' => $member && $subject->allows('admin.access'),
@@ -773,7 +792,7 @@ final class CoreServiceProvider implements ServiceProvider
                 new Lazy(LocaleFormatter::class), Router::class, ThemePresentation::class, ThemeSlots::class,
                 CacheFactory::class, new Lazy(RequestSubject::class), ThemeRequest::class, SeoMetadata::class,
                 new Lazy(CommunityNotifications::class), new Lazy(PrivateConversations::class),
-                new Lazy(SiteSettings::class), new Lazy(AdminNotices::class)],
+                new Lazy(SiteSettings::class), new Lazy(AdminNotices::class), new Lazy(Connection::class)],
         );
         $services->factory(
             AdminNotices::class,
