@@ -130,14 +130,15 @@ final readonly class ExtensionArchive
             $target = $this->manager->catalog->directory . '/' . $manifest->id;
             ExtensionIntegrity::digest($target);
             $failed = $this->manager->state->directory . '/replaced-' . $token;
-            if (file_exists($failed) || !rename($target, $failed)) {
+            if (file_exists($failed) || !self::move($target, $failed)) {
                 throw new ExtensionFailure('extension_state_write_failed');
             }
 
-            if (!rename($previous, $target)) {
-                rename($failed, $target);
+            if (!self::move($previous, $target)) {
+                self::move($failed, $target);
                 throw new ExtensionFailure('extension_state_write_failed');
             }
+            self::invalidate($target);
         });
     }
 
@@ -167,7 +168,7 @@ final readonly class ExtensionArchive
             $clear($manifest);
             // Out of the catalog in one rename, then deleted; a half-deleted folder is never discovered.
             $trash = $this->manager->state->directory . '/removed-' . bin2hex(random_bytes(16));
-            if (!rename($target, $trash)) {
+            if (!self::move($target, $trash)) {
                 throw new ExtensionFailure('extension_state_write_failed');
             }
             self::delete($trash);
@@ -284,17 +285,94 @@ final readonly class ExtensionArchive
 
             $previous = $this->manager->state->directory . '/previous-' . $token;
             $hadPrevious = is_dir($target);
-            if ($hadPrevious && !rename($target, $previous)) {
+            if ($hadPrevious && !self::move($target, $previous)) {
                 throw new ExtensionFailure('extension_state_write_failed');
             }
 
-            if (!rename($stage, $target)) {
+            if (!self::move($stage, $target)) {
                 if ($hadPrevious) {
-                    rename($previous, $target);
+                    self::move($previous, $target);
                 }
 
                 throw new ExtensionFailure('extension_state_write_failed');
             }
+            self::invalidate($target);
         });
+    }
+
+    /**
+     * Moves a folder; when storage and extensions/ are on different disks rename() cannot cross devices, so the
+     * files are copied and the source removed (2026-11-26).
+     */
+    private static function move(string $source, string $target): bool
+    {
+        return @rename($source, $target) || (is_dir($source) && !file_exists($target)
+            && self::copyTree($source, $target));
+    }
+
+    /**
+     * Copies a folder, then removes the source; a failed copy removes the half-written target instead.
+     */
+    private static function copyTree(string $source, string $target): bool
+    {
+        $ok = is_dir($target) || @mkdir($target, 0700, true);
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST,
+        );
+        foreach ($ok ? $items : [] as $item) {
+            $path = $target . '/' . substr($item->getPathname(), strlen($source) + 1);
+            if ($item->isLink()) {
+                $ok = false;
+            } elseif ($item->isDir()) {
+                $ok = is_dir($path) || @mkdir($path, 0700);
+            } else {
+                $ok = @copy($item->getPathname(), $path);
+            }
+            if (!$ok) {
+                break;
+            }
+        }
+        self::removeTree($ok ? $source : $target);
+
+        return $ok;
+    }
+
+    private static function removeTree(string $directory): void
+    {
+        if (!is_dir($directory) || is_link($directory)) {
+            return;
+        }
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
+        );
+        foreach ($items as $item) {
+            if ($item->isDir() && !$item->isLink()) {
+                @rmdir($item->getPathname());
+            } else {
+                @unlink($item->getPathname());
+            }
+        }
+        @rmdir($directory);
+    }
+
+    /**
+     * Drops the new files from OPcache (2026-11-26): packages are built with fixed file times, so an update can
+     * have the same times as the files it replaces, and OPcache would keep running the old code.
+     */
+    private static function invalidate(string $directory): void
+    {
+        if (!function_exists('opcache_invalidate')) {
+            return;
+        }
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+        );
+        foreach ($items as $item) {
+            if (str_ends_with($item->getFilename(), '.php')) {
+                @opcache_invalidate($item->getPathname(), true);
+            }
+        }
     }
 }
