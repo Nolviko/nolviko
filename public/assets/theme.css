@@ -727,3 +727,9 @@ main form.filters > label { flex: 1 1 12rem; }
 .top-nav .nav-drop-panel a{padding:8px 10px;border-radius:6px;white-space:nowrap}
 .top-menu-panel .menu-group{font-weight:600;padding-top:6px}
 .top-menu-panel .menu-child{padding-inline-start:1.5em}
+/* Many menu items (menu or pages extensions): the inline menu gives way to the menu button earlier, so the
+   header never wraps; the menu button lists every item. */
+@media (max-width: 1180px) { .top-nav:has(> :nth-child(7)) { display: none; }
+    .top-in:has(.top-nav > :nth-child(7)) .top-menu { display: block; } }
+@media (max-width: 1040px) { .top-nav:has(> :nth-child(6)) { display: none; }
+    .top-in:has(.top-nav > :nth-child(6)) .top-menu { display: block; } }
