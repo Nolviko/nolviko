@@ -17,8 +17,8 @@ final class CspNonce
 
     private const BYTES = 16;
 
-    private const SOURCE = '~^https://(?:\*\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}'
-        . '[a-z0-9])?)+(?::[0-9]{2,5})?(?:/[A-Za-z0-9._~/-]*)?$~D';
+    private const SOURCE = '#^https://(?:\*\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}'
+        . '[a-z0-9])?)+(?::[0-9]{2,5})?(?:/[A-Za-z0-9._~/-]*)?$#D';
 
     /** @var array<string, list<string>> */
     private array $sources = [];

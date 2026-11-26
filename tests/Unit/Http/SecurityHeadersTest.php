@@ -97,6 +97,28 @@ final class SecurityHeadersTest extends TestCase
         }
     }
 
+    public function testExtensionHostsAreAddedButNeverKeywords(): void
+    {
+        $nonce = CspNonce::generate();
+        $nonce->allow('script-src', 'https://*.googletagmanager.com');
+        $nonce->allow('connect-src', 'https://region1.google-analytics.com');
+        $nonce->allow('script-src', "'unsafe-inline'");
+        $nonce->allow('script-src', 'http://example.com');
+        $nonce->allow('script-src', '*');
+        $nonce->allow('object-src', 'https://example.com');
+        $nonce->allow('frame-src', 'https://challenges.cloudflare.com');
+
+        $csp = (new SecurityHeaders($nonce))->contentSecurityPolicy();
+
+        self::assertStringContainsString("'nonce-" . $nonce->value . "' https://*.googletagmanager.com;", $csp);
+        self::assertStringContainsString("connect-src 'self' https://region1.google-analytics.com;", $csp);
+        self::assertStringContainsString('player.vimeo.com https://challenges.cloudflare.com;', $csp);
+        self::assertStringNotContainsString('unsafe-inline', $csp);
+        self::assertStringNotContainsString('http://example.com', $csp);
+        self::assertStringContainsString("object-src 'none';", $csp);
+        self::assertFalse(CspNonce::validSource('script-src', 'https://exa mple.com'));
+    }
+
     public static function assertPolicy(Response $response, CspNonce $nonce): void
     {
         $headers = $response->headers;
