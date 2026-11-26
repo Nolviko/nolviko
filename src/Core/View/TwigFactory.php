@@ -107,6 +107,9 @@ final class TwigFactory
         }));
 
         $slots ??= new ThemeSlots();
+        // The main menu after extension filters (API 1.4.0); the default items are listed in the layout.
+        $menuSlots = $slots;
+        $twig->addFunction(new TwigFunction('main_menu', static fn(array $items): array => $menuSlots->menu($items)));
         $renderer = new TwigRenderer($twig, $renderCache, $renderIdentity, $nonce, $slots, $seo);
         $twig->addExtension(new ThemeViewExtension($slots, $themeSelection ?? [
             'css' => ThemeTokens::css([]), 'assets' => [], 'appearance' => 'system',

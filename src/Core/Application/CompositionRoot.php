@@ -83,7 +83,8 @@ final class CompositionRoot
         $services->value(InstallationState::class, $state);
         $services->value(ErrorReporter::class, $reporter);
         $services->value(LoggerInterface::class, $logger ?? new NullLogger());
-        $services->value(CspNonce::class, $nonce ?? CspNonce::generate());
+        $nonce ??= CspNonce::generate();
+        $services->value(CspNonce::class, $nonce);
 
         $manager = ExtensionBootstrap::manager($root, $storage);
         $registry = new ExtensionRegistry();
@@ -110,6 +111,11 @@ final class CompositionRoot
         $wasSafe = $manager->state->safe();
         try {
             ExtensionBootstrap::register($manager, $services, $registry);
+            foreach ($registry->csp as $directive => $sources) {
+                foreach ($sources as $source) {
+                    $nonce->allow($directive, $source);
+                }
+            }
 
             $routes = array_keys($registry->routes);
             $services->factory(

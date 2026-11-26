@@ -52,6 +52,7 @@
 {% else %}<span aria-hidden="true"></span>{% endif %}
 </li>
 {% endif %}
+{{ theme_slot('forum.row.after', {position: loop.index}) }}
 {% endfor %}
 </ul>
 {% endif %}

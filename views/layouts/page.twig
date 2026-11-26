@@ -41,6 +41,7 @@
 {% endfor %}
 {% endif %}
 {% block head %}{% endblock %}
+{{ theme_slot('layout.head') }}
 </head>
 <body>
 {% block skip_link %}<a class="skip-link" href="#main-content">{{ t('core.accessibility.skip') }}</a>{% endblock %}
@@ -49,12 +50,17 @@
 <header class="top">
 <div class="top-in">
 <a class="wm site-brand" href="{{ forum_home_url|safe_url }}"><span class="mark" aria-hidden="true">{{ (site.name|default('') ?: 'nolviko')|first|lower }}</span><bdi>{{ site.name|default('') ?: 'nolviko' }}</bdi></a>
+{# Main menu (extension API 1.4.0): core's items, then extension filters (main_menu); an item may have children,
+   shown as a dropdown. #}
+{% set menu_items = [{id: 'forums', label: t('core.nav.forums'), url: forum_home_url}, {id: 'members', label: t('core.nav.members'), url: path('community', {section: 'members'})}] %}
+{% if site.gallery|default('off') == 'on' or viewer.admin|default(false) %}{% set menu_items = menu_items|merge([{id: 'gallery', label: t('core.nav.gallery'), url: path('gallery')}]) %}{% endif %}
+{% if viewer.moderator %}{% set menu_items = menu_items|merge([{id: 'moderation', label: t('core.nav.moderation'), url: path('moderation.queue')}]) %}{% endif %}
+{% if viewer.admin %}{% set menu_items = menu_items|merge([{id: 'admin', label: t('core.nav.admin'), url: path('admin.dashboard')}]) %}{% endif %}
+{% set menu_items = main_menu(menu_items) %}
 <nav class="top-nav" aria-label="{{ t('core.nav.label') }}">
-<a href="{{ forum_home_url|safe_url }}">{{ t('core.nav.forums') }}</a>
-<a href="{{ path('community', {section: 'members'})|safe_url }}">{{ t('core.nav.members') }}</a>
-{% if site.gallery|default('off') == 'on' or viewer.admin|default(false) %}<a href="{{ path('gallery')|safe_url }}">{{ t('core.nav.gallery') }}</a>{% endif %}
-{% if viewer.moderator %}<a href="{{ path('moderation.queue')|safe_url }}">{{ t('core.nav.moderation') }}</a>{% endif %}
-{% if viewer.admin %}<a href="{{ path('admin.dashboard')|safe_url }}">{{ t('core.nav.admin') }}</a>{% endif %}
+{% for item in menu_items %}{% if item.children is empty %}<a href="{{ item.url|safe_url }}"><bdi>{{ item.label }}</bdi></a>
+{% else %}<details class="nav-drop"><summary><bdi>{{ item.label }}</bdi></summary><div class="nav-drop-panel">{% if item.url %}<a href="{{ item.url|safe_url }}"><bdi>{{ item.label }}</bdi></a>{% endif %}{% for child in item.children %}<a href="{{ child.url|safe_url }}"><bdi>{{ child.label }}</bdi></a>{% endfor %}</div></details>
+{% endif %}{% endfor %}
 </nav>
 <form class="top-search" method="get" action="{{ path('search.posts')|safe_url }}" role="search">
 <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
@@ -72,13 +78,11 @@
 <details class="top-menu">
 <summary class="icon-btn" aria-label="{{ t('core.nav.menu') }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary>
 <nav class="top-menu-panel" aria-label="{{ t('core.nav.menu') }}">
-<a href="{{ forum_home_url|safe_url }}">{{ t('core.nav.forums') }}</a>
-<a href="{{ path('community', {section: 'members'})|safe_url }}">{{ t('core.nav.members') }}</a>
-{% if site.gallery|default('off') == 'on' or viewer.admin|default(false) %}<a href="{{ path('gallery')|safe_url }}">{{ t('core.nav.gallery') }}</a>{% endif %}
+{% for item in menu_items %}{% if item.url %}<a href="{{ item.url|safe_url }}"><bdi>{{ item.label }}</bdi></a>{% else %}<span class="menu-group"><bdi>{{ item.label }}</bdi></span>{% endif %}
+{% for child in item.children %}<a class="menu-child" href="{{ child.url|safe_url }}"><bdi>{{ child.label }}</bdi></a>{% endfor %}
+{% endfor %}
 <a href="{{ path('community', {section: 'online'})|safe_url }}">{{ t('core.nav.online') }}</a>
 {% if viewer.signed_in %}<a href="{{ path('community', {section: 'bookmarks'})|safe_url }}">{{ t('core.nav.bookmarks') }}</a>{% endif %}
-{% if viewer.moderator %}<a href="{{ path('moderation.queue')|safe_url }}">{{ t('core.nav.moderation') }}</a>{% endif %}
-{% if viewer.admin %}<a href="{{ path('admin.dashboard')|safe_url }}">{{ t('core.nav.admin') }}</a>{% endif %}
 {% if not viewer.signed_in %}<a href="{{ path('auth.login')|safe_url }}">{{ t('core.nav.login') }}</a>{% endif %}
 </nav>
 </details>
@@ -89,7 +93,9 @@
 {{ theme_slot('layout.header.after') }}
 {% if theme_preview %}<p class="theme-preview" role="status">{{ t('core.theme.preview') }}</p>{% endif %}
 {% if site.announcement|default('') %}<aside class="site-announcement" aria-label="{{ t('core.announcement.label') }}"><p dir="auto">{{ site.announcement }}</p></aside>{% endif %}
+{{ theme_slot('layout.content.before') }}
 <main id="main-content" tabindex="-1"{% if block('main_class') is defined %} class="{{ block('main_class') }}"{% endif %}>{% block content %}{% endblock %}</main>
+{{ theme_slot('layout.content.after') }}
 {% block footer %}
 <footer class="site-footer">
 <nav class="site-footer-in" aria-label="{{ t('core.footer.label') }}">
@@ -105,6 +111,7 @@
 </footer>
 {% endblock %}
 {{ theme_scripts }}
+{{ theme_slot('layout.body.end') }}
 {% if viewer.signed_in %}<div hidden data-suggest="{{ path('community.member_suggest') }}"></div><script src="{{ asset('autocomplete.js') }}" defer></script>{% endif %}
 </body>
 </html>

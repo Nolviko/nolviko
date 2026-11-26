@@ -14,6 +14,7 @@ use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
 use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\Session\Session;
+use Nolviko\Core\View\SafeHtml;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Users\Domain\NoChallenge;
 use Nolviko\Modules\Users\Domain\PasswordPolicy;
@@ -179,7 +180,9 @@ final class RegisterHandler implements RouteHandler
             'errors' => $errors,
             'password_min' => PasswordPolicy::MIN_LENGTH,
             'honeypot' => self::HONEYPOT,
-            'challenge' => $challenge === null
+            // An extension challenge may bring its own widget (API 1.4.0): trusted HTML built by the extension.
+            'challenge_widget' => ($challenge['widget'] ?? null) instanceof SafeHtml ? $challenge['widget'] : null,
+            'challenge' => $challenge === null || $challenge['id'] === ''
                 ? null
                 : $this->translator->translate($challenge['id'], $challenge['parameters']),
             'challenge_field' => QuestionChallenge::FIELD,

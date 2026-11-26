@@ -77,6 +77,7 @@
 {% if thread.replies|default(null) is not null %}<div class="stat"><b>{{ thread.replies|format_number }}</b><span>{{ t('forums.show.replies', {count: thread.replies}) }}</span></div>{% endif %}
 {% if thread.views|default(null) is not null %}<div class="stat"><b>{{ thread.views|format_number }}</b><span>{{ t('forums.show.views', {count: thread.views}) }}</span></div>{% endif %}
 </li>
+{{ theme_slot('forum.thread.after', {position: loop.index}) }}
 {% endfor %}
 </ul>
 {% endif %}

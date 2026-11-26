@@ -16,8 +16,11 @@ final class ExtensionBootstrap
      * 1.2.0: optional `"repository"` for panel update checks.
      * Release packages publish the same value as `extension_api` (dev/src/PackageBuilder.php).
      */
-    /** 1.3.0 (2026-11-20): manifest `remove` and the "Remove" action. */
-    public const API_VERSION = '1.3.0';
+    /**
+     * 1.3.0 (2026-11-20): manifest `remove` and the "Remove" action. 1.4.0 (2026-11-26): CSP hosts, cacheable
+     * slots, layout/list slots, main-menu filters and a registration challenge.
+     */
+    public const API_VERSION = '1.4.0';
 
     public static function manager(string $root, string $storage): ExtensionManager
     {

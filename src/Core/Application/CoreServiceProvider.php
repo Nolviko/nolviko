@@ -266,6 +266,7 @@ use Nolviko\Modules\Users\Domain\Authenticator;
 use Nolviko\Modules\Users\Domain\LoginThrottle;
 use Nolviko\Modules\Users\Domain\NoChallenge;
 use Nolviko\Modules\Users\Domain\PasswordHasher;
+use Nolviko\Modules\Users\Domain\RegistrationChallenge;
 use Nolviko\Modules\Users\Domain\RememberTokens;
 use Nolviko\Modules\Users\Domain\SecondFactors;
 use Nolviko\Modules\Users\Domain\UserRepository;
@@ -3309,6 +3310,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Session $session,
                 RegistrationRules $rules,
                 Closure $identityProviders,
+                ExtensionRegistry $extensions,
             ): RegisterHandler => new RegisterHandler(
                 $translator,
                 $views,
@@ -3318,11 +3320,11 @@ final class CoreServiceProvider implements ServiceProvider
                 $router,
                 $session,
                 $rules,
-                match ($rules->challenge) {
+                self::extensionChallenge($extensions, match ($rules->challenge) {
                     RegistrationRules::CHALLENGE_QUESTION => new QuestionChallenge($session),
                     RegistrationRules::CHALLENGE_WORK => new WorkChallenge($session, new QuestionChallenge($session)),
                     default => new NoChallenge(),
-                },
+                }),
                 external: $rules->mode === RegistrationRules::CLOSED ? null
                     : static fn(): array => ExternalAuthHandler::buttons($identityProviders(), $router, $translator),
             ),
@@ -3336,6 +3338,7 @@ final class CoreServiceProvider implements ServiceProvider
                 Session::class,
                 RegistrationRules::class,
                 new Lazy(IdentityProviders::class),
+                ExtensionRegistry::class,
             ],
         );
         $verifyPages = [VerifyEmailHandler::class => false, VerifyEmailHandler::class . '.resend' => true];
@@ -4327,5 +4330,27 @@ final class CoreServiceProvider implements ServiceProvider
         $user = $userId === null ? null : $users()->findById($userId);
 
         return $user === null ? null : ['locale' => $user->preferredLocale, 'time_zone' => $user->timeZone];
+    }
+
+    /**
+     * An extension's registration challenge (API 1.4.0, e.g. an outside CAPTCHA): its service is a closure that
+     * receives the built-in challenge and returns the one to use. A failing extension keeps the built-in one.
+     */
+    private static function extensionChallenge(
+        ExtensionRegistry $extensions,
+        RegistrationChallenge $builtIn,
+    ): RegistrationChallenge {
+        $service = array_key_first($extensions->challenges);
+        if ($service === null || $extensions->resolver === null) {
+            return $builtIn;
+        }
+        try {
+            $factory = ($extensions->resolver)($service);
+            $challenge = $factory instanceof Closure ? $factory($builtIn) : null;
+        } catch (Throwable) {
+            return $builtIn;
+        }
+
+        return $challenge instanceof RegistrationChallenge ? $challenge : $builtIn;
     }
 }

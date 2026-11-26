@@ -22,8 +22,17 @@ final class ExtensionRegistry
     /** @var array<string, array<string, Closure>> */
     public array $subscribers = [];
 
-    /** @var list<array{0: string, 1: string, 2: Closure}> */
+    /** @var list<array{0: string, 1: string, 2: Closure, 3?: bool}> Slot, owner, renderer, cacheable (1.4.0). */
     public array $slots = [];
+
+    /** @var array<string, list<string>> CSP directive => outside hosts (API 1.4.0, 2026-11-26). */
+    public array $csp = [];
+
+    /** @var list<array{0: int, 1: string, 2: Closure}> Main-menu filters: order, owner, filter (API 1.4.0). */
+    public array $menus = [];
+
+    /** @var array<string, string> Registration challenge service ID => extension ID (API 1.4.0). */
+    public array $challenges = [];
 
     /** @var array<string, array<string, string>> */
     public array $messages = [];
@@ -66,8 +75,13 @@ final class ExtensionRegistry
 
     public function applySlots(ThemeSlots $slots): ThemeSlots
     {
-        foreach ($this->slots as [$slot, $owner, $render]) {
-            $slots->add($slot, 1, str_replace('/', '.', $owner), $render);
+        foreach ($this->slots as $entry) {
+            $slots->add($entry[0], 1, str_replace('/', '.', $entry[1]), $entry[2], $entry[3] ?? false);
+        }
+        $menus = $this->menus;
+        usort($menus, static fn(array $a, array $b): int => $a[0] <=> $b[0]);
+        foreach ($menus as [, $owner, $filter]) {
+            $slots->addMenu(str_replace('/', '.', $owner), $filter);
         }
 
         return $slots;

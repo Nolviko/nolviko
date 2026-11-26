@@ -35,6 +35,7 @@
 <input type="hidden" name="{{ challenge_work.field }}" value="">
 <p class="hint" role="status" data-work-status hidden>{{ t('auth.register.work_status') }}</p>
 {% endif %}
+{% if challenge_widget|default(null) %}<div class="challenge-widget">{{ challenge_widget }}</div>{% endif %}
 {% include 'auth/register_extras.twig' %}
 <p class="register-extra" aria-hidden="true"><label for="register-website">{{ t('auth.register.website') }}</label>
 <input id="register-website" name="{{ honeypot }}" type="text" tabindex="-1" autocomplete="off"></p>

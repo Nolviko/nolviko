@@ -89,7 +89,7 @@ final class TwigRenderer implements TemplateRenderer
             'components/post.twig'], true);
         if (
             !$eligible || $this->renderCache === null || $this->renderIdentity === null
-            || $this->nonce === null || $this->slots?->hasProviders() || $this->seo?->filtered() === true
+            || $this->nonce === null || $this->slots?->hasUncacheableProviders() || $this->seo?->filtered() === true
         ) {
             return $this->twig->render($name, $context);
         }

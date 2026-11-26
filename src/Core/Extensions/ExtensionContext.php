@@ -9,6 +9,7 @@ use Doctrine\DBAL\Connection;
 use Nolviko\Core\Container\ContainerBuilder;
 use Nolviko\Core\Container\Lazy;
 use Nolviko\Core\Database\ExtensionSqlGuard;
+use Nolviko\Core\Http\CspNonce;
 use Nolviko\Core\Routing\RouteDefinition;
 use Nolviko\Core\View\ThemeSlots;
 use Nolviko\Modules\Permissions\Domain\PermissionDefinition;
@@ -244,7 +245,12 @@ final readonly class ExtensionContext
         return $directory;
     }
 
-    public function slot(string $slot, Closure $render): void
+    /**
+     * Adds output to a theme slot. `$cacheable` (API 1.4.0) promises that the output is the same for every guest
+     * on the same page (it may differ for members): pages then stay in the 60-second guest render cache, so the
+     * output may lag a settings change by up to a minute. Without it, a slot provider turns that cache off.
+     */
+    public function slot(string $slot, Closure $render, bool $cacheable = false): void
     {
         if (ThemeSlots::version($slot) !== 1 || !in_array($slot, $this->manifest->data['ui_slots'] ?? [], true)) {
             throw new ExtensionFailure('extension_slot_undeclared');
@@ -264,7 +270,57 @@ final readonly class ExtensionContext
             throw new ExtensionFailure('extension_slot_undeclared');
         }
 
-        $this->registry->slots[] = [$slot, $this->manifest->id, $render];
+        $this->registry->slots[] = [$slot, $this->manifest->id, $render, $cacheable];
+    }
+
+    /**
+     * Outside hosts the extension's pages need (API 1.4.0, 2026-11-26), e.g. `['script-src' =>
+     * ['https://*.googletagmanager.com']]`. Allowed directives: CspNonce::DIRECTIVES; only https hosts.
+     *
+     * @param array<string, list<string>> $sources
+     */
+    public function contentSecurity(array $sources): void
+    {
+        foreach ($sources as $directive => $list) {
+            foreach (is_array($list) ? $list : [] as $source) {
+                if (!is_string($directive) || !is_string($source) || !CspNonce::validSource($directive, $source)) {
+                    throw new ExtensionFailure('extension_csp_invalid');
+                }
+                $this->registry->csp[$directive][] = $source;
+            }
+        }
+    }
+
+    /**
+     * Changes the main menu (API 1.4.0, 2026-11-26). The filter receives the items so far and returns the new
+     * list; each item is `{id, label, url, children}` (children: items without children). Lower `$order` runs
+     * first; a menu editor runs last (order 100) to see every other extension's items. An invalid result is
+     * ignored and the previous list kept. Core keeps no menu storage.
+     *
+     * @param Closure(list<array{id: string, label: string, url: string, children: list<array>}>): list<array> $filter
+     */
+    public function menu(Closure $filter, int $order = 0): void
+    {
+        foreach ($this->registry->menus as [, $owner]) {
+            if ($owner === $this->manifest->id) {
+                throw new ExtensionFailure('extension_hook_duplicate');
+            }
+        }
+        $this->registry->menus[] = [max(-100, min(100, $order)), $this->manifest->id, $filter];
+    }
+
+    /**
+     * Replaces the built-in registration challenge with one of the extension's services (API 1.4.0), e.g. an
+     * outside CAPTCHA. The service implements RegistrationChallenge; it should fall back to the built-in one when
+     * it is not configured. Only one extension may do this.
+     */
+    public function registrationChallenge(string $serviceId): void
+    {
+        $this->owned($serviceId);
+        if ($this->registry->challenges !== []) {
+            throw new ExtensionFailure('extension_hook_duplicate');
+        }
+        $this->registry->challenges[$serviceId] = $this->manifest->id;
     }
 
     private function owned(string $id): void

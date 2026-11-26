@@ -66,8 +66,10 @@
 {% for post in posts %}
 {{ theme_fragment('components/post.twig', {post: post}) }}
 {% if community_extras[post.id]|default(null) %}{% include 'community/post_extras.twig' with {extra: community_extras[post.id], tools: tools|default(null), thread_id: thread_id, csrf_field: csrf_field|default(null), csrf_token: csrf_token|default(null)} only %}{% endif %}
+{{ theme_slot('thread.post.after', {position: loop.index}) }}
 {% endfor %}
 </div>
+{{ theme_slot('thread.posts.after') }}
 {% endif %}
 <div class="head-row">
 {% if links is not empty %}

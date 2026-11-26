@@ -717,3 +717,13 @@ main form.inline-form, .card form.inline-form { display: inline-flex; flex-direc
 main form.inline-form > label { display: inline; }
 main form.filters { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
 main form.filters > label { flex: 1 1 12rem; }
+
+/* Main-menu dropdowns from extensions (API 1.4.0, 2026-11-26). */
+.top-nav .nav-drop{position:relative}
+.top-nav .nav-drop>summary{cursor:pointer;list-style:none}
+.top-nav .nav-drop>summary::-webkit-details-marker{display:none}
+.top-nav .nav-drop>summary::after{content:"";display:inline-block;margin-inline-start:.35em;border:4px solid transparent;border-top-color:currentColor;vertical-align:middle;transform:translateY(2px)}
+.top-nav .nav-drop-panel{position:absolute;inset-inline-start:0;top:calc(100% + 6px);z-index:30;min-width:200px;display:flex;flex-direction:column;padding:6px;background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.top-nav .nav-drop-panel a{padding:8px 10px;border-radius:6px;white-space:nowrap}
+.top-menu-panel .menu-group{font-weight:600;padding-top:6px}
+.top-menu-panel .menu-child{padding-inline-start:1.5em}

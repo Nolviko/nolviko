@@ -32,20 +32,25 @@ final class SecurityHeaders
     public function contentSecurityPolicy(): string
     {
         $nonce = "'nonce-" . $this->nonce->value . "'";
+        // Hosts enabled extensions added (API 1.4.0), e.g. Google Analytics; core's own sources come first.
+        $extra = fn(string $directive): string => implode('', array_map(
+            static fn(string $source): string => ' ' . $source,
+            $this->nonce->sources($directive),
+        ));
 
         return implode('; ', [
             "default-src 'self'",
-            "script-src 'self' " . $nonce,
+            "script-src 'self' " . $nonce . $extra('script-src'),
             // The hash admits only HtmlPage's fixed system-page style block (errors work without assets or Twig).
-            "style-src 'self' " . $nonce . ' ' . HtmlPage::styleSource(),
-            "img-src 'self' data:",
-            "font-src 'self'",
-            "connect-src 'self'",
+            "style-src 'self' " . $nonce . ' ' . HtmlPage::styleSource() . $extra('style-src'),
+            "img-src 'self' data:" . $extra('img-src'),
+            "font-src 'self'" . $extra('font-src'),
+            "connect-src 'self'" . $extra('connect-src'),
             "object-src 'none'",
             "base-uri 'none'",
             "form-action 'self'",
-            // Click-to-load video players (Editor MediaEmbed); nothing else may be framed.
-            'frame-src ' . implode(' ', self::FRAME_SOURCES),
+            // Click-to-load video players (Editor MediaEmbed) and extension hosts; nothing else may be framed.
+            'frame-src ' . implode(' ', self::FRAME_SOURCES) . $extra('frame-src'),
             "frame-ancestors 'none'",
         ]);
     }
