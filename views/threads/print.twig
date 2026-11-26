@@ -1,18 +1,26 @@
-{# Print view of one thread page (beta.18 roadmap 34): title and visible posts only, no forms or navigation.
+{# Print view of one thread page (beta.18 roadmap 34; redone 2026-11-27 after phpBB's print view): a centred
+   reading column with the site name and address, the title and each visible post with its author and date; a Print
+   button and a link back, both hidden on paper. No header, footer, forms or extension slots (no ads).
    Context: the thread page context (title, canonical, page, pages, posts). Answered with `X-Robots-Tag: noindex`. #}
 {% extends 'layouts/page.twig' %}
 {% block header %}{% endblock %}
 {% block footer %}{% endblock %}
+{% block content_before %}{% endblock %}
+{% block content_after %}{% endblock %}
 {% block content %}
 <article class="print-view">
+<header class="print-head">
+<p class="print-actions"><a href="{{ canonical|safe_url }}">{{ t('threads.print.back') }}</a> <button type="button" class="btn-s btn-sm" data-print>{{ t('threads.print.print') }}</button></p>
+<p class="meta"><bdi>{{ site.name|default('') ?: 'Nolviko' }}</bdi> · <bdi>{{ canonical }}</bdi></p>
 <h1 dir="auto">{{ title }}</h1>
 {% if pages > 1 %}<p class="meta">{{ t('threads.show.pages', {page: page, pages: pages}) }}</p>{% endif %}
+</header>
 {% for post in posts %}{% if post.status is null %}
 <section class="print-post">
-<p class="meta"><b><bdi>{{ post.authorName ?? t('threads.show.removed_account') }}</bdi></b> · <time datetime="{{ post.createdAt|date('c') }}">{{ post.createdAt|format_datetime }}</time></p>
+<p class="print-author"><b><bdi>{{ post.authorName ?? t('threads.show.removed_account') }}</bdi></b> <time class="meta" datetime="{{ post.createdAt|date('c') }}">{{ post.createdAt|format_datetime }}</time></p>
 <div class="post-body" dir="auto">{{ post.html }}</div>
 </section>
 {% endif %}{% endfor %}
-<p class="meta"><bdi>{{ canonical }}</bdi></p>
 </article>
+<script nonce="{{ csp_nonce }}">document.querySelector('[data-print]').addEventListener('click', function () { window.print(); });</script>
 {% endblock %}

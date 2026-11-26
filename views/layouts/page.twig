@@ -93,9 +93,9 @@
 {{ theme_slot('layout.header.after') }}
 {% if theme_preview %}<p class="theme-preview" role="status">{{ t('core.theme.preview') }}</p>{% endif %}
 {% if site.announcement|default('') %}<aside class="site-announcement" aria-label="{{ t('core.announcement.label') }}"><p dir="auto">{{ site.announcement }}</p></aside>{% endif %}
-{{ theme_slot('layout.content.before') }}
+{% block content_before %}{{ theme_slot('layout.content.before') }}{% endblock %}
 <main id="main-content" tabindex="-1"{% if block('main_class') is defined %} class="{{ block('main_class') }}"{% endif %}>{% block content %}{% endblock %}</main>
-{{ theme_slot('layout.content.after') }}
+{% block content_after %}{{ theme_slot('layout.content.after') }}{% endblock %}
 {% block footer %}
 <footer class="site-footer">
 <nav class="site-footer-in" aria-label="{{ t('core.footer.label') }}">

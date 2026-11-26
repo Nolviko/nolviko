@@ -10,7 +10,7 @@ return [
     'community.notifications' => 'Notifications',
     'community.bookmarks' => 'Bookmarks',
     'community.profile' => 'Member profile',
-    'community.thread' => 'Reactions, poll and thread tools',
+    'community.thread' => 'Poll and files',
     'community.avatar' => 'Avatar',
     'community.biography' => 'About you',
     'community.location' => 'Location',

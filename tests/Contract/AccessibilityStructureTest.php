@@ -59,7 +59,7 @@ final class AccessibilityStructureTest extends TestCase
         $dom = new DOMDocument();
         @$dom->loadHTML($html);
         $xpath = new DOMXPath($dom);
-        self::assertSame(1, $xpath->query('//main/h1')->length);
+        self::assertSame(1, $xpath->query('//main//h1')->length);
         self::assertSame(1, $xpath->query('//h2/a[@href="/forums/1"]')->length);
         self::assertSame(0, $xpath->query('//h3')->length);
     }

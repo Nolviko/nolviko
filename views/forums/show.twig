@@ -26,20 +26,6 @@
 <div class="stack"><h1 dir="auto">{{ title }}</h1>
 {% if description|default(null) %}<p class="lead" dir="auto">{{ description }}</p>{% endif %}</div>
 <div class="actions">
-{% if subscribe_url|default(null) %}<form method="post" action="{{ subscribe_url|safe_url }}">
-<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="enable" value="{{ subscribed ? '0' : '1' }}">
-<button class="btn-s" type="submit">{{ subscribed ? t('forums.show.unsubscribe') : t('forums.show.subscribe') }}</button>
-</form>{% endif %}
-{% if mark_read_url is not null %}
-<form method="post" action="{{ mark_read_url|safe_url }}">
-<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<button class="btn-s" type="submit">{{ t('forums.show.mark_read') }}</button>
-</form>
-<form method="post" action="{{ path('forums.read_all')|safe_url }}">
-<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<button class="btn-s" type="submit">{{ t('forums.index.mark_all_read') }}</button>
-</form>
-{% endif %}
 {% if new_thread_url is not null %}
 <a class="btn" href="{{ new_thread_url|safe_url }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{{ t('forums.index.new_thread') }}</a>
 {% endif %}
@@ -50,13 +36,20 @@
 <ul class="panel list">{% for child in subforums %}<li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path></svg><a href="{{ child.url|safe_url }}"><bdi>{{ child.title }}</bdi></a></li>{% endfor %}</ul>
 </section>
 {% endif %}
+{# The list toolbar (2026-11-27, after phpBB): sort on the left, the small forum links on the right. #}
+<div class="list-bar">
+{% if threads is not empty %}<form method="get" action="{{ canonical|safe_url }}" class="inline-form forum-sort"><label for="forum-sort" class="meta">{{ t('forums.show.sort') }}</label> <select id="forum-sort" name="sort">
+<option value=""{% if sort is null %} selected{% endif %}>{{ t('forums.show.sort_activity') }}</option>
+{% for option in sorts %}<option value="{{ option }}"{% if sort == option %} selected{% endif %}>{{ {title: t('forums.show.sort_title'), replies: t('forums.show.sort_replies'), started: t('forums.show.sort_started'), activity: t('forums.show.sort_activity')}[option]|default(option) }}</option>{% endfor %}
+</select> <button type="submit" class="btn-s btn-sm">{{ t('forums.show.sort_apply') }}</button></form>{% endif %}
+<div class="quick-links row-end">
+{% if mark_read_url is not null %}<form method="post" action="{{ mark_read_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><button class="link-btn" type="submit">{{ t('forums.show.mark_read') }}</button></form>{% endif %}
+{% if subscribe_url|default(null) %}<form method="post" action="{{ subscribe_url|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="enable" value="{{ subscribed ? '0' : '1' }}"><button class="link-btn" type="submit" aria-pressed="{{ subscribed ? 'true' : 'false' }}">{{ subscribed ? t('forums.show.unsubscribe') : t('forums.show.subscribe') }}</button></form>{% endif %}
+</div>
+</div>
 {% if threads is empty %}
 <div class="panel empty"><p>{{ t('forums.show.empty') }}</p></div>
 {% else %}
-<form method="get" action="{{ canonical|safe_url }}" class="inline-form forum-sort"><label for="forum-sort" class="meta">{{ t('forums.show.sort') }}</label> <select id="forum-sort" name="sort">
-<option value=""{% if sort is null %} selected{% endif %}>{{ t('forums.show.sort_activity') }}</option>
-{% for option in sorts %}<option value="{{ option }}"{% if sort == option %} selected{% endif %}>{{ {title: t('forums.show.sort_title'), replies: t('forums.show.sort_replies'), started: t('forums.show.sort_started'), activity: t('forums.show.sort_activity')}[option]|default(option) }}</option>{% endfor %}
-</select> <button type="submit" class="btn-s btn-sm">{{ t('forums.show.sort_apply') }}</button></form>
 <ul class="panel thread-list">
 {% for thread in threads %}
 <li class="trow thread{{ thread.sticky ? ' thread-sticky' : '' }}{{ thread.moved ? ' thread-moved' : '' }}{{ thread.unread ? ' t-unread' : '' }}{{ thread.status is not null ? ' thread-' ~ thread.status : '' }}">

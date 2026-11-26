@@ -1,24 +1,11 @@
-{# Inline thread tools on the thread page (design pass 2026-11-07): bookmark/subscribe toggles, accepted answer link
+{# Inline thread tools on the thread page (design pass 2026-11-07; bookmark/follow moved into the thread tools menu
+   2026-11-27): accepted answer link
    and the poll (vote form until the reader voted or the poll closed, results otherwise). Context: tools
    (CommunityRead::threadTools), thread_id, csrf_field and csrf_token (null for guests: no forms then). Poll creation
    and attachments stay on the community tools page. Every form posts to the community endpoint and returns here. #}
 {% set act = path('community', {section: 'thread'}) ~ '?thread=' ~ thread_id %}
 {% set member = csrf_token is not null %}
-{% if member or tools.solution %}
-<div class="thread-tools row">
-{% if member %}
-{% set states = {bookmark: tools.relationship.bookmarked, subscribe: tools.relationship.subscribed} %}
-{% set undo_labels = {bookmark: t('community.undo_bookmark'), subscribe: t('community.undo_subscribe')} %}
-{% for action in ['bookmark', 'subscribe'] %}
-<form method="post" action="{{ act|safe_url }}" class="inline-form"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="target" value="{{ thread_id }}"><input type="hidden" name="return_thread" value="{{ thread_id }}">
-{% if states[action] %}<button class="btn-s btn-sm" name="enable" value="0" aria-pressed="true">{{ undo_labels[action] }}</button>
-{% else %}<button class="btn-g btn-sm" name="enable" value="1" aria-pressed="false">{{ t('community.' ~ action) }}</button>{% endif %}
-</form>
-{% endfor %}
-{% endif %}
-{% if tools.solution %}<a class="chip chip-new" href="{{ path('posts.show', {post: tools.solution})|safe_url }}">{{ t('community.solution') }}</a>{% endif %}
-</div>
+{% if tools.solution %}<p class="thread-tools"><a class="chip chip-new" href="{{ path('posts.show', {post: tools.solution})|safe_url }}">{{ t('community.solution') }}</a></p>
 {% endif %}
 {% if tools.poll %}
 {% set total = 0 %}{% for option in tools.options %}{% set total = total + option.votes %}{% endfor %}

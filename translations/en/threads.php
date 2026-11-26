@@ -101,5 +101,9 @@ return [
     'threads.manage.saved_action' => 'Saved action: {title}',
     'threads.create.icon' => 'Thread icon',
     'threads.create.no_icon' => 'None',
+    'threads.print.back' => 'Back to the thread',
+    'threads.print.print' => 'Print',
+    'threads.show.tools' => 'Thread tools',
+    'threads.show.moderation_tools' => 'Moderation',
     'threads.show.print' => 'Print view',
 ];

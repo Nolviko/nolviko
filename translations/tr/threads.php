@@ -98,5 +98,9 @@ return [
     'threads.manage.saved_action' => 'Kayıtlı işlem: {title}',
     'threads.create.icon' => 'Konu simgesi',
     'threads.create.no_icon' => 'Yok',
+    'threads.print.back' => 'Konuya dön',
+    'threads.print.print' => 'Yazdır',
+    'threads.show.tools' => 'Konu araçları',
+    'threads.show.moderation_tools' => 'Moderasyon',
     'threads.show.print' => 'Yazdırma görünümü',
 ];

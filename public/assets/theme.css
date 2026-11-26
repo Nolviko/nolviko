@@ -704,8 +704,7 @@ a.post-author:hover { color: var(--accent-text); }
 .code-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
 .code-list code { display: block; padding: 6px 10px; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--sunken); font-size: 15px; letter-spacing: .06em; text-align: center; }
 /* beta.20 UI pass: compact member tools, thread icons, print view, birthdays, forum sort. */
-.forum-sort, .thread-search { margin-block: 8px; }
-.thread-search input[type="search"] { min-inline-size: 14rem; }
+.forum-sort { margin-block: 8px; }
 .thread-icon { vertical-align: middle; border-radius: 4px; margin-inline-end: 4px; }
 .icon-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; }
 .icon-pick legend { inline-size: 100%; }
@@ -718,18 +717,92 @@ main form.inline-form > label { display: inline; }
 main form.filters { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
 main form.filters > label { flex: 1 1 12rem; }
 
-/* Main-menu dropdowns from extensions (API 1.4.0, 2026-11-26). */
-.top-nav .nav-drop{position:relative}
-.top-nav .nav-drop>summary{cursor:pointer;list-style:none}
-.top-nav .nav-drop>summary::-webkit-details-marker{display:none}
-.top-nav .nav-drop>summary::after{content:"";display:inline-block;margin-inline-start:.35em;border:4px solid transparent;border-top-color:currentColor;vertical-align:middle;transform:translateY(2px)}
-.top-nav .nav-drop-panel{position:absolute;inset-inline-start:0;top:calc(100% + 6px);z-index:30;min-width:200px;display:flex;flex-direction:column;padding:6px;background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
-.top-nav .nav-drop-panel a{padding:8px 10px;border-radius:6px;white-space:nowrap}
-.top-menu-panel .menu-group{font-weight:600;padding-top:6px}
-.top-menu-panel .menu-child{padding-inline-start:1.5em}
-/* Many menu items (menu or pages extensions): the inline menu gives way to the menu button earlier, so the
-   header never wraps; the menu button lists every item. */
-@media (max-width: 1180px) { .top-nav:has(> :nth-child(7)) { display: none; }
-    .top-in:has(.top-nav > :nth-child(7)) .top-menu { display: block; } }
-@media (max-width: 1040px) { .top-nav:has(> :nth-child(6)) { display: none; }
-    .top-in:has(.top-nav > :nth-child(6)) .top-menu { display: block; } }
+/* Main menu (2026-11-27). Dropdowns from extensions look and sit like the other links. With six or more items the
+   links move to their own row under the logo, search and member icons, as in phpBB, MyBB and SMF; phones keep the
+   menu button. */
+.top-nav { align-items: center; }
+.top-nav .nav-drop { position: relative; }
+.top-nav .nav-drop > summary { display: inline-flex; align-items: center; gap: 6px; min-block-size: 40px;
+    padding-inline: 12px; border-radius: 8px; color: var(--ink-2); font-weight: 500; cursor: pointer; list-style: none; }
+.top-nav .nav-drop > summary::-webkit-details-marker { display: none; }
+.top-nav .nav-drop > summary::after { content: ""; inline-size: 6px; block-size: 6px; border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); opacity: .7; }
+.top-nav .nav-drop > summary:hover, .top-nav .nav-drop[open] > summary { background: var(--sunken); color: var(--ink); }
+.top-nav .nav-drop-panel, .menu-drop-panel { position: absolute; inset-inline-start: 0; inset-block-start: calc(100% + 6px);
+    z-index: 30; min-inline-size: 220px; display: flex; flex-direction: column; padding: 6px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, .12); }
+.top-nav .nav-drop-panel a { min-block-size: 36px; padding-inline: 10px; white-space: nowrap; }
+.top-menu-panel .menu-group { display: block; padding: 10px 12px 2px; font-size: 12px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.top-menu-panel .menu-child { padding-inline-start: 24px; }
+@media (min-width: 761px) {
+    .top-in:has(.top-nav > :nth-child(6)) .top-nav { order: 10; flex: 1 0 100%; margin-inline: -12px;
+        padding-block: 2px 6px; }
+}
+
+/* Thread page toolbar (2026-11-27): reply, the thread tools menu, search in this thread and the pages in one row
+   above and below the posts (phpBB, MyBB and SMF all do this). */
+.thread-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block: 4px 12px; }
+.thread-bar-end { margin-block: 12px 0; }
+.thread-bar .pagination li > a, .thread-bar .pagination li[aria-current] { min-block-size: 34px; min-inline-size: 34px; }
+.thread-search { display: inline-flex; align-items: center; gap: 0; margin: 0; }
+.thread-search input[type="search"] { min-inline-size: 0; inline-size: 13rem; min-block-size: 36px;
+    border-start-end-radius: 0; border-end-end-radius: 0; font-size: 13.5px; }
+.thread-search button { min-block-size: 36px; padding-inline: 10px; border-start-start-radius: 0;
+    border-end-start-radius: 0; margin-inline-start: -1px; }
+.menu-drop { position: relative; }
+.menu-drop > summary { list-style: none; }
+.menu-drop > summary::-webkit-details-marker { display: none; }
+.menu-drop > summary::after { content: ""; inline-size: 6px; block-size: 6px; border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); margin-inline-start: 2px; opacity: .7; }
+.menu-drop-panel { min-inline-size: 240px; }
+.menu-drop-panel > a, .menu-drop-panel button { display: flex; align-items: center; inline-size: 100%;
+    min-block-size: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: none; color: var(--ink-2);
+    font: 500 14px/1.2 var(--body); text-align: start; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.menu-drop-panel > a:hover, .menu-drop-panel button:hover { background: var(--sunken); color: var(--ink); }
+.menu-drop-panel button[aria-pressed="true"] { color: var(--accent-text); }
+.menu-drop-panel form { display: block; margin: 0; }
+.menu-drop-head { display: block; margin-block-start: 6px; padding: 8px 10px 2px; border-block-start: 1px solid var(--line);
+    font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+
+/* List toolbars and small links (2026-11-27): "mark read" and "follow" are small text links, as in phpBB. */
+.list-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-block: 4px 10px; }
+.list-bar .forum-sort { margin: 0; }
+.list-bar .forum-sort select { min-block-size: 36px; font-size: 13.5px; }
+.quick-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 13.5px; }
+.quick-links form { display: inline; margin: 0; }
+.quick-links a, .link-btn, button.link-btn { display: inline; min-block-size: 0; padding: 0; border: 0; background: none;
+    color: var(--accent-text); font: 500 13.5px/1.4 var(--body); text-decoration: none; cursor: pointer; }
+.quick-links a:hover, .link-btn:hover, button.link-btn:hover { background: none; color: var(--accent-text);
+    text-decoration: underline; }
+
+/* Posts (2026-11-27): actions small and on the right, reactions compact and joined to their post. */
+.post-acts { justify-content: flex-end; margin-inline: 0 -10px; }
+.post-acts a, .post-acts button { min-block-size: 32px; font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.post:has(+ .post-extras) { border-block-end: 0; padding-block-end: 8px; }
+.post-extras { padding-block-start: 0; gap: 8px; }
+.post-extras .reactions { gap: 4px; }
+.chip-btn, button.chip-btn { min-block-size: 28px; padding: 2px 10px; font: 500 12.5px/1.2 var(--body); }
+.post-extras .chip { font-size: 12.5px; }
+.post-extras hr { margin-block: 4px; }
+.post-extras > p.meta { font-size: 13px; }
+@media (max-width: 760px) { .post-extras { padding-inline: 18px; } .thread-search input[type="search"] { inline-size: 9rem; } }
+main details.menu-drop { background: none; border: 0; border-radius: 0; padding: 0; }
+main details.menu-drop[open] > summary { margin-block-end: 0; }
+.menu-drop-panel button { justify-content: flex-start; }
+
+/* Print view (2026-11-27): a centred reading column, readable sizes, buttons only on screen. */
+.print-view { max-inline-size: 72ch; margin-inline: auto; }
+.print-head { padding-block-end: 14px; border-block-end: 2px solid var(--line-strong); }
+.print-head h1 { font-size: 28px; margin-block: 6px 0; }
+.print-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block-end: 10px; }
+.print-view .print-post { padding-block: 16px; border-block-start: 1px solid var(--line); }
+.print-view .print-post:first-of-type { border-block-start: 0; }
+.print-author { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-block-end: 8px; font-size: 15px; }
+.print-view .post-body { font-size: 16px; line-height: 1.65; }
+@media print {
+    .print-actions, .nv-ad, .skip-link { display: none !important; }
+    body { background: #fff; color: #000; }
+    .print-view { max-inline-size: none; }
+    .print-view .post-body img { max-block-size: 60vh; }
+}

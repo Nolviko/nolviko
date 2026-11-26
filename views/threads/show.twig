@@ -25,31 +25,54 @@
 {% block content %}
 {{ theme_slot('thread.header.before') }}
 <nav class="crumb" aria-label="{{ t('core.nav.breadcrumb') }}"><a href="{{ forum_home_url|safe_url }}">{{ t('forums.show.back') }}</a>{% for step in trail|default([]) %}<span aria-hidden="true">/</span>{% if step.url %}<a href="{{ step.url|safe_url }}"><bdi>{{ step.title }}</bdi></a>{% else %}<span><bdi>{{ step.title }}</bdi></span>{% endif %}{% endfor %}</nav>
-<div class="head-row">
 <h1 dir="auto">{% if labels.prefix|default(null) %}<span class="{{ labels.prefix.class }} title-prefix"><bdi>{{ labels.prefix.label }}</bdi></span> {% endif %}{{ title|censor }}</h1>
-<div class="actions">
-{% if community_url|default(null) %}<a class="btn btn-s" href="{{ community_url|safe_url }}">{{ t('community.thread') }}</a>{% endif %}
-{% if csrf_token|default(null) and thread_id|default(null) %}<a class="btn btn-s" href="{{ path('threads.unread', {thread: thread_id})|safe_url }}">{{ t('threads.show.first_unread') }}</a>{% endif %}
-{% if reply_url is not null %}<a class="btn" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>{% endif %}
+{# Pagination, shown above and below the posts like phpBB, MyBB and SMF. #}
+{% set pager %}{% if links is not empty %}<nav aria-label="{{ t('threads.show.pages', {page: page, pages: pages}) }}">
+<ul class="pagination">
+{% if previous is not null %}<li><a rel="prev" href="{{ previous|safe_url }}">{{ t('threads.show.previous') }}</a></li>{% endif %}
+{% for link in links %}
+{% if link.url is null %}<li aria-hidden="true">…</li>{% elseif link.current %}<li aria-current="page">{{ link.number|format_number }}</li>{% else %}<li><a href="{{ link.url|safe_url }}">{{ link.number|format_number }}</a></li>{% endif %}
+{% endfor %}
+{% if next is not null %}<li><a rel="next" href="{{ next|safe_url }}">{{ t('threads.show.next') }}</a></li>{% endif %}
+</ul>
+</nav>{% endif %}{% endset %}
+{# One toolbar under the title (2026-11-27, after phpBB/MyBB/SMF): reply, a "Thread tools" menu with the less
+   frequent actions (print, first unread, bookmark, follow, poll and files, labels, moderation), search in this
+   thread and the pages. #}
+{% set act = path('community', {section: 'thread'}) ~ '?thread=' ~ thread_id|default(0) %}
+<div class="thread-bar">
+{% if reply_url is not null %}<a class="btn btn-sm" href="{{ reply_url|safe_url }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg>{{ t('threads.show.reply') }}</a>{% endif %}
+{% if thread_id|default(null) %}
+<details class="menu-drop">
+<summary class="btn btn-s btn-sm">{{ t('threads.show.tools') }}</summary>
+<div class="menu-drop-panel">
+{% if csrf_token|default(null) %}<a href="{{ path('threads.unread', {thread: thread_id})|safe_url }}">{{ t('threads.show.first_unread') }}</a>{% endif %}
+{% if thread_status|default(null) is null %}<a href="{{ canonical|safe_url }}?print=1" rel="nofollow">{{ t('threads.show.print') }}</a>{% endif %}
+{% if csrf_token|default(null) and tools|default(null) %}
+{% set states = {bookmark: tools.relationship.bookmarked, subscribe: tools.relationship.subscribed} %}
+{% set undo_labels = {bookmark: t('community.undo_bookmark'), subscribe: t('community.undo_subscribe')} %}
+{% for action in ['bookmark', 'subscribe'] %}<form method="post" action="{{ act|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="target" value="{{ thread_id }}"><input type="hidden" name="return_thread" value="{{ thread_id }}"><button type="submit" name="enable" value="{{ states[action] ? '0' : '1' }}" aria-pressed="{{ states[action] ? 'true' : 'false' }}">{{ states[action] ? undo_labels[action] : t('community.' ~ action) }}</button></form>{% endfor %}
+{% endif %}
+{% if community_url|default(null) %}<a href="{{ community_url|safe_url }}">{{ t('community.thread') }}</a>{% endif %}
+{% if labels|default(null) and labels.manage_url %}<a href="{{ labels.manage_url|safe_url }}">{{ t('threads.labels.edit') }}</a>{% endif %}
+{% if moderation|default(null) %}<span class="menu-drop-head">{{ t('threads.show.moderation_tools') }}</span>
+{% for command in [moderation.sticky, moderation.lock] %}{% if command %}<form method="post" action="{{ moderation.action|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="command" value="{{ command }}"><button type="submit">{% if command == 'sticky' %}{{ t('threads.show.command.sticky') }}{% elseif command == 'unsticky' %}{{ t('threads.show.command.unsticky') }}{% elseif command == 'lock' %}{{ t('threads.show.command.lock') }}{% else %}{{ t('threads.show.command.unlock') }}{% endif %}</button></form>{% endif %}{% endfor %}
+<a href="{{ moderation.manage_url|safe_url }}">{{ t('threads.manage.title') }}</a>
+{% endif %}
 </div>
-</div>
-{% if thread_id|default(null) and thread_status|default(null) is null %}
-<form class="inline-form thread-search" method="get" action="{{ path('search.posts')|safe_url }}" role="search" aria-label="{{ t('threads.show.search') }}">
+</details>
+{% if thread_status|default(null) is null %}
+<form class="thread-search" method="get" action="{{ path('search.posts')|safe_url }}" role="search" aria-label="{{ t('threads.show.search') }}">
 <input type="hidden" name="thread" value="{{ thread_id }}">
 <input type="search" name="q" required maxlength="120" dir="auto" aria-label="{{ t('threads.show.search') }}" placeholder="{{ t('threads.show.search') }}">
-<button type="submit" class="btn-s btn-sm">{{ t('search.submit') }}</button>
-<a class="btn btn-s btn-sm" href="{{ canonical|safe_url }}?print=1" rel="nofollow">{{ t('threads.show.print') }}</a>
+<button type="submit" class="btn-s btn-sm" aria-label="{{ t('search.submit') }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
 </form>
 {% endif %}
-{% if moderation|default(null) %}
-<div class="row thread-moderation">
-{% for command in [moderation.sticky, moderation.lock] %}{% if command %}<form method="post" action="{{ moderation.action|safe_url }}"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="command" value="{{ command }}"><button type="submit" class="btn btn-s">{% if command == 'sticky' %}{{ t('threads.show.command.sticky') }}{% elseif command == 'unsticky' %}{{ t('threads.show.command.unsticky') }}{% elseif command == 'lock' %}{{ t('threads.show.command.lock') }}{% else %}{{ t('threads.show.command.unlock') }}{% endif %}</button></form>{% endif %}{% endfor %}
-<a class="btn-s" href="{{ moderation.manage_url|safe_url }}">{{ t('threads.manage.title') }}</a>
-</div>
 {% endif %}
-{% if labels|default(null) and (labels.tags is not empty or labels.manage_url) %}
-<p class="row thread-tags">{% for tag in labels.tags %}<a class="chip chip-tag" href="{{ path('tags.show', {tag: tag.slug})|safe_url }}">#<bdi>{{ tag.name }}</bdi></a>{% endfor %}
-{% if labels.manage_url %}<a class="btn-s" href="{{ labels.manage_url|safe_url }}">{{ t('threads.labels.edit') }}</a>{% endif %}</p>
+<div class="row-end">{{ pager }}</div>
+</div>
+{% if labels|default(null) and labels.tags is not empty %}
+<p class="row thread-tags">{% for tag in labels.tags %}<a class="chip chip-tag" href="{{ path('tags.show', {tag: tag.slug})|safe_url }}">#<bdi>{{ tag.name }}</bdi></a>{% endfor %}</p>
 {% endif %}
 {{ theme_slot('thread.header.after') }}
 {% if thread_status is not null or locked %}
@@ -71,21 +94,9 @@
 </div>
 {{ theme_slot('thread.posts.after') }}
 {% endif %}
-<div class="head-row">
-{% if links is not empty %}
-<nav aria-label="{{ t('threads.show.pages', {page: page, pages: pages}) }}">
-<ul class="pagination">
-{% if previous is not null %}<li><a rel="prev" href="{{ previous|safe_url }}">{{ t('threads.show.previous') }}</a></li>{% endif %}
-{% for link in links %}
-{% if link.url is null %}<li aria-hidden="true">…</li>{% elseif link.current %}<li aria-current="page">{{ link.number|format_number }}</li>{% else %}<li><a href="{{ link.url|safe_url }}">{{ link.number|format_number }}</a></li>{% endif %}
-{% endfor %}
-{% if next is not null %}<li><a rel="next" href="{{ next|safe_url }}">{{ t('threads.show.next') }}</a></li>{% endif %}
-</ul>
-</nav>
-{% endif %}
-{% if reply_url is not null %}
-<a class="btn row-end" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>
-{% endif %}
+<div class="thread-bar thread-bar-end">
+{{ pager }}
+{% if reply_url is not null %}<a class="btn btn-sm row-end" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>{% endif %}
 </div>
 {% if reply_url is not null %}
 <a id="multi-quote" class="btn multi-quote" href="{{ reply_url|safe_url }}" hidden>{{ t('threads.show.multi_quote_go') }} <span class="chip" data-count>0</span></a>

@@ -10,7 +10,7 @@ return [
     'community.notifications' => 'Bildirimler',
     'community.bookmarks' => 'Yer imleri',
     'community.profile' => 'Üye profili',
-    'community.thread' => 'Tepkiler, anket ve konu araçları',
+    'community.thread' => 'Anket ve dosyalar',
     'community.avatar' => 'Avatar',
     'community.biography' => 'Hakkınızda',
     'community.location' => 'Konum',
