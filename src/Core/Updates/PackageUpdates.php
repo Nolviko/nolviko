@@ -27,6 +27,13 @@ final class PackageUpdates
         'nolviko/google' => 'Nolviko/extension-google-auth',
         'nolviko/seo' => 'Nolviko/extension-seo',
         'nolviko/importer' => 'Nolviko/extension-importer',
+        // 2026-11-27: extension API 1.4 packages (PLG-02, PLG-05..08).
+        'nolviko/analytics' => 'Nolviko/extension-analytics',
+        'nolviko/google_analytics' => 'Nolviko/extension-google-analytics',
+        'nolviko/ads' => 'Nolviko/extension-ads',
+        'nolviko/captcha' => 'Nolviko/extension-captcha',
+        'nolviko/menu' => 'Nolviko/extension-menu',
+        'nolviko/pages' => 'Nolviko/extension-pages',
     ];
 
     public const OFFICIAL_THEMES = ['lumen' => 'Nolviko/theme-lumen', 'kolaj' => 'Nolviko/theme-kolaj'];

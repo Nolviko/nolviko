@@ -66,6 +66,21 @@ final readonly class ExtensionsHandler implements RouteHandler
         return $id;
     }
 
+    /** Name and description message IDs of the official extensions (literal, for the i18n contract). */
+    private const CATALOG_TEXTS = [
+        'nolviko/totp' => ['admin.extensions.catalog_name_totp', 'admin.extensions.catalog_about_totp'],
+        'nolviko/google' => ['admin.extensions.catalog_name_google', 'admin.extensions.catalog_about_google'],
+        'nolviko/seo' => ['admin.extensions.catalog_name_seo', 'admin.extensions.catalog_about_seo'],
+        'nolviko/importer' => ['admin.extensions.catalog_name_importer', 'admin.extensions.catalog_about_importer'],
+        'nolviko/analytics' => ['admin.extensions.catalog_name_analytics', 'admin.extensions.catalog_about_analytics'],
+        'nolviko/google_analytics' => ['admin.extensions.catalog_name_google_analytics',
+            'admin.extensions.catalog_about_google_analytics'],
+        'nolviko/ads' => ['admin.extensions.catalog_name_ads', 'admin.extensions.catalog_about_ads'],
+        'nolviko/captcha' => ['admin.extensions.catalog_name_captcha', 'admin.extensions.catalog_about_captcha'],
+        'nolviko/menu' => ['admin.extensions.catalog_name_menu', 'admin.extensions.catalog_about_menu'],
+        'nolviko/pages' => ['admin.extensions.catalog_name_pages', 'admin.extensions.catalog_about_pages'],
+    ];
+
     /**
      * Official extensions that are not installed yet, with their newest release (beta.10 catalog).
      *
@@ -79,17 +94,10 @@ final readonly class ExtensionsHandler implements RouteHandler
             $release = isset($installed[$id]) || $this->updates === null ? null
                 : $this->updates->available($repository, '0.0.0', PackageUpdates::extensionAsset($id));
             if ($release !== null) {
-                $rows[] = ['id' => $id, 'name' => $this->translator->translate(match ($id) {
-                    'nolviko/totp' => 'admin.extensions.catalog_name_totp',
-                    'nolviko/google' => 'admin.extensions.catalog_name_google',
-                    'nolviko/importer' => 'admin.extensions.catalog_name_importer',
-                    default => 'admin.extensions.catalog_name_seo',
-                }), 'about' => $this->translator->translate(match ($id) {
-                    'nolviko/totp' => 'admin.extensions.catalog_about_totp',
-                    'nolviko/google' => 'admin.extensions.catalog_about_google',
-                    'nolviko/importer' => 'admin.extensions.catalog_about_importer',
-                    default => 'admin.extensions.catalog_about_seo',
-                }), 'version' => $release['version'], 'repository' => $repository, 'tag' => $release['tag']];
+                [$name, $about] = self::CATALOG_TEXTS[$id] ?? self::CATALOG_TEXTS['nolviko/seo'];
+                $rows[] = ['id' => $id, 'name' => $this->translator->translate($name),
+                    'about' => $this->translator->translate($about),
+                    'version' => $release['version'], 'repository' => $repository, 'tag' => $release['tag']];
             }
         }
 
