@@ -249,7 +249,7 @@ final class ForumIndexTest extends TestCase
 
         fwrite(STDERR, sprintf("forum_index_queries guest=%d member=%d\n", $large[0], $large[1]));
         self::assertSame($small, $large);
-        self::assertSame([5, 9], $large, 'recorded: guest 5, member 9 (groups and rules of the member)');
+        self::assertSame([5, 8], $large, 'recorded: guest 5, member 8 (combined member permission overrides)');
     }
 
     /**
