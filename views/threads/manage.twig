@@ -13,18 +13,12 @@
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <fieldset>
 <legend>{{ t('threads.manage.choose') }}</legend>
-<p><input id="manage-sticky" name="command" type="radio" value="{{ choices.sticky }}" required>
-<label for="manage-sticky">{{ t('threads.manage.command.sticky') }}</label></p>
-<p><input id="manage-unsticky" name="command" type="radio" value="{{ choices.unsticky }}">
-<label for="manage-unsticky">{{ t('threads.manage.command.unsticky') }}</label></p>
-<p><input id="manage-lock" name="command" type="radio" value="{{ choices.lock }}">
-<label for="manage-lock">{{ t('threads.manage.command.lock') }}</label></p>
-<p><input id="manage-unlock" name="command" type="radio" value="{{ choices.unlock }}">
-<label for="manage-unlock">{{ t('threads.manage.command.unlock') }}</label></p>
-{% for saved in saved_actions|default([]) %}<p><input id="manage-action-{{ saved.id }}" name="command" type="radio" value="{{ 'action:' ~ saved.id }}">
-<label for="manage-action-{{ saved.id }}" dir="auto">{{ t('threads.manage.saved_action', {title: saved.title}) }}</label></p>{% endfor %}
-<p><input id="manage-move" name="command" type="radio" value="{{ choices.move }}">
-<label for="manage-move">{{ t('threads.manage.command.move') }}</label></p>
+<p><label><input id="manage-sticky" name="command" type="radio" value="{{ choices.sticky }}" required> {{ t('threads.manage.command.sticky') }}</label></p>
+<p><label><input id="manage-unsticky" name="command" type="radio" value="{{ choices.unsticky }}"> {{ t('threads.manage.command.unsticky') }}</label></p>
+<p><label><input id="manage-lock" name="command" type="radio" value="{{ choices.lock }}"> {{ t('threads.manage.command.lock') }}</label></p>
+<p><label><input id="manage-unlock" name="command" type="radio" value="{{ choices.unlock }}"> {{ t('threads.manage.command.unlock') }}</label></p>
+{% for saved in saved_actions|default([]) %}<p><label dir="auto"><input id="manage-action-{{ saved.id }}" name="command" type="radio" value="{{ 'action:' ~ saved.id }}"> {{ t('threads.manage.saved_action', {title: saved.title}) }}</label></p>{% endfor %}
+<p><label><input id="manage-move" name="command" type="radio" value="{{ choices.move }}"> {{ t('threads.manage.command.move') }}</label></p>
 </fieldset>
 <p><label for="manage-forum">{{ t('threads.manage.forum') }}</label>
 {% if forum_options|default([]) is not empty %}<select id="manage-forum" name="forum"><option value="">{{ t('threads.manage.forum_none') }}</option>

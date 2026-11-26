@@ -5,7 +5,7 @@
 <h1>{{ title }}</h1>
 <nav class="head-row" aria-label="{{ t('calendar.months') }}">
 <a class="btn btn-s" rel="prev" href="{{ previous_url|safe_url }}">{{ t('calendar.previous') }}</a>
-<h2>{{ month }}</h2>
+<h2><time datetime="{{ month }}">{{ month_label|default(month) }}</time></h2>
 <a class="btn btn-s" rel="next" href="{{ next_url|safe_url }}">{{ t('calendar.next') }}</a>
 </nav>
 {% if events is empty %}<p class="hint">{{ t('calendar.none') }}</p>{% else %}

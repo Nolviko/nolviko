@@ -13,12 +13,12 @@
 {% if page.rows is empty %}<p class="hint">{{ t('content.attachments.none') }}</p>{% else %}
 <form method="post" action="{{ action|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<table class="table"><thead><tr><th scope="col"><span class="visually-hidden">{{ t('content.attachments.select') }}</span></th><th scope="col">{{ t('content.attachments.name') }}</th><th scope="col">{{ t('content.attachments.type') }}</th><th scope="col">{{ t('content.attachments.size') }}</th><th scope="col">{{ t('content.attachments.owner') }}</th><th scope="col">{{ t('content.attachments.post') }}</th><th scope="col">{{ t('content.attachments.date') }}</th></tr></thead>
+<div class="panel"><table class="tbl"><thead><tr><th scope="col"><span class="visually-hidden">{{ t('content.attachments.select') }}</span></th><th scope="col">{{ t('content.attachments.name') }}</th><th scope="col">{{ t('content.attachments.type') }}</th><th scope="col">{{ t('content.attachments.size') }}</th><th scope="col">{{ t('content.attachments.owner') }}</th><th scope="col">{{ t('content.attachments.post') }}</th><th scope="col">{{ t('content.attachments.date') }}</th></tr></thead>
 <tbody>{% for row in page.rows %}<tr><td><input type="checkbox" name="media[]" value="{{ row.id }}" aria-label="{{ t('content.attachments.select_file', {name: row.name}) }}"></td>
 <td><bdi>{{ row.name }}</bdi></td><td>{{ row.mime }}</td><td>{{ t('content.attachments.kb', {kb: (row.bytes / 1024)|round}) }}</td>
 <td>{% if row.user %}<bdi>{{ row.user }}</bdi>{% else %}—{% endif %}</td>
 <td>{% if row.post_id %}<a href="{{ path('posts.show', {post: row.post_id})|safe_url }}">#{{ row.post_id }}</a>{% else %}{{ t('content.attachments.unattached') }}{% endif %}</td>
-<td>{{ row.created_at }}</td></tr>{% endfor %}</tbody></table>
+<td>{{ row.created_at }}</td></tr>{% endfor %}</tbody></table></div>
 <p><button class="btn-d" type="submit"{% if not fresh %} disabled{% endif %}>{{ t('content.attachments.remove') }}</button></p>
 </form>
 {% if next_url %}<p><a href="{{ next_url|safe_url }}">{{ t('content.attachments.older') }}</a></p>{% endif %}

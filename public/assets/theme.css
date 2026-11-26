@@ -703,3 +703,17 @@ a.post-author:hover { color: var(--accent-text); }
 .qr-figure svg { inline-size: min(220px, 60vw); block-size: auto; }
 .code-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
 .code-list code { display: block; padding: 6px 10px; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--sunken); font-size: 15px; letter-spacing: .06em; text-align: center; }
+/* beta.20 UI pass: compact member tools, thread icons, print view, birthdays, forum sort. */
+.forum-sort, .thread-search { margin-block: 8px; }
+.thread-search input[type="search"] { min-inline-size: 14rem; }
+.thread-icon { vertical-align: middle; border-radius: 4px; margin-inline-end: 4px; }
+.icon-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.icon-pick legend { inline-size: 100%; }
+.print-view { max-inline-size: 72ch; }
+.print-view .print-post { padding-block: 14px; border-block-start: 1px solid var(--line); }
+.print-view .print-post .meta { margin-block-end: 8px; }
+.terms-text { max-block-size: 16rem; overflow: auto; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunken); }
+main form.inline-form, .card form.inline-form { display: inline-flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; }
+main form.inline-form > label { display: inline; }
+main form.filters { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
+main form.filters > label { flex: 1 1 12rem; }

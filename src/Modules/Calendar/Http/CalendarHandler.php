@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Nolviko\Core\Http\ErrorResponder;
 use Nolviko\Core\Http\RouteHandler;
+use Nolviko\Core\Locale\LocaleFormatter;
 use Nolviko\Core\Locale\MessageTranslator;
 use Nolviko\Core\Routing\CoreRoutes;
 use Nolviko\Core\Routing\UrlGenerator;
@@ -39,6 +40,7 @@ final readonly class CalendarHandler implements RouteHandler
         private TemplateRenderer $views,
         private UrlGenerator $urls,
         private ErrorResponder $errors,
+        private ?LocaleFormatter $formatter = null,
     ) {
     }
 
@@ -85,6 +87,7 @@ final readonly class CalendarHandler implements RouteHandler
         $html = $this->views->render('calendar/month.twig', [
             'title' => $this->translator->translate('calendar.title'),
             'month' => $first->format('Y-m'),
+            'month_label' => $this->formatter?->pattern($first, 'LLLL y') ?? $first->format('Y-m'),
             'events' => $events,
             'previous_url' => $base . '?month=' . $first->modify('-1 month')->format('Y-m'),
             'next_url' => $base . '?month=' . $first->modify('+1 month')->format('Y-m'),

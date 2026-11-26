@@ -73,7 +73,7 @@
 <button class="btn-s" type="submit" name="action" value="{{ 'delete_question' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.taxonomy.delete') }}</button></form></li>{% endfor %}</ul>{% endif %}
 <form method="post" action="{{ action|safe_url }}" class="panel">{{ m.hidden(csrf_field, csrf_token) }}
 <label for="q-locale">{{ t('admin.membership.locale') }}</label>
-<select id="q-locale" name="locale">{% for locale in locales %}<option value="{{ locale }}">{{ locale }}</option>{% endfor %}</select>
+<select id="q-locale" name="locale">{% for locale in locales %}<option value="{{ locale }}">{{ locale_names[locale]|default(locale) }}</option>{% endfor %}</select>
 <label for="q-text">{{ t('admin.membership.question') }}</label><input id="q-text" name="question" maxlength="255" required dir="auto">
 <label for="q-answers">{{ t('admin.membership.answers') }}</label><textarea id="q-answers" name="answers" rows="3" maxlength="1000" required dir="auto"></textarea>
 <button type="submit" name="action" value="{{ 'add_question' }}"{% if not fresh %} disabled{% endif %}>{{ t('admin.membership.add_question') }}</button></form>

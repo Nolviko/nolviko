@@ -495,6 +495,7 @@ final class CoreServiceProvider implements ServiceProvider
                 TemplateRenderer $views,
                 Router $router,
                 ErrorResponder $errors,
+                LocaleFormatter $formatter,
             ): CalendarHandler => new CalendarHandler(
                 new CalendarEvents($db),
                 $threads,
@@ -505,10 +506,11 @@ final class CoreServiceProvider implements ServiceProvider
                 $views,
                 $router,
                 $errors,
+                $formatter,
             ),
             [Connection::class, ThreadRepository::class, ForumVisibility::class, RequestSubject::class,
                 CsrfTokens::class, MessageTranslator::class, TemplateRenderer::class, Router::class,
-                ErrorResponder::class],
+                ErrorResponder::class, LocaleFormatter::class],
         );
         $services->factory(
             SiteImageHandler::class,
@@ -2156,6 +2158,8 @@ final class CoreServiceProvider implements ServiceProvider
                 CsrfTokens $csrf,
                 Router $router,
                 ErrorResponder $errors,
+                Connection $db,
+                ForumVisibility $visibility,
             ): FollowedHandler => new FollowedHandler(
                 $translator,
                 $views,
@@ -2164,9 +2168,11 @@ final class CoreServiceProvider implements ServiceProvider
                 $csrf,
                 $router,
                 $errors,
+                new ForumSubscriptions($db),
+                $visibility,
             ),
             [MessageTranslator::class, TemplateRenderer::class, RequestSubject::class, CommunityInteractions::class,
-                CsrfTokens::class, Router::class, ErrorResponder::class],
+                CsrfTokens::class, Router::class, ErrorResponder::class, Connection::class, ForumVisibility::class],
         );
         $services->factory(
             ForumThreadsHandler::class,

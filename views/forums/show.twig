@@ -53,10 +53,10 @@
 {% if threads is empty %}
 <div class="panel empty"><p>{{ t('forums.show.empty') }}</p></div>
 {% else %}
-<form method="get" action="{{ canonical|safe_url }}" class="row forum-sort"><label>{{ t('forums.show.sort') }} <select name="sort">
+<form method="get" action="{{ canonical|safe_url }}" class="inline-form forum-sort"><label for="forum-sort" class="meta">{{ t('forums.show.sort') }}</label> <select id="forum-sort" name="sort">
 <option value=""{% if sort is null %} selected{% endif %}>{{ t('forums.show.sort_activity') }}</option>
 {% for option in sorts %}<option value="{{ option }}"{% if sort == option %} selected{% endif %}>{{ {title: t('forums.show.sort_title'), replies: t('forums.show.sort_replies'), started: t('forums.show.sort_started'), activity: t('forums.show.sort_activity')}[option]|default(option) }}</option>{% endfor %}
-</select></label> <button type="submit" class="btn btn-s">{{ t('forums.show.sort_apply') }}</button></form>
+</select> <button type="submit" class="btn-s btn-sm">{{ t('forums.show.sort_apply') }}</button></form>
 <ul class="panel thread-list">
 {% for thread in threads %}
 <li class="trow thread{{ thread.sticky ? ' thread-sticky' : '' }}{{ thread.moved ? ' thread-moved' : '' }}{{ thread.unread ? ' t-unread' : '' }}{{ thread.status is not null ? ' thread-' ~ thread.status : '' }}">

@@ -34,10 +34,11 @@
 </div>
 </div>
 {% if thread_id|default(null) and thread_status|default(null) is null %}
-<form class="row thread-search" method="get" action="{{ path('search.posts')|safe_url }}" role="search" aria-label="{{ t('threads.show.search') }}">
+<form class="inline-form thread-search" method="get" action="{{ path('search.posts')|safe_url }}" role="search" aria-label="{{ t('threads.show.search') }}">
 <input type="hidden" name="thread" value="{{ thread_id }}">
 <input type="search" name="q" required maxlength="120" dir="auto" aria-label="{{ t('threads.show.search') }}" placeholder="{{ t('threads.show.search') }}">
-<button type="submit" class="btn-s">{{ t('search.submit') }}</button>
+<button type="submit" class="btn-s btn-sm">{{ t('search.submit') }}</button>
+<a class="btn btn-s btn-sm" href="{{ canonical|safe_url }}?print=1" rel="nofollow">{{ t('threads.show.print') }}</a>
 </form>
 {% endif %}
 {% if moderation|default(null) %}

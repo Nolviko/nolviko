@@ -85,7 +85,7 @@
 {% elseif section == 'thread' %}
 <div class="community-tools stack-l">{% include 'community/thread.twig' %}</div>
 {% else %}
-{% if section == 'members' and directory|default(null) %}<form method="get" class="row member-search"><label>{{ t('community.directory_search') }} <input type="search" name="q" value="{{ directory.q }}" maxlength="50"></label>
+{% if section == 'members' and directory|default(null) %}<form method="get" class="filters member-search"><label>{{ t('community.directory_search') }} <input type="search" name="q" value="{{ directory.q }}" maxlength="50"></label>
 <label>{{ t('community.directory_sort') }} <select name="sort"><option value=""{% if directory.sort == '' %} selected{% endif %}>{{ t('community.directory_sort_number') }}</option>
 {% for option in directory.sorts %}<option value="{{ option }}"{% if directory.sort == option %} selected{% endif %}>{{ {number: t('community.directory_sort_number'), name: t('community.directory_sort_name'), joined: t('community.directory_sort_joined')}[option]|default(option) }}</option>{% endfor %}</select></label>
 <button type="submit" class="btn btn-s">{{ t('community.directory_apply') }}</button></form>{% endif %}

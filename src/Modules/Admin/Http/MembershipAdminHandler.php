@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Admin\Http;
 
+use Locale;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Locale\MessageTranslator;
@@ -127,6 +128,14 @@ final readonly class MembershipAdminHandler implements RouteHandler
             'mail_jobs' => $this->groups->mailJobs(),
             'questions' => $this->questions->all(),
             'locales' => $this->locales,
+            // Each language in its own name (intl), so the list reads "English", "Türkçe".
+            'locale_names' => array_combine($this->locales, array_map(
+                static fn(string $code): string => mb_convert_case(
+                    Locale::getDisplayLanguage($code, $code),
+                    MB_CASE_TITLE,
+                ),
+                $this->locales,
+            )) ?: [],
             'error' => $error,
             'notice' => is_string($notice) ? $notice : null,
             'fresh' => $this->admin->isFresh(),

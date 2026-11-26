@@ -32,7 +32,9 @@
 {% if forum_subscriptions|default([]) is not empty %}
 <section class="followed" aria-labelledby="followed-forums">
 <h2 id="followed-forums">{{ t('community.followed_forums') }}</h2>
-<ul class="panel list">{% for forum in forum_subscriptions %}<li><a href="{{ forum.url|safe_url }}"><bdi>{{ forum.title }}</bdi></a></li>{% endfor %}</ul>
+<ul class="panel list">{% for forum in forum_subscriptions %}<li><a href="{{ forum.url|safe_url }}"><bdi>{{ forum.title }}</bdi></a>
+<form method="post" action="{{ forum.unsubscribe_url|safe_url }}" class="row-end"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="enable" value="{{ '0' }}">
+<button class="btn-s btn-sm" type="submit">{{ t('forums.show.unsubscribe') }}</button></form></li>{% endfor %}</ul>
 </section>
 {% endif %}
 {% endblock %}

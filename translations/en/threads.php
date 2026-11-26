@@ -101,4 +101,5 @@ return [
     'threads.manage.saved_action' => 'Saved action: {title}',
     'threads.create.icon' => 'Thread icon',
     'threads.create.no_icon' => 'None',
+    'threads.show.print' => 'Print view',
 ];

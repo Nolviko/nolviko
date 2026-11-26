@@ -8,12 +8,12 @@
 
 {% block content %}
 <h1 dir="auto">{{ title }}</h1>
-{% if csrf_token|default(null) %}<div class="actions head-row">
-<a class="btn-s" href="{{ path('community.followed')|safe_url }}">{{ t('community.followed') }}</a>
-<a class="btn-s" href="{{ path('community.drafts')|safe_url }}">{{ t('community.drafts') }}</a>
+{% if csrf_token|default(null) %}<div class="actions">
+<a class="btn btn-s btn-sm" href="{{ path('community.followed')|safe_url }}">{{ t('community.followed') }}</a>
+<a class="btn btn-s btn-sm" href="{{ path('community.drafts')|safe_url }}">{{ t('community.drafts') }}</a>
 <form method="post" action="{{ path('forums.read_all')|safe_url }}">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<button class="btn-s" type="submit">{{ t('forums.index.mark_all_read') }}</button>
+<button class="btn-s btn-sm" type="submit">{{ t('forums.index.mark_all_read') }}</button>
 </form>
 </div>{% endif %}
 {{ theme_slot('forum.list.before', {forums: forums}) }}
@@ -56,7 +56,6 @@
 </ul>
 {% endif %}
 {{ theme_slot('forum.list.after', {forums: forums}) }}
-{% if birthdays|default([]) is not empty %}<section class="panel" aria-labelledby="birthdays-title"><h2 id="birthdays-title">{{ t('community.birthdays') }}</h2>
+{% if birthdays|default([]) is not empty %}<section class="panel panel-pad birthdays" aria-labelledby="birthdays-title"><h2 id="birthdays-title">{{ t('community.birthdays') }}</h2>
 <p>{% for member in birthdays %}<a href="{{ member.url|safe_url }}"><bdi>{{ member.username }}</bdi></a>{% if member.age is not null %} ({{ member.age }}){% endif %} <span class="meta">{{ member.today ? t('community.birthday_today') : member.day }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</p></section>{% endif %}
-<p><a href="{{ path('calendar')|safe_url }}">{{ t('calendar.title') }}</a></p>
 {% endblock %}

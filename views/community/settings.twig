@@ -27,7 +27,6 @@
 <button>{{ t('community.save') }}</button></form>
 {% if options is defined and options and option_choices %}
 <h2 id="display">{{ t('community.display') }}</h2>
-<p><a href="{{ path('groups')|safe_url }}">{{ t('community.groups') }}</a></p>
 <form method="post" action="#display"><input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}"><input type="hidden" name="action" value="{{ 'options' }}">
 <p><label>{{ t('community.date_format') }}<select name="date_format">{% for value in option_choices.date_formats %}<option value="{{ value }}"{% if options.date_format == value %} selected{% endif %}>{{ {auto: t('community.date_format_auto'), dmy: t('community.date_format_dmy'), mdy: t('community.date_format_mdy'), ymd: t('community.date_format_ymd'), long: t('community.date_format_long')}[value]|default(value) }}</option>{% endfor %}</select></label></p>
 <p><label>{{ t('community.time_format') }}<select name="time_format">{% for value in option_choices.time_formats %}<option value="{{ value }}"{% if options.time_format == value %} selected{% endif %}>{{ {auto: t('community.time_format_auto'), '24': t('community.time_format_24'), '12': t('community.time_format_12')}[value]|default(value) }}</option>{% endfor %}</select></label></p>

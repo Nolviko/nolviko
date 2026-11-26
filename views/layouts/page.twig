@@ -97,6 +97,8 @@
 <a href="{{ path('community', {section: 'members'})|safe_url }}">{{ t('community.members') }}</a>
 <a href="{{ path('community', {section: 'online'})|safe_url }}">{{ t('core.nav.online') }}</a>
 <a href="{{ path('search.posts')|safe_url }}">{{ t('search.title') }}</a>
+<a href="{{ path('calendar')|safe_url }}">{{ t('calendar.title') }}</a>
+{% if viewer.signed_in|default(false) %}<a href="{{ path('groups')|safe_url }}">{{ t('community.groups') }}</a>{% endif %}
 <a href="{{ appearance_url|safe_url }}">{{ t('core.theme.title') }}</a>
 <span class="row-end">{{ t('core.footer.powered') }}</span>
 </nav>

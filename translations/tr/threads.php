@@ -98,4 +98,5 @@ return [
     'threads.manage.saved_action' => 'Kayıtlı işlem: {title}',
     'threads.create.icon' => 'Konu simgesi',
     'threads.create.no_icon' => 'Yok',
+    'threads.show.print' => 'Yazdırma görünümü',
 ];

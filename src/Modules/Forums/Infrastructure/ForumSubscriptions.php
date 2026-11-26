@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Nolviko\Modules\Forums\Infrastructure;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Nolviko\Core\Database\SqlDialect;
 use Throwable;
 
@@ -28,6 +30,33 @@ final class ForumSubscriptions
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * The member's subscribed forums among `$visible` (forum IDs the member may see), by name.
+     *
+     * @param list<int> $visible
+     * @return list<array{id: int, title: string}>
+     */
+    public function forums(int $userId, array $visible): array
+    {
+        if ($visible === []) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->fetchAllAssociative(
+                'SELECT f.id, f.title FROM forum_subscriptions s INNER JOIN forums f ON f.id = s.forum_id '
+                    . 'WHERE s.user_id = ? AND s.forum_id IN (?) ORDER BY f.title, f.id LIMIT 200',
+                [$userId, $visible],
+                [ParameterType::INTEGER, ArrayParameterType::INTEGER],
+            );
+        } catch (Throwable) {
+            return [];
+        }
+
+        return array_map(static fn(array $row): array => ['id' => (int) $row['id'],
+            'title' => (string) $row['title']], $rows);
     }
 
     public function set(int $userId, int $forumId, bool $enable): void

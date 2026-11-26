@@ -16,6 +16,8 @@ use Nolviko\Core\Session\CsrfTokens;
 use Nolviko\Core\View\TemplateRenderer;
 use Nolviko\Modules\Community\Infrastructure\CommunityActions;
 use Nolviko\Modules\Community\Infrastructure\CommunityInteractions;
+use Nolviko\Modules\Forums\Infrastructure\ForumSubscriptions;
+use Nolviko\Modules\Permissions\Domain\ForumVisibility;
 use Nolviko\Modules\Threads\Http\ThreadPageHandler;
 use Nolviko\Modules\Users\Domain\RegistrationRejected;
 use Nolviko\Modules\Users\Http\RequestSubject;
@@ -25,8 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * `/following` (beta.18, roadmap 18): the member's thread subscriptions and bookmarks in two lists of PER_PAGE
  * with their own "older" links, and bulk removal (POST, CSRF-checked by the kernel guard). Only readable,
- * visible threads are listed. `forum_subscriptions` is an empty list here: the forum subscriptions of another
- * group plug into the same page and template section.
+ * visible threads are listed. Forum subscriptions (roadmap 01) follow, limited to forums the member may see,
+ * each with a stop button that posts to the forum's subscribe route.
  */
 final class FollowedHandler implements RouteHandler
 {
@@ -42,6 +44,8 @@ final class FollowedHandler implements RouteHandler
         private readonly CsrfTokens $csrf,
         private readonly UrlGenerator $urls,
         private readonly ErrorResponder $errors,
+        private readonly ?ForumSubscriptions $forums = null,
+        private readonly ?ForumVisibility $visibility = null,
     ) {
     }
 
@@ -102,7 +106,14 @@ final class FollowedHandler implements RouteHandler
             'title' => $this->translator->translate('community.followed'),
             'subscriptions' => $lists['subscribe'],
             'bookmarks' => $lists['bookmark'],
-            'forum_subscriptions' => [],
+            'forum_subscriptions' => $this->forums === null || $this->visibility === null ? []
+                : array_map(fn(array $forum): array => $forum + [
+                    'url' => $this->urls->generate(CoreRoutes::FORUM_SHOW, ['forum' => (string) $forum['id']]),
+                    'unsubscribe_url' => $this->urls->generate(
+                        CoreRoutes::FORUM_SUBSCRIBE,
+                        ['forum' => (string) $forum['id']],
+                    ),
+                ], $this->forums->forums($subject->userId, $this->visibility->visible($subject)->forumIds)),
             'removed' => is_string($removed) && ctype_digit($removed) ? (int) $removed : null,
             'action' => $base,
             'csrf_field' => CsrfTokens::FIELD,
