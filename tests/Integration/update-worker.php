@@ -34,7 +34,8 @@ try {
 
     echo 'accepted';
 } catch (RuntimeException $error) {
-    if (!in_array($error->getMessage(), ['update_already_active', 'update_claim_refused', 'update_begin_busy'], true)) {
+    $expected = ['update_already_active', 'update_claim_refused', 'update_lease_held', 'update_begin_busy'];
+    if (!in_array($error->getMessage(), $expected, true)) {
         throw $error;
     }
 

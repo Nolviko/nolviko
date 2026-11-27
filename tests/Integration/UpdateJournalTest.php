@@ -109,7 +109,7 @@ final class UpdateJournalTest extends TestCase
             $this->journal->claim($id, $this->now);
             self::fail('two holders acquired one run');
         } catch (RuntimeException $error) {
-            self::assertSame('update_claim_refused', $error->getMessage());
+            self::assertSame('update_lease_held', $error->getMessage(), 'a live lease is "try again later"');
         }
 
         $later = $this->now->modify('+5 seconds');

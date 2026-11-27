@@ -29,6 +29,16 @@ No limit is relaxed for the updater. Code promotion is per-file atomic, journale
 Expand migrations and fresh-runtime smoke checks precede installed-sequence/version persistence.
 Failure retains maintenance and recovery controls. Manual restore remains available.
 
+What the update backup holds (2026-11-27, checked by the RC1 final run): the database and the files of the
+installed release plus `config/local.php`, `config/install.lock`, `config/update-trust.json` and
+`config/import-sources.json`. It does not hold `extensions/`, `themes/` or the private storage folder (uploads,
+extension data, theme builds), because an update never changes them. Restoring it in place therefore brings back
+the previous release and database while extensions, themes and uploads stay as they are. It is not a full-site
+disaster backup: for that, keep the host's own database and file backups.
+
+If an update request dies halfway (a server restart or the PHP time limit), its step keeps a two-minute lease.
+The update page shows "retrying" and goes on by itself once the lease expires; nothing has to be repaired.
+
 ## Local source setup
 
 Only a frozen local read-only SQL copy is supported. Freeze attachments too. MyISAM source tables do not

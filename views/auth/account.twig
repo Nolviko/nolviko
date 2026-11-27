@@ -38,6 +38,8 @@
 
 <h2>{{ t('auth.account.password_heading') }}</h2>
 <form method="post" action="{{ password_action|safe_url }}">
+{# The account name for password managers (2026-11-27, browser hint); not sent. #}
+<input type="text" autocomplete="username" value="{{ username }}" hidden aria-hidden="true" tabindex="-1">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <p><label for="password-current">{{ t('auth.account.current_password') }}</label>
 <input id="password-current" name="current_password" type="password" required autocomplete="current-password"></p>
@@ -50,6 +52,8 @@
 
 <h2>{{ t('auth.account.email_heading') }}</h2>
 <form method="post" action="{{ email_action|safe_url }}">
+{# The account name for password managers (2026-11-27, browser hint); not sent. #}
+<input type="text" autocomplete="username" value="{{ username }}" hidden aria-hidden="true" tabindex="-1">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 <p><label for="email-current">{{ t('auth.account.current_password') }}</label>
 <input id="email-current" name="current_password" type="password" required autocomplete="current-password"></p>
@@ -67,6 +71,8 @@
 {% if account.linked %}
 <p><span class="chip chip-new">{{ t('auth.external.linked') }}</span> {{ account.name }}{% if account.email %} · {{ account.email }}{% endif %}</p>
 <form method="post" action="{{ external.unlink_action|safe_url }}" class="row">
+{# The account name for password managers (2026-11-27, browser hint); not sent. #}
+<input type="text" autocomplete="username" value="{{ username }}" hidden aria-hidden="true" tabindex="-1">
 <input type="hidden" name="{{ csrf_field }}" value="{{ external.csrf_token }}">
 <input type="hidden" name="provider" value="{{ account.slug }}">
 <p><label for="unlink-{{ account.slug }}">{{ t('auth.account.current_password') }}</label>

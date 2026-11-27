@@ -4,7 +4,7 @@
 
 Upload the complete runtime ZIP to a private staging directory first. Preserve its hidden access-control files. Use a supported PHP version with the installer-required extensions and a dedicated database account on MySQL 8.0 or newer, MariaDB 10.6 or newer, or PostgreSQL 14 or newer (with pdo_pgsql); see compatibility.md; the installer asks for the database type and detects MySQL and MariaDB by itself. Open the browser installer over HTTPS where the host offers it (HTTPS is required only when the board is set to require it), follow its checks, create the first administrator, and verify that installation is locked afterwards. Never publish configuration, storage, database exports or recovery codes.
 
-Keep a separately restorable database and file backup before updates or imports (for PostgreSQL, for example `pg_dump` from the hosting panel). A ZIP of application files alone cannot restore member content. Test restoration on an isolated copy. Shared hosting does not require Composer, Node, Redis, cron or shell access.
+Keep a separately restorable database and file backup before updates or imports (for PostgreSQL, for example `pg_dump` from the hosting panel). A ZIP of application files alone cannot restore member content. Test restoration on an isolated copy. The updater's own backup covers the release files, private configuration and database, not extensions, themes or uploads (see operations.md). Shared hosting does not require Composer, Node, Redis, cron or shell access.
 
 ## Permissions and moderation
 

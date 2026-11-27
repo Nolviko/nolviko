@@ -106,7 +106,14 @@ final class UpdateJournal
         );
 
         if ($updated !== 1) {
-            throw new RuntimeException('update_claim_refused');
+            // 2026-11-27: a lease another (possibly dead) request still holds is "try again later"; a stopped or
+            // finished run is a refusal.
+            $held = $this->connection->fetchOne(
+                "SELECT 1 FROM update_runs WHERE id = ? AND active_slot = 1 AND run_condition = 'running' "
+                    . 'AND owner_token IS NOT NULL AND lease_expires_at > ?',
+                [$id, self::stamp($now)],
+            );
+            throw new RuntimeException($held === false ? 'update_claim_refused' : 'update_lease_held');
         }
 
         return $token;
