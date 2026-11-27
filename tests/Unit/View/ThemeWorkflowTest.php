@@ -201,6 +201,24 @@ final class ThemeWorkflowTest extends TestCase
         self::assertSame($reviewed['build'], $this->builds->pointer());
     }
 
+    /** RC1 final run (2026-11-27): after a core update the published theme comes back, rebuilt once. */
+    public function testACoreUpdateRebuildsTheActiveThemeWhenItStillFits(): void
+    {
+        $this->manifest('vendor.plain', 'default');
+        $first = $this->builds->build('vendor.plain', [], 1);
+        $this->builds->publish(1, $first['build']);
+        $this->files->write('app/views/layouts/page.twig', '<h1>{{ title }}</h1><p>New core</p>'
+            . '{% block content %}{% endblock %}');
+
+        $active = $this->builds->active();
+
+        self::assertNotNull($active);
+        self::assertSame('vendor.plain', $active['theme']);
+        self::assertNotSame($first['build'], $active['hash']);
+        self::assertSame($active['hash'], $this->builds->pointer());
+        self::assertSame($active['hash'], $this->builds->active()['hash'], 'built once');
+    }
+
     public function testSourceZipRoundTripAndImmutableIds(): void
     {
         $archive = new ThemeArchive($this->builds);

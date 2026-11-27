@@ -122,6 +122,7 @@
     const recover = async () => {
         const parts = grant.split('.');
         let sequence = 0;
+        let busyWaits = 0;
         const send = async (action, reconcile = true) => {
             const response = await reach(box.dataset.recovery, {
                 method: 'POST', credentials: 'same-origin', cache: 'no-store',
@@ -137,6 +138,14 @@
             if (response.status === 409 && result.error === 'recovery_sequence_conflict' && reconcile) {
                 return send('status', false);
             }
+            // A step that died (server restart, time limit) holds its lease for up to two minutes: wait, then retry.
+            if (response.status === 409 && result.error === 'recovery_busy' && busyWaits < 24) {
+                busyWaits++;
+                say('retry');
+                await pause(10000);
+                return send(action, reconcile);
+            }
+            busyWaits = 0;
             if (!response.ok) throw new Error('update_recovery_failed');
             return result;
         };

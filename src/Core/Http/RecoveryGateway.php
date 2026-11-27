@@ -90,10 +90,11 @@ final class RecoveryGateway implements RouteHandler
                 $name === 'revoke',
             );
         } catch (RuntimeException $failure) {
-            return self::reply([
-                'error' => $failure->getMessage() === 'recovery_grant_busy'
-                    ? 'recovery_busy' : 'recovery_request_refused',
-            ], $failure->getMessage() === 'recovery_grant_busy' ? 409 : 403);
+            // 2026-11-27 (RC1 final run): a step whose request died keeps its lease for up to two minutes; the
+            // next request is "busy, try again", not a refusal, so the update page waits instead of failing.
+            $busy = in_array($failure->getMessage(), ['recovery_grant_busy', 'update_claim_refused'], true);
+
+            return self::reply(['error' => $busy ? 'recovery_busy' : 'recovery_request_refused'], $busy ? 409 : 403);
         } catch (Throwable) {
             // No exception text, credentials, filesystem paths or request headers enter the response.
             return self::reply(['error' => 'recovery_step_failed'], 503);

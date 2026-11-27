@@ -163,9 +163,57 @@ final readonly class ThemeBuildStore
                 return null;
             }
             $data = $this->get($hash);
-            return $this->compatible($data) ? $data : null;
+            return $this->compatible($data) ? $data : $this->refresh($data);
         } catch (Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * After a core update the published build belongs to the old release (2026-11-27, RC1 final run: a themed
+     * forum came back with the default theme after every update). The same theme with the same colours is
+     * built and published again for the new release, once: when the theme no longer fits the new core (it
+     * overrides a template that changed) or another request is already building, the default theme is used and
+     * the administrator sees the warnings in Admin > Themes as before.
+     *
+     * @param array<string, mixed> $old
+     */
+    private function refresh(array $old): ?array
+    {
+        $fingerprint = hash('sha256', ($old['hash'] ?? '') . '|'
+            . (ReleaseId::fromFile($this->root . '/config/release.php') ?? 'dev') . '|'
+            . ThemeFiles::fingerprint(ThemeFiles::core($this->root . '/views')));
+        $marker = $this->directory() . '/refresh-failed-' . substr($fingerprint, 0, 32);
+        if (!is_string($old['theme'] ?? null) || !is_int($old['owner'] ?? null) || file_exists($marker)) {
+            return null;
+        }
+        $lock = @fopen($this->directory() . '/refresh.lock', 'c+b');
+        if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+            return null;
+        }
+        try {
+            if ($this->pointer() !== ($old['hash'] ?? null)) {
+                $current = $this->pointer() === null ? null : $this->get((string) $this->pointer());
+
+                return $current !== null && $this->compatible($current) ? $current : null;
+            }
+            $tokens = is_array($old['tokens'] ?? null) ? $old['tokens'] : [];
+            $draft = $this->build($old['theme'], $tokens, $old['owner']);
+            if ($draft['warnings'] !== 0) {
+                @touch($marker);
+
+                return null;
+            }
+            $this->publish($old['owner'], $draft['build']);
+
+            return $this->get($draft['build']);
+        } catch (Throwable) {
+            @touch($marker);
+
+            return null;
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
     }
 

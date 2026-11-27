@@ -209,7 +209,7 @@ final class UpdatePolicyTest extends TestCase
             $dispatcher->actions(),
         );
         $sequence = 0;
-        $send = function (string $action) use ($gateway, $grant, $origin, &$sequence): array {
+        $send = function (string $action, int $status = 200) use ($gateway, $grant, $origin, &$sequence): array {
             $request = Request::create($origin . '/update-recovery.php', 'POST', [], [], [], [
                 'HTTP_ORIGIN' => $origin, 'CONTENT_TYPE' => 'application/json',
                 'HTTP_X_NOLVIKO_RECOVERY_GRANT' => $grant['id'], 'HTTP_X_NOLVIKO_RECOVERY_CODE' => $grant['code'],
@@ -218,14 +218,23 @@ final class UpdatePolicyTest extends TestCase
             ], json_encode(['action' => $action], JSON_THROW_ON_ERROR));
             $response = $gateway->handle($request, []);
             $data = json_decode((string) $response->getContent(), true, 4, JSON_THROW_ON_ERROR);
-            self::assertSame(200, $response->getStatusCode(), $action . ': ' . $response->getContent());
-            $sequence = $data['next_sequence'];
+            self::assertSame($status, $response->getStatusCode(), $action . ': ' . $response->getContent());
+            $sequence = $data['next_sequence'] ?? $sequence;
 
             return $data;
         };
 
         self::assertSame('backup', $send('status')['next_action']);
         $send('backup');
+        // RC1 final run (2026-11-27): a request that died mid-step still holds the lease. The next step is
+        // "busy" (409, the page waits and retries), not a refusal; once the lease expires the update goes on.
+        $journal->claim($job, new DateTimeImmutable());
+        self::assertSame('recovery_busy', $send('resume', 409)['error']);
+        $this->db->executeStatement('UPDATE update_runs SET lease_expires_at = ? WHERE id = ?', [
+            '2000-01-01 00:00:00', $job,
+        ]);
+        // The busy answer used up a sequence number; the page learns the next one from the conflict reply.
+        self::assertSame('recovery_sequence_conflict', $send('status', 409)['error']);
         $state = $send('status');
         for ($round = 0; ($state['next_action'] ?? null) === 'resume' && $round < 50; $round++) {
             $send('resume');
