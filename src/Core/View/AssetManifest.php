@@ -32,6 +32,12 @@ final class AssetManifest
             throw new RuntimeException('asset_missing');
         }
 
+        if (!isset($this->files[$name])) {
+            // A development checkout has no fingerprinted copies (2026-11-27): the file's change time in the
+            // address makes browsers fetch an edited file at once instead of after the one-day cache.
+            return 'assets/' . $file . '?v=' . (int) filemtime($this->root . '/public/assets/' . $file);
+        }
+
         return 'assets/' . $file;
     }
 

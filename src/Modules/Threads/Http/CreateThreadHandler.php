@@ -141,7 +141,7 @@ final class CreateThreadHandler implements RouteHandler
         [$prefix, $tags] = ThreadLabelsHandler::picked($input);
 
         try {
-            [$prefix, $tags] = $this->taxonomy?->validate($forumId, $prefix, $tags) ?? [null, []];
+            [$prefix, $tags] = $this->taxonomy?->validate($forumId, $prefix, $tags, true) ?? [null, []];
             $created = $this->threads->create($subject, $forumId, $title, $content, $request->getClientIp());
         } catch (ThreadRuleViolation $violation) {
             return $this->page($forum, $violation, $title, $content, picked: [$prefix, $tags]);
@@ -219,6 +219,7 @@ final class CreateThreadHandler implements RouteHandler
             'selected_prefix' => $picked[0],
             'selected_tags' => $picked[1],
             'max_tags' => ThreadTaxonomy::MAX_TAGS,
+            'prefix_required' => $this->taxonomy?->prefixRequired() ?? false,
             'content' => $content,
             'max_title' => CreateThread::MAX_TITLE_LENGTH,
             'max_content' => CreateThread::MAX_CONTENT_LENGTH,

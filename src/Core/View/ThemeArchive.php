@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nolviko\Core\View;
 
 use Nolviko\Core\Locale\TranslatorFactory;
+use Nolviko\Core\Runtime\DirectoryMove;
 use Throwable;
 use ZipArchive;
 
@@ -157,7 +158,8 @@ final readonly class ThemeArchive
                 }
             }
             $renderer->warm(array_values(array_unique($names)));
-            // Same-filesystem installation under an exclusive lock; an existing ID is never overwritten.
+            // Installation under an exclusive lock (a copy when storage is on another disk, 2026-11-27); an
+            // existing ID is never overwritten.
             $lockPath = $this->builds->directory() . '/import.lock';
             if (is_link($lockPath)) {
                 throw new TemplateException('theme_path_invalid');
@@ -177,7 +179,7 @@ final readonly class ThemeArchive
                 if ($aside !== null && !rename($target, $aside)) {
                     throw new TemplateException('theme_path_invalid');
                 }
-                if (!rename($stage . '/themes/' . $id, $target)) {
+                if (!DirectoryMove::move($stage . '/themes/' . $id, $target)) {
                     if ($aside !== null) {
                         rename($aside, $target);
                     }

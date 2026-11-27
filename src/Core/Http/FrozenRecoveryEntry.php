@@ -14,6 +14,9 @@ use Nolviko\Core\Runtime\Bootstrap;
 use Nolviko\Core\Session\NativeSession;
 use Nolviko\Core\Updates\RecoveryGrantStore;
 use Nolviko\Core\Updates\UpdateSmokeCheck;
+use Nolviko\Core\View\TemplateRenderer;
+use Nolviko\Core\View\ThemeFiles;
+use Nolviko\Core\View\TwigRenderer;
 use Nolviko\Modules\Admin\Http\AdminGuard;
 use Nolviko\Modules\Admin\Http\AdminSession;
 use Nolviko\Modules\Users\Http\RequestSubject;
@@ -77,6 +80,14 @@ final class FrozenRecoveryEntry
                         return ($route['_route'] ?? null) === CoreRoutes::ADMIN_UPDATES;
                     },
                     'database' => static fn(): bool => (int) $connection->fetchOne('SELECT 1') === 1,
+                    'templates' => static function () use ($services, $site): bool {
+                        $renderer = $services->get(TemplateRenderer::class);
+                        if ($renderer instanceof TwigRenderer) {
+                            $renderer->warm(array_keys(ThemeFiles::core($site . '/views')));
+                        }
+
+                        return true;
+                    },
                 ]) : null;
                 $dispatcher = new RecoveryDispatcher(
                     $connection,

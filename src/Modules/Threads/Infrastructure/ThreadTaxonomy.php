@@ -122,14 +122,20 @@ final readonly class ThreadTaxonomy
      * @param list<int> $tagIds
      * @return array{int|null, list<int>}
      *
-     * @throws ThreadRuleViolation `thread_prefix_invalid` or `thread_tags_invalid`.
+     * @throws ThreadRuleViolation `thread_prefix_invalid`, `thread_prefix_required` (a new thread in a forum with
+     *     prefixes while Site settings require one) or `thread_tags_invalid`.
      */
-    public function validate(int $forumId, ?int $prefixId, array $tagIds): array
+    public function validate(int $forumId, ?int $prefixId, array $tagIds, bool $newThread = false): array
     {
         $tagIds = array_values(array_unique(array_filter($tagIds, static fn(int $id): bool => $id > 0)));
+        $available = array_column($this->prefixes($forumId), 'id');
 
-        if ($prefixId !== null && !in_array($prefixId, array_column($this->prefixes($forumId), 'id'), true)) {
+        if ($prefixId !== null && !in_array($prefixId, $available, true)) {
             throw new ThreadRuleViolation('thread_prefix_invalid');
+        }
+
+        if ($newThread && $prefixId === null && $available !== [] && $this->prefixRequired()) {
+            throw new ThreadRuleViolation('thread_prefix_required');
         }
 
         if (
@@ -143,6 +149,13 @@ final readonly class ThreadTaxonomy
         }
 
         return [$prefixId, $tagIds];
+    }
+
+    public function prefixRequired(): bool
+    {
+        return $this->db->fetchOne(
+            "SELECT setting_value FROM settings WHERE setting_key = 'threads.prefix_required'",
+        ) === 'on';
     }
 
     /**

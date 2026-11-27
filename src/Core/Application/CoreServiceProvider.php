@@ -53,6 +53,7 @@ use Nolviko\Core\Http\SiteClosedGuard;
 use Nolviko\Core\Http\ThemeRequest;
 use Nolviko\Core\Installer\DatabaseSetup;
 use Nolviko\Core\Installer\FreshInstallDefaults;
+use Nolviko\Core\Installer\InstallReport;
 use Nolviko\Core\Installer\MailSetup;
 use Nolviko\Core\Installer\PostInstallExposure;
 use Nolviko\Core\Installer\PrerequisiteCheck;
@@ -3718,6 +3719,7 @@ final class CoreServiceProvider implements ServiceProvider
                 $configDirectory,
                 new MailSetup($configDirectory, $root . '/public'),
                 $siteSettings,
+                new InstallReport($root, $configDirectory),
             ),
             [
                 InstallerPage::class,

@@ -389,6 +389,17 @@ return [
     'admin.forums.site_visibility' => 'Tüm bölümler için varsayılan',
     'admin.forums.site_visibility_hint' => 'Bölümler aksini seçmedikçe buna uyar. Bir bölümü kilitlemek yalnızca yeni '
         . 'mesajları durdurur; kimin görebileceği buradan ayarlanır.',
+    'admin.forums.task_moderators' => 'Bu bölümün moderatörleri',
+    'admin.forums.task_access' => 'Kimlerin görebildiğini denetle',
+    'admin.forums.task_groups' => 'Grup izinleri',
+    'admin.forums.task_open' => 'Bölümü aç',
+    'admin.dashboard.attention' => 'İlgilenmeniz gerekenler',
+    'admin.dashboard.attention_none'
+        => 'Bekleyen bir şey yok: onaylanacak üye, açık rapor, onaylanacak ileti ve başarısız iş yok.',
+    'admin.dashboard.attention_approvals' => 'Onay bekleyen {count, plural, other {# üye}}',
+    'admin.dashboard.attention_reports' => '{count, plural, other {# açık rapor}}',
+    'admin.dashboard.attention_posts' => 'Onay bekleyen {count, plural, other {# ileti}}',
+    'admin.dashboard.attention_tasks' => '{count, plural, other {# başarısız arka plan işi}}',
     'admin.forums.guest_sees' => 'Misafir ne görür: {result}',
     'admin.forums.guest_all' => 'bölümü ve konularını',
     'admin.forums.guest_name' => 'yalnızca adını; konular için hesap gerekir',
@@ -819,6 +830,10 @@ return [
     'admin.webhooks.last' => 'son yanıt {status}',
     'admin.site.field.api_enabled' => 'Salt okunur JSON API',
     'admin.site.hint.api_enabled' => 'Yalnızca herkese açık veriler, ziyaretçilerin gördüğü gibi, /api/v1/ altında.',
+    'admin.site.field.threads_prefix_required' => 'Yeni konularda önek zorunlu',
+    'admin.site.hint.threads_prefix_required'
+        => 'Açık: öneki olan bir bölümde yeni konu bir önek seçmeden açılamaz. Önekler Yönetim, Önekler ve '
+        . 'etiketler altında tanımlanır.',
     'admin.site.field.seo_indexnow' => 'IndexNow (arama motorlarına anında bildirim)',
     'admin.site.hint.seo_indexnow' => 'Açık: herkese açık her yeni konu Bing, Yandex ve diğer IndexNow '
         . 'motorlarına bildirilir. Yapılandırmada site adresi gerekir.',

@@ -7,9 +7,12 @@ namespace Nolviko\Core\Updates;
 use Closure;
 use Nolviko\Core\View\AssetManifest;
 use RuntimeException;
+use Throwable;
 
 /**
  * Trusted server-defined fresh-runtime probes; no admin URL, arbitrary PHP or public maintenance bypass.
+ * An optional `templates` probe (2026-11-27) compiles the new release's templates before the site opens again, so
+ * the first visitors do not wait for it; its result never fails the update.
  */
 final class UpdateSmokeCheck
 {
@@ -79,6 +82,14 @@ final class UpdateSmokeCheck
         foreach (['runtime', 'routing', 'database'] as $name) {
             if (($this->probes[$name])() !== true) {
                 throw new RuntimeException('update_smoke_probe_failed:' . $name);
+            }
+        }
+
+        if (($this->probes['templates'] ?? null) instanceof Closure) {
+            try {
+                ($this->probes['templates'])();
+            } catch (Throwable) {
+                // Warming is a speed-up only; pages compile on first use as before.
             }
         }
 

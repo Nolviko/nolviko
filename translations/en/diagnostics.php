@@ -264,6 +264,7 @@ return [
     'diagnostics.thread_posts_all' => 'Every post is selected. To move the whole thread use "Move", or merge it '
         . 'into an existing thread with "All posts".',
     'diagnostics.thread_merge_target_invalid' => 'Enter another thread you may moderate (its number or address).',
+    'diagnostics.thread_prefix_required' => 'Choose a prefix for the new thread.',
     'diagnostics.thread_prefix_invalid' => 'This prefix cannot be used in this forum.',
     'diagnostics.thread_tags_invalid' => 'Choose at most {max} of the listed tags.',
     'diagnostics.taxonomy_label_invalid' => 'Enter a name of 1 to {max} characters.',

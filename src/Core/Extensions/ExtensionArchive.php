@@ -6,6 +6,7 @@ namespace Nolviko\Core\Extensions;
 
 use Closure;
 use FilesystemIterator;
+use Nolviko\Core\Runtime\DirectoryMove;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ZipArchive;
@@ -306,55 +307,12 @@ final readonly class ExtensionArchive
      */
     private static function move(string $source, string $target): bool
     {
-        return @rename($source, $target) || (is_dir($source) && !file_exists($target)
-            && self::copyTree($source, $target));
-    }
-
-    /**
-     * Copies a folder, then removes the source; a failed copy removes the half-written target instead.
-     */
-    private static function copyTree(string $source, string $target): bool
-    {
-        $ok = is_dir($target) || @mkdir($target, 0700, true);
-        $items = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST,
-        );
-        foreach ($ok ? $items : [] as $item) {
-            $path = $target . '/' . substr($item->getPathname(), strlen($source) + 1);
-            if ($item->isLink()) {
-                $ok = false;
-            } elseif ($item->isDir()) {
-                $ok = is_dir($path) || @mkdir($path, 0700);
-            } else {
-                $ok = @copy($item->getPathname(), $path);
-            }
-            if (!$ok) {
-                break;
-            }
-        }
-        self::removeTree($ok ? $source : $target);
-
-        return $ok;
+        return DirectoryMove::move($source, $target);
     }
 
     private static function removeTree(string $directory): void
     {
-        if (!is_dir($directory) || is_link($directory)) {
-            return;
-        }
-        $items = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST,
-        );
-        foreach ($items as $item) {
-            if ($item->isDir() && !$item->isLink()) {
-                @rmdir($item->getPathname());
-            } else {
-                @unlink($item->getPathname());
-            }
-        }
-        @rmdir($directory);
+        DirectoryMove::removeTree($directory);
     }
 
     /**

@@ -175,13 +175,14 @@ final class AdminAreaTest extends TestCase
         self::assertStringContainsString('<a class="skip-link" href="#admin-main">', $html);
         self::assertStringContainsString('<nav class="admin-nav" aria-label="Administration">', $html);
         self::assertStringContainsString('aria-current="page">Dashboard</a>', $html);
-        self::assertStringContainsString('href="/assets/admin.css"', $html);
-        self::assertStringContainsString('href="/assets/accessibility.css"', $html);
+        // A development checkout adds the file time to asset addresses (2026-11-27).
+        self::assertMatchesRegularExpression('~href="/assets/admin\.css(\?v=[0-9]+)?"~', $html);
+        self::assertMatchesRegularExpression('~href="/assets/accessibility\.css(\?v=[0-9]+)?"~', $html);
         self::assertStringContainsString(
             ':focus-visible',
             (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/accessibility.css'),
         );
-        self::assertStringContainsString('src="/assets/admin-commands.js" defer', $html);
+        self::assertMatchesRegularExpression('~src="/assets/admin-commands\.js(\?v=[0-9]+)?" defer~', $html);
         self::assertStringContainsString('data-admin-commands', $html);
         self::assertStringNotContainsString('<script>', $html, 'no inline JavaScript');
     }

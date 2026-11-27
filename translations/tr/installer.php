@@ -98,5 +98,7 @@ return [
     'installer.steps.mail' => 'E-posta',
     'installer.steps.admin' => 'Yönetici',
     'installer.admin.accent' => 'Forumun vurgu rengi',
+    'installer.admin.report'
+        => 'Bu kurulumu Nolviko ekibine bildir. Paylaşılacak bilgiler: {domain} ve Nolviko {version}.',
     'installer.admin.accent_hint' => 'Daha sonra Yönetim, Site ayarları bölümünden değiştirebilirsiniz.',
 ];

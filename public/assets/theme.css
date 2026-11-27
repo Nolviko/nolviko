@@ -594,6 +594,8 @@ a.post-author:hover { color: var(--accent-text); }
 .title-prefix { font-size: .55em; vertical-align: middle; }
 .thread-tags { flex-wrap: wrap; gap: 6px; }
 .tag-picks span { display: inline-flex; align-items: center; gap: 4px; margin-inline-end: 14px; }
+.tag-picks span[hidden] { display: none; }
+.tag-picks-list { max-block-size: 240px; overflow-y: auto; }
 .feed-forum[aria-current="page"] { color: var(--accent-text); }
 
 /* Click-to-load video cards (2026-11-08). */
@@ -806,3 +808,9 @@ main details.menu-drop[open] > summary { margin-block-end: 0; }
     .print-view { max-inline-size: none; }
     .print-view .post-body img { max-block-size: 60vh; }
 }
+
+/* Admin task links on a forum row and the dashboard attention list (2026-11-27). */
+.forum-tasks { margin-block: 4px 0; font-size: 13px; }
+.attention ul { margin: 0; }
+.quick-reply { margin-block-start: 16px; }
+.quick-reply textarea { inline-size: 100%; }

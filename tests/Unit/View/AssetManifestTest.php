@@ -22,7 +22,11 @@ final class AssetManifestTest extends TestCase
         $root = new TemporaryDirectory();
         $root->write('public/assets/site.css', 'body { color: black; }');
         $root->write('config/.keep', '');
-        self::assertSame('assets/site.css', (new AssetManifest($root->path))->path('site.css'));
+        // Without a manifest the change time keeps browsers from using a stale copy (2026-11-27).
+        self::assertMatchesRegularExpression(
+            '~^assets/site\.css\?v=[0-9]+$~D',
+            (new AssetManifest($root->path))->path('site.css'),
+        );
         $first = AssetManifest::build($root->path);
         $other = new TemporaryDirectory();
         $other->write('public/assets/site.css', 'body { color: black; }');
@@ -52,7 +56,7 @@ final class AssetManifestTest extends TestCase
             assets: new AssetManifest($root->path),
             assetBase: static fn(): string => '/forum/',
         ));
-        self::assertSame('/forum/assets/site.css', $twig->render('page'));
+        self::assertMatchesRegularExpression('~^/forum/assets/site\.css\?v=[0-9]+$~D', $twig->render('page'));
     }
 
     public function testMissingFileFailsExplicitly(): void

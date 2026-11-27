@@ -33,7 +33,7 @@ final class SiteSettings
         'seo.indexnow' => 'off', 'limits.search_seconds' => '1', 'limits.message_seconds' => '10',
         'limits.message_recipients' => '10',
         'membership.questions' => 'on', 'membership.birth_date' => 'off', 'membership.birthdays_list' => 'on',
-        'membership.member_themes' => 'off',
+        'membership.member_themes' => 'off', 'threads.prefix_required' => 'off',
         'site.closed' => 'off'];
 
     /** Key => [type, limit] (string/email: max length, int: [min, max], enum: options). */
@@ -67,6 +67,8 @@ final class SiteSettings
         'gallery.quota_mb' => ['int', [0, 1000000]],
         'gallery.approval' => ['enum', ['off', 'on']],
         'posting.images' => ['enum', ['off', 'on']],
+        // 2026-11-27 (roadmap Beta 18): a new thread must have a prefix where the forum has prefixes.
+        'threads.prefix_required' => ['enum', ['off', 'on']],
         'posting.image_max_mb' => ['int', [1, 100]],
         'posting.images_per_post' => ['int', [1, 50]],
         'antispam.blocked_words' => ['string', 2000],

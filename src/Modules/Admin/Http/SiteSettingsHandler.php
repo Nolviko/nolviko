@@ -121,6 +121,7 @@ final readonly class SiteSettingsHandler implements RouteHandler
                         'home.layout' => 'admin.site.layout',
                         'appearance.accent' => 'admin.site.accent',
                         'gallery.enabled', 'gallery.approval', 'api.enabled', 'seo.indexnow', 'posting.images',
+                            'threads.prefix_required',
                             'membership.questions', 'membership.birth_date', 'membership.birthdays_list',
                             'membership.member_themes',
                             'site.closed'

@@ -104,5 +104,7 @@ return [
     'installer.steps.mail' => 'Email',
     'installer.steps.admin' => 'Administrator',
     'installer.admin.accent' => 'Accent colour of the forum',
+    'installer.admin.report'
+        => 'Tell the Nolviko team about this installation. Shared: {domain} and Nolviko {version}.',
     'installer.admin.accent_hint' => 'You can change it later under Administration, Site settings.',
 ];

@@ -1,6 +1,6 @@
 {# Admin dashboard (M04.01). Context: title, nav, stats (users, forums, threads, posts; null on a database
    failure), empty (no forum yet), confirmed (just re-authenticated), fresh (re-authenticated recently),
-   reauth_url. #}
+   reauth_url, attention (list of {key, count, url}: what waits, 2026-11-27). #}
 {% extends 'admin/layout.twig' %}
 
 {% block admin %}
@@ -10,6 +10,13 @@
 {% endif %}
 {% if second_factor_off|default(0) > 0 %}
 <p role="alert">{{ t('admin.dashboard.second_factor_off', {count: second_factor_off}) }}</p>
+{% endif %}
+{% if stats is not null %}
+<section class="panel panel-pad attention" aria-labelledby="attention-title">
+<h2 id="attention-title">{{ t('admin.dashboard.attention') }}</h2>
+{% if attention|default([]) is empty %}<p class="meta">{{ t('admin.dashboard.attention_none') }}</p>
+{% else %}<ul class="rows">{% for line in attention %}<li><a href="{{ line.url|safe_url }}">{{ t(line.key, {count: line.count}) }}</a></li>{% endfor %}</ul>{% endif %}
+</section>
 {% endif %}
 {% if stats is null %}
 <div role="alert">

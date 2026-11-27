@@ -322,6 +322,19 @@ return [
     'admin.forums.site_visibility' => 'Default for all sections',
     'admin.forums.site_visibility_hint' => 'Sections follow this unless they choose otherwise. Locking a section only '
         . 'stops new posts; who can see it is set here.',
+    'admin.forums.task_moderators' => 'Moderators of this forum',
+    'admin.forums.task_access' => 'Check who can see it',
+    'admin.forums.task_groups' => 'Group permissions',
+    'admin.forums.task_open' => 'Open the forum',
+    'admin.dashboard.attention' => 'Needs your attention',
+    'admin.dashboard.attention_none'
+        => 'Nothing is waiting: no members to approve, no open reports, no posts to approve and no failed tasks.',
+    'admin.dashboard.attention_approvals'
+        => '{count, plural, one {# member waits} other {# members wait}} for approval',
+    'admin.dashboard.attention_reports' => '{count, plural, one {# open report} other {# open reports}}',
+    'admin.dashboard.attention_posts' => '{count, plural, one {# post waits} other {# posts wait}} for approval',
+    'admin.dashboard.attention_tasks'
+        => '{count, plural, one {# background task failed} other {# background tasks failed}}',
     'admin.forums.guest_sees' => 'What guests see: {result}',
     'admin.forums.guest_all' => 'the section and its threads',
     'admin.forums.guest_name' => 'the name only; threads need an account',
@@ -826,6 +839,10 @@ return [
     'admin.webhooks.last' => 'last answer {status}',
     'admin.site.field.api_enabled' => 'Read-only JSON API',
     'admin.site.hint.api_enabled' => 'Public data only, as guests see it, under /api/v1/.',
+    'admin.site.field.threads_prefix_required' => 'Prefix required for new threads',
+    'admin.site.hint.threads_prefix_required'
+        => 'On: in a forum that has prefixes, a new thread must have one. Prefixes are set up under Admin, Prefixes '
+        . 'and tags.',
     'admin.site.field.seo_indexnow' => 'IndexNow (instant search engine notice)',
     'admin.site.hint.seo_indexnow' => 'On: every new public thread is announced to Bing, Yandex and other '
         . 'IndexNow engines. Needs the site address in config.',

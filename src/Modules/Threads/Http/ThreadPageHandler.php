@@ -232,6 +232,15 @@ final class ThreadPageHandler implements RouteHandler
             ? ['csrf_field' => CsrfTokens::FIELD, 'csrf_token' => $this->csrf->token()]
             : [];
         $forms['moderation'] = $forms === [] ? null : $this->moderationTools($subject, $thread);
+        // Quick reply under the posts (2026-11-27, roadmap Beta 18): the same POST, token and rules as the reply
+        // page; members only, so guest pages stay render-cacheable.
+        $forms['quick_reply'] = $replyUrl !== null && isset($forms['csrf_token']) ? [
+            'action' => $replyUrl,
+            'token_field' => CreateReplyHandler::TOKEN_FIELD,
+            'token' => CreateReply::newToken(),
+            'max_content' => CreateThread::MAX_CONTENT_LENGTH,
+            'preview_intent' => ComposerPreview::INTENT,
+        ] : null;
         $this->viewCounter?->record(
             (string) $request->headers->get('User-Agent', ''),
             (string) ($request->headers->get('Sec-Purpose') ?? $request->headers->get('Purpose') ?? ''),

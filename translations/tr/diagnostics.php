@@ -266,6 +266,7 @@ return [
     'diagnostics.thread_posts_all' => 'Tüm iletiler seçili. Konunun tamamı için "Taşı"yı kullanın ya da "Tüm '
         . 'iletiler" ile var olan bir konuyla birleştirin.',
     'diagnostics.thread_merge_target_invalid' => 'Moderatörü olduğunuz başka bir konu girin (numarası veya adresi).',
+    'diagnostics.thread_prefix_required' => 'Yeni konu için bir önek seçin.',
     'diagnostics.thread_prefix_invalid' => 'Bu önek bu forumda kullanılamaz.',
     'diagnostics.thread_tags_invalid' => 'Listedeki etiketlerden en fazla {max} tane seçin.',
     'diagnostics.taxonomy_label_invalid' => '1 ile {max} karakter arasında bir ad girin.',

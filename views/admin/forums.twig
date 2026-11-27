@@ -95,6 +95,11 @@
 <button class="btn-d" type="submit" name="action" value="{{ choices.delete }}">{{ t('admin.forums.delete') }}</button>
 </form>
 {% if row.guest_sees|default('') %}<p class="meta">{{ t('admin.forums.guest_sees', {result: row.guest_sees}) }}</p>{% endif %}
+{# Everything about this forum from its own row (2026-11-27, roadmap Beta 18: task-based admin). #}
+<p class="quick-links forum-tasks"><a href="{{ (path('admin.forum_moderators') ~ '?forum=' ~ row.id)|safe_url }}">{{ t('admin.forums.task_moderators') }}</a>
+<a href="{{ (path('admin.permissions') ~ '?permission=forum.view&forum=' ~ row.id)|safe_url }}">{{ t('admin.forums.task_access') }}</a>
+<a href="{{ path('admin.groups')|safe_url }}">{{ t('admin.forums.task_groups') }}</a>
+{% if not row.is_link %}<a href="{{ path('forums.show', {forum: row.id})|safe_url }}">{{ t('admin.forums.task_open') }}</a>{% endif %}</p>
 <details class="forum-edit"><summary>{{ t('admin.forums.edit') }}</summary>
 <form method="post" action="{{ action|safe_url }}" class="forum-edit-form">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">

@@ -31,8 +31,11 @@
     const token = form.querySelector('input[name=token]');
     if (!area) return;
     const saved = read(key);
-    if (saved && typeof saved.text === 'string' && saved.text.trim() !== '' && area.value.trim() === '') {
-        area.value = saved.text;
+    // 2026-11-27: text typed in the quick reply under a thread comes back on the full reply page, also when that
+    // page already holds quotes (quote.js runs first) or the server sent the same text back (preview).
+    if (saved && typeof saved.text === 'string' && saved.text.trim() !== ''
+        && !area.value.includes(saved.text.trim())) {
+        area.value = area.value.trim() === '' ? saved.text : saved.text.replace(/\s+$/, '') + '\n\n' + area.value;
         const note = document.querySelector('[data-draft-restored]');
         if (note) note.hidden = false;
     }
@@ -50,4 +53,5 @@
         timer = window.setTimeout(save, 400);
     });
     form.addEventListener('submit', save);
+    window.addEventListener('pagehide', save);
 })();

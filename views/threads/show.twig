@@ -98,6 +98,22 @@
 {{ pager }}
 {% if reply_url is not null %}<a class="btn btn-sm row-end" href="{{ reply_url|safe_url }}">{{ t('threads.show.reply') }}</a>{% endif %}
 </div>
+{% if quick_reply|default(null) and not locked|default(false) %}
+<section class="panel panel-pad quick-reply" aria-labelledby="quick-reply-title">
+<h2 id="quick-reply-title">{{ t('threads.quick_reply.title') }}</h2>
+<form method="post" action="{{ quick_reply.action|safe_url }}" data-draft-keeper="{{ quick_reply.action }}">
+<input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+<input type="hidden" name="{{ quick_reply.token_field }}" value="{{ quick_reply.token }}">
+<p role="status" data-draft-restored hidden>{{ t('threads.draft.local_restored') }}</p>
+<p><label class="visually-hidden" for="quick-reply-content">{{ t('threads.reply.content') }}</label>
+<textarea dir="auto" id="quick-reply-content" data-mentions data-thread="{{ thread_id }}" name="content" rows="5" required maxlength="{{ quick_reply.max_content }}"></textarea></p>
+<p class="row"><button type="submit">{{ t('threads.reply.submit') }}</button>
+<button class="btn-s" type="submit" name="intent" value="{{ quick_reply.preview_intent }}" formnovalidate>{{ t('threads.quick_reply.full_editor') }}</button>
+<span class="meta">{{ t('threads.quick_reply.hint') }}</span></p>
+</form>
+</section>
+<script src="{{ asset('draft-keeper.js') }}" defer></script>
+{% endif %}
 {% if reply_url is not null %}
 <a id="multi-quote" class="btn multi-quote" href="{{ reply_url|safe_url }}" hidden>{{ t('threads.show.multi_quote_go') }} <span class="chip" data-count>0</span></a>
 <script src="{{ asset('quote.js') }}" defer></script>

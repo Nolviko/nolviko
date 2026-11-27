@@ -53,6 +53,26 @@ final class DashboardHandler implements RouteHandler
         }
     }
 
+    /** @return list<array{key: string, count: int, url: string}> Only the lines with something waiting. */
+    private function attention(): array
+    {
+        $links = [
+            'approvals' => CoreRoutes::MODERATION_QUEUE,
+            'reports' => CoreRoutes::MODERATION_QUEUE,
+            'posts' => CoreRoutes::MODERATION_QUEUE,
+            'tasks' => CoreRoutes::ADMIN_TASKS,
+        ];
+        $lines = [];
+        foreach ($this->stats->attention() as $key => $count) {
+            if ($count > 0) {
+                $url = $this->urls->generate($links[$key]) . ($key === 'tasks' ? '?status=failed' : '');
+                $lines[] = ['key' => 'admin.dashboard.attention_' . $key, 'count' => $count, 'url' => $url];
+            }
+        }
+
+        return $lines;
+    }
+
     public function handle(Request $request, array $parameters): Response
     {
         if ($request->isMethod('POST')) {
@@ -92,6 +112,7 @@ final class DashboardHandler implements RouteHandler
             'fresh' => $this->admin->isFresh(),
             'reauth_url' => $this->urls->generate(CoreRoutes::ADMIN_REAUTH),
             'second_factor_off' => $stats === null ? 0 : $this->unprotected(),
+            'attention' => $stats === null ? [] : $this->attention(),
         ]);
 
         return new Response($html, $stats === null ? Response::HTTP_SERVICE_UNAVAILABLE : Response::HTTP_OK, [

@@ -9,6 +9,7 @@ use Nolviko\Core\Application\InstallationState;
 use Nolviko\Core\Http\InstallerPage;
 use Nolviko\Core\Http\RouteHandler;
 use Nolviko\Core\Installer\InstallLock;
+use Nolviko\Core\Installer\InstallReport;
 use Nolviko\Core\Installer\MailSetup;
 use Nolviko\Core\Installer\SchemaMigrator;
 use Nolviko\Core\Installer\SetupCode;
@@ -27,6 +28,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Configured and every migration has run; the POST (CSRF-checked) needs the proven setup code. When an
  * administrator already exists (an earlier attempt committed the account but could not write the lock) the step
  * only finishes the installation. After the lock the installer is gone (404) and the visitor goes to the login.
+ * A ticked "report this installation" box (2026-11-27, on by default) sends one report after the lock.
  */
 final class InstallerAdminHandler implements RouteHandler
 {
@@ -45,6 +47,7 @@ final class InstallerAdminHandler implements RouteHandler
         private readonly string $configDirectory,
         private readonly ?MailSetup $mailSetup = null,
         private readonly ?Closure $siteSettings = null,
+        private readonly ?InstallReport $report = null,
     ) {
     }
 
@@ -63,14 +66,27 @@ final class InstallerAdminHandler implements RouteHandler
         $username = is_string($input['username'] ?? null) ? $input['username'] : '';
         $email = is_string($input['email'] ?? null) ? $input['email'] : '';
 
+        $host = $request->getHost();
+
         if (!$request->isMethod('POST')) {
-            return $this->form($provisioner->hasAdministrator(), $username, $email, [], Response::HTTP_OK);
+            return $this->form($provisioner->hasAdministrator(), $username, $email, [], Response::HTTP_OK, host: $host);
         }
+
+        $reportChecked = ($input['report_install'] ?? '') === '1';
 
         $code = is_string($input['setup_code'] ?? null) ? $input['setup_code'] : '';
 
         if (!$this->setupCode->isProven() && !$this->setupCode->prove($code)) {
-            return $this->form(false, $username, $email, ['installer_setup_code_invalid'], 422);
+            return $this->form(
+                false,
+                $username,
+                $email,
+                ['installer_setup_code_invalid'],
+                422,
+                'green',
+                $host,
+                $reportChecked,
+            );
         }
 
         try {
@@ -100,12 +116,27 @@ final class InstallerAdminHandler implements RouteHandler
                 $rejected->diagnostics,
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 is_string($input['accent'] ?? null) ? $input['accent'] : 'green',
+                $host,
+                $reportChecked,
             );
         } catch (RuntimeException $failure) {
-            return $this->form(true, $username, $email, [$failure->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->form(
+                true,
+                $username,
+                $email,
+                [$failure->getMessage()],
+                Response::HTTP_INTERNAL_SERVER_ERROR,
+                'green',
+                $host,
+                $reportChecked,
+            );
         }
 
         $this->setupCode->remove();
+
+        if ($reportChecked) {
+            $this->report?->send($host);
+        }
 
         return InstallerPage::redirect($this->urls->generate(CoreRoutes::LOGIN));
     }
@@ -120,8 +151,12 @@ final class InstallerAdminHandler implements RouteHandler
         array $diagnostics,
         int $status,
         string $accent = 'green',
+        string $host = '',
+        bool $reportChecked = true,
     ): Response {
         $this->setupCode->ensure();
+        $version = $this->report?->version();
+        $domain = InstallReport::domain($host);
 
         return $this->page->render('installer/admin.twig', [
             'action' => $this->urls->generate(CoreRoutes::INSTALLER_ADMIN),
@@ -134,6 +169,8 @@ final class InstallerAdminHandler implements RouteHandler
             'email' => $email,
             'accents' => array_keys(ThemeTokens::ACCENTS),
             'accent' => $accent,
+            'report' => $version !== null && $domain !== null
+                ? ['domain' => $domain, 'version' => $version, 'checked' => $reportChecked] : null,
             'errors' => $this->page->messages($diagnostics),
         ], $status);
     }

@@ -1,6 +1,6 @@
 {# Installer step 4 (M02.15a). Context: language, title, action, csrf_field, csrf_token, needs_code, code_file,
    finish_only (an administrator exists: only the lock is missing), username, email, accents (colour names),
-   accent (chosen), errors (translated). The
+   accent (chosen), report (null, or {domain, version, checked}: the installation report box), errors (translated). The
    passwords are never filled in again. #}
 {% extends 'layouts/page.twig' %}
 
@@ -33,6 +33,8 @@
 {% endif %}
 {% if finish_only %}
 <p role="status">{{ t('installer.admin.exists') }}</p>
+{% if report %}<p class="check"><input id="report-install" name="report_install" type="checkbox" value="1"{% if report.checked %} checked{% endif %}>
+<label for="report-install">{{ t('installer.admin.report', {domain: report.domain, version: report.version}) }}</label></p>{% endif %}
 <p><button type="submit">{{ t('installer.admin.finish') }}</button></p>
 {% else %}
 <p>{{ t('installer.admin.intro') }}</p>
@@ -51,6 +53,8 @@
 {% endfor %}
 <p class="hint">{{ t('installer.admin.accent_hint') }}</p>
 </fieldset>
+{% if report %}<p class="check"><input id="report-install" name="report_install" type="checkbox" value="1"{% if report.checked %} checked{% endif %}>
+<label for="report-install">{{ t('installer.admin.report', {domain: report.domain, version: report.version}) }}</label></p>{% endif %}
 <p><button type="submit">{{ t('installer.admin.submit') }}</button></p>
 {% endif %}
 </form>
