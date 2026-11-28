@@ -114,6 +114,24 @@ final class OutboxTest extends TestCase
         ));
     }
 
+    /** 2026-11-27: events nobody handles stop piling up as "waiting" after a day; handled ones are never touched. */
+    public function testUnhandledEventsAreRetiredAfterADay(): void
+    {
+        $this->connection->transactional(fn(): bool => $this->outbox->record('post.edited', 'post', 1, []));
+        $this->connection->transactional(fn(): bool => $this->outbox->record('post.created', 'post', 2, []));
+        $this->connection->transactional(fn(): bool => $this->outbox->record('thread.locked', 'thread', 3, []));
+        $this->connection->executeStatement(
+            "UPDATE outbox_events SET available_at = '2000-01-01 00:00:00' WHERE event_type <> 'thread.locked'",
+        );
+        $queue = new OutboxQueue($this->connection);
+
+        self::assertSame(1, $queue->retireUnhandled(['post.created']));
+        $status = $this->connection->fetchAllKeyValue('SELECT event_type, status FROM outbox_events ORDER BY id');
+        $expected = ['post.edited' => 'completed', 'post.created' => 'pending', 'thread.locked' => 'pending'];
+        self::assertSame($expected, $status, 'only the old event without a handler; a new one waits its day');
+        self::assertSame(0, $queue->retireUnhandled(['post.created']));
+    }
+
     public function testCommittedEventIsPendingWithItsPayload(): void
     {
         $recorded = $this->connection->transactional(

@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Nolviko\Core\Events\OutboxLease;
 use RuntimeException;
@@ -201,6 +202,39 @@ final class OutboxQueue
             "DELETE FROM outbox_events WHERE status = 'completed' AND id IN (?)",
             [array_map(intval(...), $ids)],
             [ArrayParameterType::INTEGER],
+        );
+    }
+
+    /**
+     * Marks events no handler takes as done once they are $hours old (2026-11-27, found on the community forum: the
+     * core records `post.edited`, `thread.locked` and similar events for extensions; with no extension subscribed
+     * they waited for ever, filled the table and showed as "waiting too long" in Admin > Background tasks). They
+     * are then deleted by prune() like other finished work. An extension enabled later sees new events only.
+     *
+     * @param list<string> $handled Event types the runner has a handler for.
+     */
+    public function retireUnhandled(array $handled, int $hours = 24, int $limit = 500): int
+    {
+        if ($this->connection->isTransactionActive() || $handled === [] || $hours < 1 || $limit < 1 || $limit > 5000) {
+            return 0;
+        }
+        $now = $this->now();
+        $cutoff = $now->modify('-' . $hours . ' hours')->format('Y-m-d H:i:s.u');
+        $ids = $this->connection->fetchFirstColumn(
+            "SELECT id FROM outbox_events WHERE status = 'pending' AND available_at < ? AND event_type NOT IN (?) "
+                . 'ORDER BY available_at, id LIMIT ' . $limit,
+            [$cutoff, array_values($handled)],
+            [ParameterType::STRING, ArrayParameterType::STRING],
+        );
+        if ($ids === []) {
+            return 0;
+        }
+
+        return (int) $this->connection->executeStatement(
+            "UPDATE outbox_events SET status = 'completed', completed_at = ?, owner_token = NULL "
+                . "WHERE status = 'pending' AND id IN (?)",
+            [$now->format('Y-m-d H:i:s.u'), array_map(intval(...), $ids)],
+            [ParameterType::STRING, ArrayParameterType::INTEGER],
         );
     }
 

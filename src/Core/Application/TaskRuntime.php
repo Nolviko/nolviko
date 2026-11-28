@@ -324,7 +324,9 @@ final class TaskRuntime
                 && array_intersect($bulk, array_keys($extensionHandlers)) === [],
         ))->run($limit, $milliseconds);
         $exports->garbageCollect();
-        (new OutboxQueue($db))->prune();
+        $outbox = new OutboxQueue($db);
+        $outbox->retireUnhandled(array_keys($handlers));
+        $outbox->prune();
         $sitemaps?->collect();
         $media->collect();
         if (in_array('0042_import_jobs', $optionalSchema, true)) {
