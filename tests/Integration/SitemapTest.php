@@ -181,7 +181,8 @@ final class SitemapTest extends TestCase
         $run = $this->finish();
         $maps = $this->maps();
         $index = $maps->index();
-        self::assertStringContainsString('/sitemaps/' . $run['token'] . '/1.xml', $index);
+        self::assertStringContainsString('/sitemaps/' . $maps->key() . '/1.xml', $index);
+        self::assertStringNotContainsString($run['token'], $index, 'no generation token in public addresses');
         $page = $maps->threads($run['token'], 1);
         self::assertStringContainsString('<loc>https://forum.example.test/threads/thread-1-1</loc>', $page);
         foreach ([2, 3, 4, 5] as $hidden) {
@@ -189,7 +190,7 @@ final class SitemapTest extends TestCase
         }
         self::assertStringContainsString('/forums/1</loc>', $maps->forums());
         self::assertStringNotContainsString('/forums/2</loc>', $maps->forums());
-        self::assertNull($maps->threads(str_repeat('f', 32), 1));
+        self::assertSame($page, $maps->threads(str_repeat('f', 32), 1), 'an older address serves the current pages');
         self::assertNull($maps->threads($run['token'], 0));
         $this->db->update('threads', ['status' => 'pending'], ['id' => 1]);
         self::assertStringNotContainsString('/threads/thread-1-1</loc>', $this->maps()->threads($run['token'], 1));
@@ -211,7 +212,7 @@ final class SitemapTest extends TestCase
 
         $index = $this->maps()->index();
         self::assertIsString($index, 'the expired generation is still served');
-        self::assertStringContainsString('/sitemaps/' . $first['token'] . '/1.xml', $index);
+        self::assertStringContainsString('/sitemaps/' . $this->maps()->key() . '/1.xml', $index);
         self::assertIsString($this->maps()->threads($first['token'], 1));
         self::assertSame(2, (int) $this->db->fetchOne('SELECT active_slot FROM seo_sitemap_runs WHERE id = ?', [
             $first['id'],
@@ -235,9 +236,13 @@ final class SitemapTest extends TestCase
                 . '- INTERVAL \'1\' SECOND WHERE event_type = ?', ['seo.sitemap_requested']);
         }
 
-        self::assertStringContainsString('/sitemaps/' . $second['token'] . '/1.xml', (string) $this->maps()->index());
+        $current = (string) $this->maps()->index();
+        self::assertStringContainsString('/sitemaps/' . $this->maps()->key() . '/1.xml', $current);
         self::assertNull($this->db->fetchOne('SELECT active_slot FROM seo_sitemap_runs WHERE id = ?', [$first['id']]));
-        self::assertNull($this->maps()->threads($first['token'], 1), 'the replaced generation is no longer served');
+        self::assertIsString(
+            $this->maps()->threads($first['token'], 1),
+            'an address from the replaced generation now serves the new one (crawlers fetch pages later)',
+        );
     }
 
     public function testHttpResponsesRemainPrivateRegardlessOfMemberCookie(): void
